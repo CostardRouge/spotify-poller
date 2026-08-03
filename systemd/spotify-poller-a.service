@@ -1,0 +1,17 @@
+[Unit]
+Description=Poller Spotify — collecteur A (recently-played, critique)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/spotify-poller
+EnvironmentFile=/opt/spotify-poller/.env
+ExecStart=/usr/bin/node dist/run-once.js A
+User=poller
+Group=poller
+# Défense en profondeur, sans conséquence sur la logique métier :
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/spotify-poller/data
+PrivateTmp=true

@@ -1,0 +1,21 @@
+[Unit]
+Description=API poller Spotify (/health /run /stats)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/spotify-poller
+EnvironmentFile=/opt/spotify-poller/.env
+ExecStart=/usr/bin/node dist/server.js
+User=poller
+Group=poller
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/spotify-poller/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

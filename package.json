@@ -1,0 +1,21 @@
+{
+  "name": "spotify-poller-homelab",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "migrate": "node dist/migrate.js",
+    "run:a": "node dist/run-once.js A",
+    "run:b": "node dist/run-once.js B",
+    "serve": "node dist/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

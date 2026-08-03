@@ -1,0 +1,134 @@
+import type Database from "better-sqlite3";
+import { Env, RunStatus, nowIso } from "./types";
+
+// ---------- couche brute (invariant I3) ----------
+
+export function insertRaw(
+  env: Env,
+  collector: string,
+  httpStatus: number,
+  requestUrl: string,
+  payload: string | null
+): void {
+  env.DB.prepare(
+    `INSERT INTO raw_spotify (collector, fetched_at, http_status, request_url, payload)
+     VALUES (?, ?, ?, ?, ?)`
+  ).run(collector, nowIso(), httpStatus, requestUrl, payload);
+}
+
+// ---------- événements (invariant I2) ----------
+
+export interface EventRow {
+  id: string;
+  ts_utc: string;
+  type: string;
+  source: string;
+  duration_s: number | null;
+  title: string;
+  subtitle: string;
+  payload: string;
+}
+
+/**
+ * INSERT OR IGNORE en transaction. Retourne le nombre réellement inséré
+ * (better-sqlite3 : changes vaut 0 pour chaque ligne ignorée par la dédup).
+ */
+export function insertEvents(env: Env, rows: EventRow[]): number {
+  if (rows.length === 0) return 0;
+  const stmt = env.DB.prepare(
+    `INSERT OR IGNORE INTO events
+       (id, ts_utc, ts_local, tz, type, source, duration_s, lat, lon, title, subtitle, payload, ingested_at)
+     VALUES (?, ?, NULL, NULL, ?, ?, ?, NULL, NULL, ?, ?, ?, ?)`
+  );
+  const ingested = nowIso();
+  let inserted = 0;
+  const tx = env.DB.transaction((items: EventRow[]) => {
+    for (const r of items) {
+      const info = stmt.run(r.id, r.ts_utc, r.type, r.source, r.duration_s, r.title, r.subtitle, r.payload, ingested);
+      inserted += info.changes;
+    }
+  });
+  tx(rows);
+  return inserted;
+}
+
+// ---------- état ----------
+
+export function getState(env: Env, key: string): string | null {
+  const row = env.DB.prepare(`SELECT value FROM poller_state WHERE key = ?`).get(key) as
+    | { value: string }
+    | undefined;
+  return row?.value ?? null;
+}
+
+export function setState(env: Env, key: string, value: string): void {
+  env.DB.prepare(
+    `INSERT INTO poller_state (key, value, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+  ).run(key, value, nowIso());
+}
+
+// ---------- journal (invariant I1) ----------
+
+export function startRun(env: Env, collector: "A" | "B", trigger: "cron" | "manual"): number {
+  const r = env.DB.prepare(
+    `INSERT INTO poller_runs (collector, trigger_kind, started_at) VALUES (?, ?, ?)`
+  ).run(collector, trigger, nowIso());
+  return Number(r.lastInsertRowid);
+}
+
+export function finishRun(
+  env: Env,
+  runId: number,
+  status: RunStatus,
+  fetched: number,
+  inserted: number,
+  error: string | null
+): void {
+  env.DB.prepare(
+    `UPDATE poller_runs
+     SET finished_at = ?, status = ?, items_fetched = ?, items_inserted = ?, error = ?
+     WHERE id = ?`
+  ).run(nowIso(), status, fetched, inserted, error, runId);
+}
+
+// ---------- trous ----------
+
+export function insertGap(env: Env, collector: string, fromUtc: string, toUtc: string, note: string): void {
+  env.DB.prepare(
+    `INSERT INTO gaps (collector, from_utc, to_utc, detected_at, note) VALUES (?, ?, ?, ?, ?)`
+  ).run(collector, fromUtc, toUtc, nowIso(), note);
+}
+
+// ---------- lecture pour /health et /stats ----------
+
+export function healthSnapshot(env: Env) {
+  const lastA = getState(env, "A.last_success_at");
+  const lastB = getState(env, "B.last_success_at");
+  const counts = env.DB.prepare(`SELECT type, COUNT(*) AS n FROM events GROUP BY type`).all() as {
+    type: string;
+    n: number;
+  }[];
+  return {
+    collector_A_last_success: lastA,
+    collector_B_last_success: lastB,
+    events_by_type: Object.fromEntries(counts.map((r) => [r.type, r.n])),
+  };
+}
+
+export function statsSnapshot(env: Env) {
+  const runs = env.DB.prepare(
+    `SELECT collector, trigger_kind, started_at, finished_at, status,
+            items_fetched, items_inserted, error
+     FROM poller_runs ORDER BY started_at DESC LIMIT 20`
+  ).all();
+  const gaps = env.DB.prepare(`SELECT * FROM gaps ORDER BY detected_at DESC LIMIT 50`).all();
+  const rawCount = env.DB.prepare(`SELECT COUNT(*) AS n FROM raw_spotify`).get() as { n: number };
+  const eventCount = env.DB.prepare(`SELECT COUNT(*) AS n FROM events`).get() as { n: number };
+  return {
+    raw_rows: rawCount.n,
+    event_rows: eventCount.n,
+    gaps,
+    last_20_runs: runs,
+  };
+}
