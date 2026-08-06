@@ -1,5 +1,6 @@
 import { getAccessToken } from "../auth";
-import { EventRow, getState, insertEvents, insertRaw, setState } from "../db";
+import { EventRow, getState, insertEvents, setState } from "../db";
+import { spotifyGet } from "../spotify-api";
 import { CollectorResult, Env, TransientError, nowIso } from "../types";
 
 const PAGE_SIZE = 50;
@@ -41,23 +42,12 @@ function toRow(it: LikedItem): EventRow {
 
 async function fetchPage(env: Env, token: string, offset: number): Promise<LikedItem[]> {
   const url = `https://api.spotify.com/v1/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`;
-  let res: Response;
-  try {
-    res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  } catch (e) {
-    insertRaw(env, "liked_tracks", 0, url, null);
-    throw new TransientError(`network: ${String(e)}`);
-  }
-  const body = await res.text();
-  insertRaw(env, "liked_tracks", res.status, url, body);
+  // spotifyGet gère réseau/5xx (retry borné), 429 (cooldown persisté + throw)
+  // et écrit raw_spotify à chaque tentative (I3).
+  const r = await spotifyGet(env, "liked_tracks", url, token);
+  if (r.status < 200 || r.status >= 300) throw new TransientError(`spotify ${r.status}`);
 
-  if (res.status === 429) {
-    const ra = res.headers.get("Retry-After") ?? "?";
-    throw new TransientError(`429 Retry-After=${ra}s`);
-  }
-  if (!res.ok) throw new TransientError(`spotify ${res.status}`);
-
-  return (JSON.parse(body).items ?? []) as LikedItem[];
+  return (JSON.parse(r.bodyText).items ?? []) as LikedItem[];
 }
 
 /**

@@ -116,6 +116,71 @@ export function healthSnapshot(env: Env) {
   };
 }
 
+// ---------- navigation paginée pour l'UI de debug ----------
+
+export interface EventFilter {
+  type?: string; // 'listen' | 'like' | ...
+  q?: string; // recherche LIKE sur title/subtitle
+  from?: string; // ISO8601, borne incluse sur ts_utc
+  to?: string;
+  order?: "asc" | "desc"; // sur ts_utc, desc par défaut
+  limit: number;
+  offset: number;
+}
+
+export function listEvents(env: Env, f: EventFilter) {
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (f.type) {
+    where.push("type = ?");
+    params.push(f.type);
+  }
+  if (f.q) {
+    where.push("(title LIKE ? OR subtitle LIKE ?)");
+    params.push(`%${f.q}%`, `%${f.q}%`);
+  }
+  if (f.from) {
+    where.push("ts_utc >= ?");
+    params.push(f.from);
+  }
+  if (f.to) {
+    where.push("ts_utc <= ?");
+    params.push(f.to);
+  }
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const orderSql = f.order === "asc" ? "ASC" : "DESC";
+
+  const total = (
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM events ${whereSql}`).get(...params) as { n: number }
+  ).n;
+  const items = env.DB.prepare(
+    `SELECT id, ts_utc, ts_local, tz, type, source, duration_s, title, subtitle, payload, ingested_at
+     FROM events ${whereSql}
+     ORDER BY ts_utc ${orderSql}
+     LIMIT ? OFFSET ?`
+  ).all(...params, f.limit, f.offset);
+
+  return { total, limit: f.limit, offset: f.offset, items };
+}
+
+export function listRuns(env: Env, limit: number, offset: number) {
+  const total = (env.DB.prepare(`SELECT COUNT(*) AS n FROM poller_runs`).get() as { n: number }).n;
+  const items = env.DB.prepare(
+    `SELECT id, collector, trigger_kind, started_at, finished_at, status,
+            items_fetched, items_inserted, error
+     FROM poller_runs ORDER BY started_at DESC LIMIT ? OFFSET ?`
+  ).all(limit, offset);
+  return { total, limit, offset, items };
+}
+
+export function listGaps(env: Env, limit: number, offset: number) {
+  const total = (env.DB.prepare(`SELECT COUNT(*) AS n FROM gaps`).get() as { n: number }).n;
+  const items = env.DB.prepare(
+    `SELECT * FROM gaps ORDER BY detected_at DESC LIMIT ? OFFSET ?`
+  ).all(limit, offset);
+  return { total, limit, offset, items };
+}
+
 export function statsSnapshot(env: Env) {
   const runs = env.DB.prepare(
     `SELECT collector, trigger_kind, started_at, finished_at, status,

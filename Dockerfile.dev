@@ -1,0 +1,17 @@
+# Local development image: source is bind-mounted by docker-compose, so we
+# only need dependencies (and the native toolchain for better-sqlite3) here.
+FROM node:24-alpine
+
+WORKDIR /app
+RUN apk add --no-cache python3 make g++
+
+# Install dependencies first for better layer caching.
+COPY package.json package-lock.json* ./
+RUN npm install
+
+EXPOSE 8787
+ENV NODE_ENV=development
+ENV API_HOST=0.0.0.0
+ENV DB_PATH=/data/life-events.db
+
+CMD ["sh", "-c", "npm run build && node dist/migrate.js && node dist/server.js"]

@@ -1,0 +1,43 @@
+# Home Lab stack (Dell OptiPlex) — optimized image with healthcheck.
+# Image is built & published by .github/workflows/docker-build.yml on every
+# push to main, so this pulls from GHCR instead of building locally.
+# If the GitHub repo/package is private, run once on the host:
+#   docker login ghcr.io -u <github-username> -p <PAT with read:packages>
+# Usage: make prod-pull && make prod-up
+services:
+  spotify-poller:
+    image: ghcr.io/costardrouge/spotify-poller:latest
+    container_name: spotify-poller
+    ports:
+      # UI de debug + API admin : à garder sur le réseau local (pas d'exposition
+      # internet directe — reverse proxy TLS si besoin d'accès distant).
+      - "${APP_PORT:-8787}:8787"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - API_HOST=0.0.0.0
+      - DB_PATH=/data/life-events.db
+      # Planification interne au conteneur — décision documentée dans
+      # docs/scheduling.md. A toutes les 30 min, B quotidien.
+      - SCHEDULE_ENABLED=1
+    volumes:
+      # La base SQLite est IRREMPLAÇABLE (spec §1) : volume nommé obligatoire,
+      # jamais la couche writable du conteneur. À inclure dans les sauvegardes.
+      - spotify-poller-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  spotify-poller-data:
