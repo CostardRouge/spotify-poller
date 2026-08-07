@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller — collector B (liked-tracks)
+Description=Spotify Poller — collector 'liked' (liked-tracks)
 After=network-online.target
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/opt/spotify-poller
 EnvironmentFile=/opt/spotify-poller/.env
-ExecStart=/usr/bin/node dist/run-once.js B
+ExecStart=/usr/bin/node dist/run-once.js liked
 User=poller
 Group=poller
 NoNewPrivileges=true

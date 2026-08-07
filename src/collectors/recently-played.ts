@@ -22,19 +22,19 @@ interface RpItem {
 /**
  * Spec §5 — deliberate decision: NO `after` parameter.
  * We refetch the last 50 on every run; INSERT OR IGNORE sorts it out.
- * `A.last_played_at` is only used for gap detection, never for the request.
+ * `played.last_played_at` is only used for gap detection, never for the request.
  */
 export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> {
   const token = await getAccessToken(env);
 
   // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
   // throw) and writes raw_spotify on every attempt (I3).
-  let r = await spotifyGet(env, "recently_played", URL_RP, token);
+  let r = await spotifyGet(env, "played", URL_RP, token);
 
   if (r.status === 401) {
     // Isolated 401: a single token refresh, then one retry (§10).
     const retryToken = await getAccessToken(env);
-    r = await spotifyGet(env, "recently_played", URL_RP, retryToken);
+    r = await spotifyGet(env, "played", URL_RP, retryToken);
   }
 
   if (r.status >= 500) {
@@ -46,7 +46,7 @@ export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> 
 
   const items: RpItem[] = (JSON.parse(r.bodyText).items ?? []) as RpItem[];
   if (items.length === 0) {
-    setState(env, "A.last_success_at", nowIso());
+    setState(env, "played.last_success_at", nowIso());
     return { status: "ok", fetched: 0, inserted: 0, note: "empty buffer" };
   }
 
@@ -74,16 +74,16 @@ export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> 
   const playedAts = items.map((i) => i.played_at).sort();
   const oldest = playedAts[0];
   const newest = playedAts[playedAts.length - 1];
-  const last = getState(env, "A.last_played_at");
+  const last = getState(env, "played.last_played_at");
 
   if (last && Date.parse(oldest) > Date.parse(last) + GAP_TOLERANCE_MS && inserted === items.length) {
-    insertGap(env, "A", last, oldest, "buffer fully renewed between two runs");
+    insertGap(env, "played", last, oldest, "buffer fully renewed between two runs");
   }
 
   if (!last || Date.parse(newest) > Date.parse(last)) {
-    setState(env, "A.last_played_at", newest);
+    setState(env, "played.last_played_at", newest);
   }
-  setState(env, "A.last_success_at", nowIso());
+  setState(env, "played.last_success_at", nowIso());
 
   return { status: "ok", fetched: items.length, inserted };
 }

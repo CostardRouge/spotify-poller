@@ -12,6 +12,29 @@ the watchdog makes those loud. The Docker `HEALTHCHECK` complements it (local
 restart of a stuck process) but never replaces it — a powered-off host
 restarts nothing on its own.
 
+## The two collectors
+
+Named after what they collect — the same id is used in the URL, the CLI, the
+Makefile, the UI buttons and every database row:
+
+| id | Source | Cadence | Role |
+|---|---|---|---|
+| `played` | `GET /v1/me/player/recently-played` | every 30 min | the critical one: Spotify only keeps the **last 50** tracks, and this is the only collector that pings the watchdog |
+| `liked` | `GET /v1/me/tracks` | daily (hourly while the backfill is running) | liked tracks, plus the paginated initial backfill |
+
+```bash
+curl -X POST "http://127.0.0.1:8787/run?collector=played" -H "Authorization: Bearer $ADMIN_TOKEN"
+make run-played        # same thing through the dev container
+```
+
+These ids replace the former `A` (= `played`) and `B` (= `liked`). The old
+letters are still accepted by `/run` and `run-once.js` so an already-installed
+systemd unit keeps working, but everything now displays and documents the
+explicit names. Existing databases are converted by
+`migrations/0004_collector_names.sql` — run `make migrate` (or `make
+prod-migrate`) **before** starting the new version, otherwise the likes
+backfill restarts from zero.
+
 ## Recommended deployment: Docker (Spotify Calendar conventions)
 
 ```bash
@@ -37,7 +60,7 @@ for rollback, optional Watchtower redeployment).
 ```bash
 make prod-pull && make prod-up     # or: make prod-deploy
 make prod-logs
-make prod-run-a                    # manual run of collector A
+make prod-run-played               # manual run of the 'played' collector
 ```
 
 Non-negotiable points, wired into `docker-compose.prod.yml`:
@@ -47,28 +70,29 @@ Non-negotiable points, wired into `docker-compose.prod.yml`:
   be included in the host's backups;
 - **no secret in the image** — everything comes from `.env` via `env_file` at
   launch time;
-- **container-internal scheduling** (`SCHEDULE_ENABLED=1`): A every 30 min, B
-  daily. Decision and alternatives: `docs/scheduling.md`;
+- **container-internal scheduling** (`SCHEDULE_ENABLED=1`): `played` every
+  30 min, `liked` daily. Decision and alternatives: `docs/scheduling.md`;
 - Docker healthcheck on `/health`, complementing the external watchdog.
 
 ### Makefile targets
 
 `make help` lists everything — same conventions as the Spotify Calendar
 (`build/up/down/logs/shell`, `prod-*`), plus the poller operations:
-`migrate`, `run-a`, `run-b` (and their `prod-` variants).
+`migrate`, `run-played`, `run-liked` (and their `prod-` variants).
 
 ## Debug UI
 
 Served on `/` by the server (no dependencies, a single `public/index.html`
 file). Minimal, designed to verify collection:
 
-- health status: last A/B success, connected account, ongoing rate limit;
+- health status: last `played`/`liked` success, connected account, ongoing
+  rate limit;
 - Spotify account connection (Authorization Code flow, spec §7 — stable token
   stored in `poller_state`);
 - browsing of **all** collected events: type filters / title-artist search /
   date bounds, sorting, pagination, expandable JSON payload;
 - run log (`poller_runs`), declared gaps (`gaps`), stats;
-- manual triggering of collectors A and B (idempotent — I2).
+- manual triggering of the `played` and `liked` collectors (idempotent — I2).
 
 The UI asks for the `ADMIN_TOKEN` (stored in the browser's localStorage). The
 server is not meant to be exposed to the internet: local network only, TLS
@@ -82,7 +106,7 @@ reverse proxy if remote access is ever needed.
 | `GET /health` | — | last success per collector, auth, rate limit, scheduler |
 | `GET /auth/login` | token (query) | starts the OAuth connection flow |
 | `GET /auth/callback` | state cookie | Spotify return, stores the refresh token |
-| `POST /run?collector=A\|B` | Bearer/query | manual trigger (idempotent) |
+| `POST /run?collector=played\|liked` | Bearer/query | manual trigger (idempotent) |
 | `GET /stats` | Bearer/query | volumes, gaps, last 20 runs |
 | `GET /api/events` | Bearer/query | pagination + `type`, `q`, `from`, `to`, `order` filters |
 | `GET /api/runs`, `GET /api/gaps` | Bearer/query | paginated logs |
@@ -132,9 +156,20 @@ sudo -u poller npm run migrate
 ```bash
 sudo cp systemd/*.service systemd/*.timer /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable --now spotify-poller-a.timer
-sudo systemctl enable --now spotify-poller-b.timer
+sudo systemctl enable --now spotify-poller-played.timer
+sudo systemctl enable --now spotify-poller-liked.timer
 sudo systemctl enable --now spotify-poller-api.service
+```
+
+Upgrading an install that predates the collector rename: the units were called
+`spotify-poller-a.*` / `spotify-poller-b.*`. Disable them before enabling the
+new ones, otherwise both fire and collection runs twice (harmless for the data
+thanks to I2, just wasted API calls):
+
+```bash
+sudo systemctl disable --now spotify-poller-a.timer spotify-poller-b.timer
+sudo rm /etc/systemd/system/spotify-poller-[ab].{service,timer}
+sudo systemctl daemon-reload
 ```
 
 On bare metal, leave `SCHEDULE_ENABLED` unset: the systemd timers drive
@@ -154,23 +189,24 @@ is caught up as soon as the machine comes back.
 ## Acceptance tests (unchanged)
 
 ```bash
-# Idempotence (I2): replay A twice in a row
-curl -X POST "http://127.0.0.1:8787/run?collector=A" -H "Authorization: Bearer $ADMIN_TOKEN"
+# Idempotence (I2): replay 'played' twice in a row
+curl -X POST "http://127.0.0.1:8787/run?collector=played" -H "Authorization: Bearer $ADMIN_TOKEN"
 # -> inserted > 0, then replay: inserted: 0
 
 # Watchdog: stop the service, wait 2 h, confirm the healthchecks.io alert
-make down   # (or systemctl stop spotify-poller-a.timer)
+make down   # (or systemctl stop spotify-poller-played.timer)
 
 # Reboot resilience: sudo reboot, then check
 docker ps            # restart: unless-stopped must have brought the container back
-make prod-logs       # first A run ~15 s after startup
+make prod-logs       # first 'played' run ~15 s after startup
 ```
 
 ## Likes backfill
 
-The UI's "Run B" button (or `make run-b`), to be re-run until
+The UI's "Run liked" button (or `make run-liked`), to be re-run until
 `note: "backfill complete"` — or just let the daily cadence finish (while the
-backfill is in progress, the scheduler runs B every hour in bounded batches).
+backfill is in progress, the scheduler runs `liked` every hour in bounded
+batches).
 
 ## The 5 empirical tests
 

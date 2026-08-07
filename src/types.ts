@@ -18,6 +18,33 @@ export interface Env {
 
 export type RunStatus = "ok" | "partial" | "error";
 
+/**
+ * Collector identifiers. Explicit code names rather than 'A'/'B': they show up
+ * in the URL (`POST /run?collector=played`), in the CLI, in the UI buttons and
+ * in every DB row — one vocabulary end to end, nothing to memorise.
+ *  - 'played' → recently-played (every 30 min, the critical one)
+ *  - 'liked'  → liked tracks (daily, plus the initial backfill)
+ */
+export type CollectorId = "played" | "liked";
+
+export const COLLECTOR_IDS: readonly CollectorId[] = ["played", "liked"];
+
+/** Legacy ids, still accepted so a systemd unit installed before the rename keeps working. */
+const COLLECTOR_ALIASES: Record<string, CollectorId> = {
+  a: "played",
+  b: "liked",
+  recently_played: "played",
+  liked_tracks: "liked",
+};
+
+/** Returns the canonical id, or null if the input names no known collector. */
+export function parseCollectorId(raw: string | null | undefined): CollectorId | null {
+  if (!raw) return null;
+  const k = raw.trim().toLowerCase();
+  if ((COLLECTOR_IDS as readonly string[]).includes(k)) return k as CollectorId;
+  return COLLECTOR_ALIASES[k] ?? null;
+}
+
 export interface CollectorResult {
   status: RunStatus;
   fetched: number;

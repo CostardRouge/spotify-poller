@@ -44,7 +44,7 @@ async function fetchPage(env: Env, token: string, offset: number): Promise<Liked
   const url = `https://api.spotify.com/v1/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`;
   // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
   // throw) and writes raw_spotify on every attempt (I3).
-  const r = await spotifyGet(env, "liked_tracks", url, token);
+  const r = await spotifyGet(env, "liked", url, token);
   if (r.status < 200 || r.status >= 300) throw new TransientError(`spotify ${r.status}`);
 
   return (JSON.parse(r.bodyText).items ?? []) as LikedItem[];
@@ -56,14 +56,14 @@ async function fetchPage(env: Env, token: string, offset: number): Promise<Liked
  */
 export async function collectLikedTracks(env: Env): Promise<CollectorResult> {
   const token = await getAccessToken(env);
-  const backfillDone = getState(env, "B.backfill_done") === "1";
+  const backfillDone = getState(env, "liked.backfill_done") === "1";
 
   let fetched = 0;
   let inserted = 0;
 
   if (!backfillDone) {
-    let offset = Number(getState(env, "B.backfill_offset") ?? "0");
-    let maxAddedAt = getState(env, "B.last_added_at") ?? "";
+    let offset = Number(getState(env, "liked.backfill_offset") ?? "0");
+    let maxAddedAt = getState(env, "liked.last_added_at") ?? "";
 
     for (let page = 0; page < MAX_PAGES_PER_RUN; page++) {
       const items = await fetchPage(env, token, offset);
@@ -74,19 +74,19 @@ export async function collectLikedTracks(env: Env): Promise<CollectorResult> {
 
       offset += items.length;
       if (items.length < PAGE_SIZE) {
-        setState(env, "B.backfill_done", "1");
-        setState(env, "B.last_added_at", maxAddedAt);
-        setState(env, "B.last_success_at", nowIso());
+        setState(env, "liked.backfill_done", "1");
+        setState(env, "liked.last_added_at", maxAddedAt);
+        setState(env, "liked.last_success_at", nowIso());
         return { status: "ok", fetched, inserted, note: "backfill complete" };
       }
     }
-    setState(env, "B.backfill_offset", String(offset));
-    if (maxAddedAt) setState(env, "B.last_added_at", maxAddedAt);
-    setState(env, "B.last_success_at", nowIso());
+    setState(env, "liked.backfill_offset", String(offset));
+    if (maxAddedAt) setState(env, "liked.last_added_at", maxAddedAt);
+    setState(env, "liked.last_success_at", nowIso());
     return { status: "partial", fetched, inserted, note: `backfill in progress, offset=${offset}` };
   }
 
-  const lastAddedAt = getState(env, "B.last_added_at") ?? "";
+  const lastAddedAt = getState(env, "liked.last_added_at") ?? "";
   let maxAddedAt = lastAddedAt;
 
   for (let page = 0; page < MAX_PAGES_PER_RUN; page++) {
@@ -101,7 +101,7 @@ export async function collectLikedTracks(env: Env): Promise<CollectorResult> {
     if (fresh.length < items.length || items.length < PAGE_SIZE) break;
   }
 
-  if (maxAddedAt > lastAddedAt) setState(env, "B.last_added_at", maxAddedAt);
-  setState(env, "B.last_success_at", nowIso());
+  if (maxAddedAt > lastAddedAt) setState(env, "liked.last_added_at", maxAddedAt);
+  setState(env, "liked.last_success_at", nowIso());
   return { status: "ok", fetched, inserted };
 }

@@ -3,13 +3,13 @@
 ## Decision
 
 **Scheduling loop internal to the long-running container** (`src/scheduler.ts`,
-enabled by `SCHEDULE_ENABLED=1`): the HTTP server also carries the A (30 min)
-and B (daily) cadences. This is the default mode of both Docker Compose stacks
+enabled by `SCHEDULE_ENABLED=1`): the HTTP server also carries the `played`
+(30 min) and `liked` (daily) cadences. This is the default mode of both Docker Compose stacks
 in this repo.
 
 `run-once.ts` is kept as-is: it remains the entry point for the systemd timers
 on bare metal, and allows manual triggering inside the container
-(`make run-a` / `make run-b`).
+(`make run-played` / `make run-liked`).
 
 ## Why this option
 
@@ -36,11 +36,12 @@ Watchtower. Option 2 is the only one that reproduces that scheme identically:
 
 ## Guardrails specific to this choice
 
-- **Persisted B cadence**: the scheduler does not count "24 h since the process
-  started" but reads `B.last_success_at` from the database — container
-  restarts do not make the daily cadence drift. As long as B's backfill is not
-  finished, B runs at every hourly check to advance it in bounded batches.
-- **First A run ~15 s after startup**: a container crash-loop shows up
+- **Persisted `liked` cadence**: the scheduler does not count "24 h since the
+  process started" but reads `liked.last_success_at` from the database —
+  container restarts do not make the daily cadence drift. As long as the
+  backfill is not finished, `liked` runs at every hourly check to advance it in
+  bounded batches.
+- **First `played` run ~15 s after startup**: a container crash-loop shows up
   immediately in `poller_runs`, and a restart never costs more than one 30 min
   window.
 - **Anti-overlap lock** per collector; a manual trigger (`POST /run`) also

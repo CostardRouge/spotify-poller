@@ -1,6 +1,6 @@
 import { getState } from "./db";
 import { runCollector } from "./run-core";
-import { Env } from "./types";
+import { CollectorId, Env } from "./types";
 
 /**
  * Container-internal scheduling (decision §13, documented in
@@ -8,12 +8,12 @@ import { Env } from "./types";
  * just as the Spotify Calendar carries everything in a single
  * `restart: unless-stopped` container.
  *
- *  - Collector A: every SCHEDULE_A_MINUTES (30 by default), first run shortly
- *    after startup — so a restart never loses more than one window.
- *  - Collector B: cadence driven by the PERSISTED clock
- *    (`B.last_success_at`), checked every hour — the daily cadence does not
+ *  - Collector 'played': every SCHEDULE_PLAYED_MINUTES (30 by default), first
+ *    run shortly after startup — so a restart never loses more than one window.
+ *  - Collector 'liked': cadence driven by the PERSISTED clock
+ *    (`liked.last_success_at`), checked every hour — the daily cadence does not
  *    drift across container restarts.
- *    Exception: as long as the backfill is not finished, B runs at every
+ *    Exception: as long as the backfill is not finished, 'liked' runs at every
  *    hourly check to advance the backfill in bounded batches.
  *
  * Disabled by default (SCHEDULE_ENABLED=1 to turn it on): on bare metal the
@@ -22,14 +22,18 @@ import { Env } from "./types";
  */
 
 export interface SchedulerOptions {
-  aEveryMinutes: number;
-  bEveryHours: number;
+  playedEveryMinutes: number;
+  likedEveryHours: number;
 }
 
+// SCHEDULE_A_MINUTES / SCHEDULE_B_HOURS stay readable as a fallback: a .env
+// written before the rename must not silently fall back to the defaults.
 export function schedulerOptionsFromProcess(): SchedulerOptions {
   return {
-    aEveryMinutes: Number(process.env.SCHEDULE_A_MINUTES ?? "30"),
-    bEveryHours: Number(process.env.SCHEDULE_B_HOURS ?? "24"),
+    playedEveryMinutes: Number(
+      process.env.SCHEDULE_PLAYED_MINUTES ?? process.env.SCHEDULE_A_MINUTES ?? "30"
+    ),
+    likedEveryHours: Number(process.env.SCHEDULE_LIKED_HOURS ?? process.env.SCHEDULE_B_HOURS ?? "24"),
   };
 }
 
@@ -39,9 +43,9 @@ export function schedulerEnabled(): boolean {
 
 export function startScheduler(env: Env, opts: SchedulerOptions): void {
   // Anti-overlap lock: a run still in progress is never doubled up.
-  const running: Record<"A" | "B", boolean> = { A: false, B: false };
+  const running: Record<CollectorId, boolean> = { played: false, liked: false };
 
-  const tick = async (collector: "A" | "B"): Promise<void> => {
+  const tick = async (collector: CollectorId): Promise<void> => {
     if (running[collector]) return;
     running[collector] = true;
     try {
@@ -56,23 +60,24 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     }
   };
 
-  const bDue = (): boolean => {
-    if (getState(env, "B.backfill_done") !== "1") return true;
-    const last = getState(env, "B.last_success_at");
-    return !last || Date.now() - Date.parse(last) >= opts.bEveryHours * 3_600_000;
+  const likedDue = (): boolean => {
+    if (getState(env, "liked.backfill_done") !== "1") return true;
+    const last = getState(env, "liked.last_success_at");
+    return !last || Date.now() - Date.parse(last) >= opts.likedEveryHours * 3_600_000;
   };
 
-  setTimeout(() => void tick("A"), 15_000);
-  setInterval(() => void tick("A"), opts.aEveryMinutes * 60_000);
+  setTimeout(() => void tick("played"), 15_000);
+  setInterval(() => void tick("played"), opts.playedEveryMinutes * 60_000);
 
   setTimeout(() => {
-    if (bDue()) void tick("B");
+    if (likedDue()) void tick("liked");
   }, 60_000);
   setInterval(() => {
-    if (bDue()) void tick("B");
+    if (likedDue()) void tick("liked");
   }, 3_600_000);
 
   console.log(
-    `[scheduler] active — A every ${opts.aEveryMinutes} min, B every ${opts.bEveryHours} h (hourly check)`
+    `[scheduler] active — played every ${opts.playedEveryMinutes} min, ` +
+      `liked every ${opts.likedEveryHours} h (hourly check)`
   );
 }

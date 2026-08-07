@@ -1,5 +1,5 @@
 import type Database from "better-sqlite3";
-import { Env, RunStatus, nowIso } from "./types";
+import { CollectorId, Env, RunStatus, nowIso } from "./types";
 
 // ---------- raw layer (invariant I3) ----------
 
@@ -70,7 +70,7 @@ export function setState(env: Env, key: string, value: string): void {
 
 // ---------- run log (invariant I1) ----------
 
-export function startRun(env: Env, collector: "A" | "B", trigger: "cron" | "manual"): number {
+export function startRun(env: Env, collector: CollectorId, trigger: "cron" | "manual"): number {
   const r = env.DB.prepare(
     `INSERT INTO poller_runs (collector, trigger_kind, started_at) VALUES (?, ?, ?)`
   ).run(collector, trigger, nowIso());
@@ -103,15 +103,15 @@ export function insertGap(env: Env, collector: string, fromUtc: string, toUtc: s
 // ---------- reads for /health and /stats ----------
 
 export function healthSnapshot(env: Env) {
-  const lastA = getState(env, "A.last_success_at");
-  const lastB = getState(env, "B.last_success_at");
+  const lastPlayed = getState(env, "played.last_success_at");
+  const lastLiked = getState(env, "liked.last_success_at");
   const counts = env.DB.prepare(`SELECT type, COUNT(*) AS n FROM events GROUP BY type`).all() as {
     type: string;
     n: number;
   }[];
   return {
-    collector_A_last_success: lastA,
-    collector_B_last_success: lastB,
+    collector_played_last_success: lastPlayed,
+    collector_liked_last_success: lastLiked,
     events_by_type: Object.fromEntries(counts.map((r) => [r.type, r.n])),
   };
 }

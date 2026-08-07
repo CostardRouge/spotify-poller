@@ -1,5 +1,5 @@
 [Unit]
-Description=Collector B cadence (daily, spec §3)
+Description=Collector 'liked' cadence (daily, spec §3)
 
 [Timer]
 OnCalendar=*-*-* 04:17:00

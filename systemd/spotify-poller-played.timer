@@ -1,5 +1,5 @@
 [Unit]
-Description=Collector A cadence (every 30 min, spec §3)
+Description=Collector 'played' cadence (every 30 min, spec §3)
 
 [Timer]
 OnCalendar=*:0/30

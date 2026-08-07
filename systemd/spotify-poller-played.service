@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller — collector A (recently-played, critical)
+Description=Spotify Poller — collector 'played' (recently-played, critical)
 After=network-online.target
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/opt/spotify-poller
 EnvironmentFile=/opt/spotify-poller/.env
-ExecStart=/usr/bin/node dist/run-once.js A
+ExecStart=/usr/bin/node dist/run-once.js played
 User=poller
 Group=poller
 # Defence in depth, with no impact on the business logic:

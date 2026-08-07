@@ -19,7 +19,7 @@ services:
       - API_HOST=0.0.0.0
       - DB_PATH=/data/life-events.db
       # Container-internal scheduling — decision documented in
-      # docs/scheduling.md. A every 30 min, B daily.
+      # docs/scheduling.md. 'played' every 30 min, 'liked' daily.
       - SCHEDULE_ENABLED=1
     volumes:
       # The SQLite database is IRREPLACEABLE (spec §1): a named volume is

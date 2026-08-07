@@ -13,7 +13,7 @@ Each test challenges an assumption made in the spec.
 ## 2. Offline listening (THE critical test — bike rides)
 
 - **Method**: airplane mode, play 3 tracks at noted times, reconnect, trigger
-  `POST /run?collector=A`, observe the `played_at` values.
+  `POST /run?collector=played`, observe the `played_at` values.
 - **Result**:
 - **Do the timestamps reflect actual listening or the sync?**:
 

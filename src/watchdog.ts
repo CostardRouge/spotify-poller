@@ -8,7 +8,7 @@ import { Env } from "./types";
  *   GET <url>       -> success ping (the check expects a ping < 2 h)
  *   GET <url>/fail  -> immediate alert
  *
- * Only collector A (the critical one) sends the success ping;
+ * Only the 'played' collector (the critical one) sends the success ping;
  * errors from both collectors ping /fail.
  */
 export async function pingSuccess(env: Env): Promise<void> {

@@ -19,7 +19,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import Database from "better-sqlite3";
-import { loadEnvFromProcess } from "./types";
+import { COLLECTOR_IDS, loadEnvFromProcess, parseCollectorId } from "./types";
 import { healthSnapshot, listEvents, listGaps, listRuns, statsSnapshot } from "./db";
 import { appBaseUrl, authStatus, buildAuthorizeUrl, exchangeCode } from "./auth";
 import { getRateLimit } from "./spotify-api";
@@ -134,8 +134,12 @@ const server = createServer(async (req, res) => {
     // ---------- administration ----------
     if (req.method === "POST" && url.pathname === "/run") {
       if (!isAdmin(req, url)) return json(res, { error: "unauthorized" }, 401);
-      const c = url.searchParams.get("collector");
-      if (c !== "A" && c !== "B") return json(res, { error: "collector must be A or B" }, 400);
+      // 'A'/'B' still resolve (parseCollectorId) so an old bookmark or script
+      // does not break, but the documented names are the explicit ones.
+      const c = parseCollectorId(url.searchParams.get("collector"));
+      if (c === null) {
+        return json(res, { error: `collector must be one of: ${COLLECTOR_IDS.join(", ")}` }, 400);
+      }
       const result = await runCollector(c, "manual", env);
       return json(res, result, result.status === "error" ? 500 : 200);
     }

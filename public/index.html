@@ -47,14 +47,14 @@
 <header>
   <h1>spotify-poller</h1>
   <span id="badge-auth" class="badge">account: …</span>
-  <span id="badge-a" class="badge">A: …</span>
-  <span id="badge-b" class="badge">B: …</span>
+  <span id="badge-played" class="badge">played: …</span>
+  <span id="badge-liked" class="badge">liked: …</span>
   <span id="badge-rl" class="badge" hidden>rate-limit</span>
   <span style="flex:1"></span>
   <input id="token" type="password" placeholder="ADMIN_TOKEN" title="Admin token (stored in localStorage)">
   <button id="btn-connect" class="primary">Connect Spotify</button>
-  <button id="btn-run-a">Run A</button>
-  <button id="btn-run-b">Run B</button>
+  <button id="btn-run-played" title="Collect the recently played tracks (Spotify's last 50)">Run played</button>
+  <button id="btn-run-liked" title="Collect the liked tracks (and advance the initial backfill)">Run liked</button>
   <div id="msg"></div>
 </header>
 <main>
@@ -91,7 +91,7 @@
 
   <section id="tab-runs" hidden>
     <div class="tablewrap"><table id="t-runs">
-      <thead><tr><th>#</th><th>coll.</th><th>trigger</th><th>started</th><th>finished</th><th>status</th><th>fetched</th><th>inserted</th><th>error</th></tr></thead>
+      <thead><tr><th>#</th><th>collector</th><th>trigger</th><th>started</th><th>finished</th><th>status</th><th>fetched</th><th>inserted</th><th>error</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <div class="pager">
@@ -103,7 +103,7 @@
 
   <section id="tab-gaps" hidden>
     <div class="tablewrap"><table id="t-gaps">
-      <thead><tr><th>#</th><th>coll.</th><th>from</th><th>to</th><th>detected</th><th>note</th></tr></thead>
+      <thead><tr><th>#</th><th>collector</th><th>from</th><th>to</th><th>detected</th><th>note</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <p class="muted">A declared gap beats an empty day that deceptively looks like "listened to nothing".</p>
@@ -143,8 +143,8 @@
         el.textContent = label + ": " + (val ? val.replace("T", " ").slice(0, 19) : "never");
         el.className = "badge " + (val ? "ok" : "ko");
       };
-      setBadge($("#badge-a"), "A", h.collector_A_last_success);
-      setBadge($("#badge-b"), "B", h.collector_B_last_success);
+      setBadge($("#badge-played"), "played", h.collector_played_last_success);
+      setBadge($("#badge-liked"), "liked", h.collector_liked_last_success);
       const a = $("#badge-auth");
       a.textContent = h.auth.connected ? "account: connected (" + h.auth.source + ")" : "account: not connected";
       a.className = "badge " + (h.auth.connected ? "ok" : "ko");
@@ -222,8 +222,8 @@
     msg(`collector ${c}: ${r.status} — fetched ${r.fetched}, inserted ${r.inserted}${r.note ? " (" + r.note + ")" : ""}`);
     refreshHealth(); loadEvents().catch(() => {});
   }
-  $("#btn-run-a").addEventListener("click", () => run("A").catch(() => {}));
-  $("#btn-run-b").addEventListener("click", () => run("B").catch(() => {}));
+  $("#btn-run-played").addEventListener("click", () => run("played").catch(() => {}));
+  $("#btn-run-liked").addEventListener("click", () => run("liked").catch(() => {}));
 
   $("#f-apply").addEventListener("click", () => { state.events.offset = 0; loadEvents().catch(() => {}); });
   $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-apply").click(); });

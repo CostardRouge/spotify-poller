@@ -2,7 +2,7 @@ import { collectRecentlyPlayed } from "./collectors/recently-played";
 import { collectLikedTracks } from "./collectors/liked-tracks";
 import { finishRun, startRun } from "./db";
 import { getRateLimit } from "./spotify-api";
-import { AuthError, CollectorResult, Env, TransientError } from "./types";
+import { AuthError, CollectorId, CollectorResult, Env, TransientError } from "./types";
 import { pingFailure, pingSuccess } from "./watchdog";
 
 /**
@@ -10,13 +10,13 @@ import { pingFailure, pingSuccess } from "./watchdog";
  *  - poller_runs row written at start, completed in a finally (I1)
  *  - AuthError / DB error / unexpected exception -> 'error' + immediate alert
  *  - TransientError -> 'partial', silent: the next run catches up
- *  - collector A success -> watchdog ping (dead man's switch, §9)
+ *  - collector 'played' success -> watchdog ping (dead man's switch, §9)
  *
  * The watchdog matters MORE here than on Workers: there are more causes of
  * silence (reboot, local network outage, full disk, process crash) and the UPS
  * only covers a loss of mains power.
  */
-export async function runCollector(collector: "A" | "B", trigger: "cron" | "manual", env: Env): Promise<CollectorResult> {
+export async function runCollector(collector: CollectorId, trigger: "cron" | "manual", env: Env): Promise<CollectorResult> {
   let runId: number | null = null;
   let result: CollectorResult = { status: "error", fetched: 0, inserted: 0 };
   let errorMsg: string | null = null;
@@ -30,7 +30,7 @@ export async function runCollector(collector: "A" | "B", trigger: "cron" | "manu
     if (rl.limited) {
       result = { status: "partial", fetched: 0, inserted: 0, note: `rate-limited, resuming after ${rl.until}` };
     } else {
-      result = collector === "A" ? await collectRecentlyPlayed(env) : await collectLikedTracks(env);
+      result = collector === "played" ? await collectRecentlyPlayed(env) : await collectLikedTracks(env);
     }
   } catch (e) {
     if (e instanceof TransientError) {
@@ -50,7 +50,7 @@ export async function runCollector(collector: "A" | "B", trigger: "cron" | "manu
     }
   }
 
-  if (collector === "A" && result.status === "ok") {
+  if (collector === "played" && result.status === "ok") {
     await pingSuccess(env);
   }
   return result;
