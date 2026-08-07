@@ -49,6 +49,16 @@ Watchtower. Option 2 is the only one that reproduces that scheme identically:
 - **Default = disabled** outside Docker: `SCHEDULE_ENABLED` is only set to `1`
   by the compose files. On bare metal, the systemd timers remain the only
   trigger source — never two schedulers in parallel.
+- **The playback ticker exists here and nowhere else.** `PLAYBACK_ENABLED=1`
+  polls `/me/player` every 15 s while something is playing; a systemd timer
+  cannot fire that often, and one process spawn per tick would be absurd. So it
+  is deliberately tied to the in-process scheduler: with `SCHEDULE_ENABLED != 1`
+  the server logs that playback stays off rather than failing silently. It is a
+  bonus on top of `played`, which keeps working identically either way.
+  Unlike the two collectors it re-arms a `setTimeout` after each tick instead of
+  using `setInterval` — that is what allows the cadence to drop to 60 s when
+  nothing is playing, and it makes overlapping ticks structurally impossible,
+  so it needs no anti-overlap lock.
 
 ## What does not change
 

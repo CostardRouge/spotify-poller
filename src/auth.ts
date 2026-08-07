@@ -28,8 +28,20 @@ import { Account, AuthError, Env, PublicAccount, TransientError } from "./types"
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const ME_URL = "https://api.spotify.com/v1/me";
-const SCOPES = "user-read-recently-played user-library-read";
 const LEGACY_KEY_REFRESH = "auth.refresh_token";
+
+/** Scope the playback collector cannot work without (GET /me/player). */
+export const PLAYBACK_SCOPE = "user-read-playback-state";
+
+/** What 'played' and 'liked' need — always required. */
+const BASE_SCOPES = ["user-read-recently-played", "user-library-read"];
+
+/**
+ * What we ASK for on the consent screen: always the full set, even when the
+ * playback collector is off. One consent covers every feature, so turning
+ * PLAYBACK_ENABLED on later never forces a second reconnection.
+ */
+export const ALL_SCOPES = [...BASE_SCOPES, PLAYBACK_SCOPE];
 
 const MAX_TOKEN_RETRIES = 2; // network only — bounded, like spotify-api.ts
 
@@ -55,7 +67,7 @@ export function buildAuthorizeUrl(env: Env, state: string): string {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: env.SPOTIFY_CLIENT_ID,
-    scope: SCOPES,
+    scope: ALL_SCOPES.join(" "),
     redirect_uri: redirectUri(env),
     state,
     // Force the consent screen so that a scope added later gets re-approved —
@@ -261,21 +273,79 @@ export async function resolveActiveAccount(env: Env): Promise<Account> {
   );
 }
 
+// ---------- scopes ----------
+
+export type ScopeState = "ok" | "missing" | "unknown";
+
+/**
+ * What the CURRENT configuration actually needs — deliberately narrower than
+ * ALL_SCOPES: an install that leaves the playback collector off must not be
+ * nagged about a scope it never uses.
+ */
+export function requiredScopes(env: Env): string[] {
+  return env.PLAYBACK_ENABLED ? [...BASE_SCOPES, PLAYBACK_SCOPE] : [...BASE_SCOPES];
+}
+
+/**
+ * Compares the scopes Spotify granted an account (persisted in accounts.scope
+ * at connection time) against what the configuration requires — this is what
+ * lets the UI say "reconnect, you are missing X" instead of letting a collector
+ * die on an opaque 403.
+ *
+ * Spotify keeps honouring an OLD grant silently: adding a scope later does not
+ * invalidate anything, the newly scoped endpoint simply starts refusing. That
+ * is exactly what makes this worth surfacing.
+ *
+ * 'unknown' when the scope was never recorded: an account adopted from a legacy
+ * token whose response carried none. We genuinely cannot tell what was granted,
+ * so we say so rather than claiming something is broken.
+ */
+export function scopeStatus(
+  env: Env,
+  granted: string | null
+): { state: ScopeState; granted: string[] | null; missing: string[] } {
+  const required = requiredScopes(env);
+  if (!granted) return { state: "unknown", granted: null, missing: [] };
+  const held = granted.split(/\s+/).filter(Boolean);
+  const missing = required.filter((s) => !held.includes(s));
+  return { state: missing.length > 0 ? "missing" : "ok", granted: held, missing };
+}
+
+/** An account plus the verdict on its grant, as served to the UI. */
+export type AccountWithScope = PublicAccount & {
+  scope_state: ScopeState;
+  scopes_missing: string[];
+};
+
 /** Non-throwing variant for status endpoints, which must answer even when broken. */
 export function authStatus(env: Env): {
   connected: boolean;
   active_account_id: string | null;
-  accounts: PublicAccount[];
+  accounts: AccountWithScope[];
   legacy_token_pending: boolean;
+  scope_state: ScopeState;
+  scopes_missing: string[];
 } {
   const accounts = listAccounts(env);
   const activeId = getActiveAccountId(env);
   const legacyPending =
     accounts.length === 0 && (getGlobalState(env, LEGACY_KEY_REFRESH) !== null || !!env.SPOTIFY_REFRESH_TOKEN);
+
+  const withScope: AccountWithScope[] = accounts.map((a) => {
+    const sc = scopeStatus(env, a.scope);
+    return { ...a, scope_state: sc.state, scopes_missing: sc.missing };
+  });
+
+  // Top-level verdict = the ACTIVE account's, since that is the one collecting.
+  // Falling back to the first account keeps the banner honest while the pointer
+  // is stale, which is exactly what resolveActiveAccount would do.
+  const active = withScope.find((a) => a.id === activeId) ?? withScope[0];
   return {
     connected: accounts.length > 0 || legacyPending,
     active_account_id: activeId,
-    accounts,
+    accounts: withScope,
     legacy_token_pending: legacyPending,
+    scope_state: active?.scope_state ?? "unknown",
+    scopes_missing: active?.scopes_missing ?? [],
   };
 }

@@ -1,5 +1,5 @@
 import { getAccessToken } from "../auth";
-import { EventRow, getState, insertEvents, insertGap, setState } from "../db";
+import { EventRow, getState, insertEvents, insertGap, linkPlaybackSessions, setState } from "../db";
 import { spotifyGet } from "../spotify-api";
 import { Account, CollectorResult, Env, TransientError, nowIso } from "../types";
 
@@ -89,6 +89,10 @@ export async function collectRecentlyPlayed(env: Env, account: Account): Promise
     setState(env, account.id, "played.last_played_at", newest);
   }
   setState(env, account.id, "played.last_success_at", nowIso());
+
+  // Now — and only now — the listen events these playback sessions belong to
+  // exist. Best effort: an unmatched session simply keeps event_id NULL.
+  if (env.PLAYBACK_ENABLED) linkPlaybackSessions(env, account.id);
 
   return {
     status: "ok",

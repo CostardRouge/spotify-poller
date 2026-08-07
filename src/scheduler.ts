@@ -1,8 +1,18 @@
+import { appBaseUrl, resolveActiveAccount } from "./auth";
 import { runBackup } from "./backup";
-import { getActiveAccountId, getGlobalState, getState, setGlobalState } from "./db";
+import { collectPlayback } from "./collectors/playback";
+import {
+  getActiveAccountId,
+  getGlobalState,
+  getState,
+  logRun,
+  purgePlaybackSamples,
+  setGlobalState,
+} from "./db";
 import { notify, notifyOnce, notifyRecovered } from "./notify";
 import { runCollector } from "./run-core";
-import { CollectorId, Env, nowIso } from "./types";
+import { getRateLimit } from "./spotify-api";
+import { AuthError, Env, GLOBAL_SCOPE, RunStatus, TransientError, nowIso } from "./types";
 
 /**
  * Container-internal scheduling (decision §13, documented in
@@ -49,9 +59,10 @@ const KEY_BACKUP_AT = "backup.last_success_at";
 
 export function startScheduler(env: Env, opts: SchedulerOptions): void {
   // Anti-overlap lock: a run still in progress is never doubled up.
-  const running: Record<CollectorId, boolean> = { played: false, liked: false };
+  // 'playback' is not here — it has its own self-rescheduling ticker below.
+  const running: Record<"played" | "liked", boolean> = { played: false, liked: false };
 
-  const tick = async (collector: CollectorId): Promise<void> => {
+  const tick = async (collector: "played" | "liked"): Promise<void> => {
     if (running[collector]) return;
     running[collector] = true;
     try {
@@ -129,6 +140,135 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     `[scheduler] active — played every ${opts.playedEveryMinutes} min, ` +
       `liked every ${opts.likedEveryHours} h (hourly check)` +
       (env.BACKUP_ENABLED ? `, backup every ${opts.backupEveryHours} h -> ${env.BACKUP_DIR}` : "")
+  );
+}
+
+// ---------- playback ticker (opt-in) ----------
+
+export interface PlaybackOptions {
+  pollSeconds: number;
+  idlePollSeconds: number;
+  idleAfter: number;
+  retentionDays: number;
+}
+
+export function playbackEnabled(): boolean {
+  return process.env.PLAYBACK_ENABLED === "1";
+}
+
+export function playbackOptionsFromProcess(): PlaybackOptions {
+  return {
+    pollSeconds: Number(process.env.PLAYBACK_POLL_SECONDS ?? "15"),
+    idlePollSeconds: Number(process.env.PLAYBACK_IDLE_POLL_SECONDS ?? "60"),
+    idleAfter: Number(process.env.PLAYBACK_IDLE_AFTER ?? "4"),
+    retentionDays: Number(process.env.PLAYBACK_RETENTION_DAYS ?? "30"),
+  };
+}
+
+const SUMMARY_EVERY_MS = 3_600_000;
+
+/**
+ * Polls /me/player on a VARIABLE interval — hence setTimeout re-armed after
+ * each tick rather than setInterval. Two consequences that are the whole point:
+ * the cadence can drop to idlePollSeconds when nothing is playing, and ticks
+ * structurally cannot overlap (the next one is only scheduled once the previous
+ * has finished), so no anti-overlap flag is needed.
+ *
+ * Sub-minute polling is why this exists only inside the long-running server;
+ * systemd timers cannot drive it, so bare-metal installs do not get playback.
+ *
+ * Unlike the other collectors it does NOT go through runCollector: one
+ * poller_runs row per tick would be ~5760 rows a day. It writes an hourly
+ * summary instead, and re-implements the three things run-core gave it — the
+ * account resolution, the persisted 429 check, and always closing a window with
+ * a logged row.
+ */
+export function startPlaybackTicker(env: Env, opts: PlaybackOptions): void {
+  let idleStreak = 0;
+  let ticks = 0;
+  let written = 0;
+  let windowErrors = 0;
+  let windowStartedAt = nowIso();
+  let windowAccountId = GLOBAL_SCOPE;
+  let lastSummaryAt = Date.now();
+  // Set on a fatal error so we stop hammering. Re-checked on expiry, so
+  // reconnecting from the UI revives the ticker without a container restart.
+  let pausedUntil = 0;
+
+  const closeWindow = (status: RunStatus, error: string | null): void => {
+    logRun(env, windowAccountId, "playback", "cron", windowStartedAt, status, ticks, written, error);
+    ticks = 0;
+    written = 0;
+    windowErrors = 0;
+    windowStartedAt = nowIso();
+    lastSummaryAt = Date.now();
+  };
+
+  const loop = async (): Promise<void> => {
+    let delayS = opts.pollSeconds;
+    try {
+      if (Date.now() < pausedUntil) {
+        delayS = 60;
+      } else {
+        // Querying during an active ban counts against the app and may extend
+        // it — the same abstention run-core applies to the other collectors.
+        const rl = getRateLimit(env);
+        if (rl.limited) {
+          delayS = Math.min(rl.retryAfterS + 1, 300);
+        } else {
+          const account = await resolveActiveAccount(env);
+          windowAccountId = account.id;
+          ticks++;
+          const result = await collectPlayback(env, account);
+          written += result.inserted;
+          idleStreak = result.fetched === 0 ? idleStreak + 1 : 0;
+          delayS = idleStreak >= opts.idleAfter ? opts.idlePollSeconds : opts.pollSeconds;
+        }
+      }
+    } catch (e) {
+      if (e instanceof TransientError) {
+        // Silent by design (§8): the next tick catches up. Back off meanwhile.
+        windowErrors++;
+        delayS = opts.idlePollSeconds;
+      } else {
+        const msg = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+        console.error("[playback]", msg);
+        closeWindow("error", msg);
+        // A missing scope or a dead token will not fix itself in 15 s, and the
+        // alert must not fire on every tick.
+        const fatal = e instanceof AuthError;
+        pausedUntil = Date.now() + (fatal ? 3_600_000 : 600_000);
+        await notifyOnce(env, fatal ? "auth" : "run-error", {
+          title: fatal
+            ? "Spotify poller — playback needs a reconnection"
+            : "Spotify poller — playback collector failed",
+          message: `${msg}\n\nThe 'played' collector is unaffected: it keeps the history.`,
+          priority: "default",
+          tags: ["musical_note", "warning"],
+          clickUrl: appBaseUrl(env),
+        }).catch(() => {});
+        delayS = 60;
+      }
+    } finally {
+      if (Date.now() - lastSummaryAt >= SUMMARY_EVERY_MS && ticks > 0) {
+        closeWindow(
+          windowErrors > 0 ? "partial" : "ok",
+          windowErrors > 0 ? `${windowErrors} transient error(s)` : null
+        );
+        const purged = purgePlaybackSamples(env, opts.retentionDays);
+        if (purged > 0) {
+          console.log(`[playback] purged ${purged} samples older than ${opts.retentionDays} d`);
+        }
+      }
+      setTimeout(() => void loop(), delayS * 1000);
+    }
+  };
+
+  setTimeout(() => void loop(), 20_000);
+  console.log(
+    `[playback] ticker active — every ${opts.pollSeconds} s while playing, ` +
+      `${opts.idlePollSeconds} s after ${opts.idleAfter} idle polls, ` +
+      `samples kept ${opts.retentionDays} d`
   );
 }
 
