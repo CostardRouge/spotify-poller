@@ -1,5 +1,5 @@
 [Unit]
-Description=Poller Spotify — collecteur A (recently-played, critique)
+Description=Spotify Poller — collector A (recently-played, critical)
 After=network-online.target
 Wants=network-online.target
 
@@ -10,7 +10,7 @@ EnvironmentFile=/opt/spotify-poller/.env
 ExecStart=/usr/bin/node dist/run-once.js A
 User=poller
 Group=poller
-# Défense en profondeur, sans conséquence sur la logique métier :
+# Defence in depth, with no impact on the business logic:
 NoNewPrivileges=true
 ProtectSystem=strict
 ReadWritePaths=/opt/spotify-poller/data

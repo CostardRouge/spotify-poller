@@ -9,8 +9,8 @@ services:
     image: ghcr.io/costardrouge/spotify-poller:latest
     container_name: spotify-poller
     ports:
-      # UI de debug + API admin : à garder sur le réseau local (pas d'exposition
-      # internet directe — reverse proxy TLS si besoin d'accès distant).
+      # Debug UI + admin API: keep them on the local network (no direct
+      # internet exposure — TLS reverse proxy if remote access is needed).
       - "${APP_PORT:-8787}:8787"
     env_file:
       - .env
@@ -18,12 +18,12 @@ services:
       - NODE_ENV=production
       - API_HOST=0.0.0.0
       - DB_PATH=/data/life-events.db
-      # Planification interne au conteneur — décision documentée dans
-      # docs/scheduling.md. A toutes les 30 min, B quotidien.
+      # Container-internal scheduling — decision documented in
+      # docs/scheduling.md. A every 30 min, B daily.
       - SCHEDULE_ENABLED=1
     volumes:
-      # La base SQLite est IRREMPLAÇABLE (spec §1) : volume nommé obligatoire,
-      # jamais la couche writable du conteneur. À inclure dans les sauvegardes.
+      # The SQLite database is IRREPLACEABLE (spec §1): a named volume is
+      # mandatory, never the container's writable layer. Include it in backups.
       - spotify-poller-data:/data
     restart: unless-stopped
     healthcheck:

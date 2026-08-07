@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
- * Serveur HTTP : endpoints d'administration (spec §11), flow OAuth de
- * connexion du compte, API JSON de navigation et UI de debug statique.
+ * HTTP server: administration endpoints (spec §11), the account connection
+ * OAuth flow, the JSON browsing API and the static debug UI.
  *
- * Deux modes d'exécution :
- *  - bare-metal : systemd service long-running (spotify-poller-api.service),
- *    les timers systemd pilotent la collecte via run-once.ts ;
- *  - conteneur : ce process porte AUSSI la boucle de planification
- *    (SCHEDULE_ENABLED=1, voir scheduler.ts et docs/scheduling.md).
+ * Two execution modes:
+ *  - bare metal: long-running systemd service (spotify-poller-api.service),
+ *    the systemd timers drive collection through run-once.ts;
+ *  - container: this process ALSO carries the scheduling loop
+ *    (SCHEDULE_ENABLED=1, see scheduler.ts and docs/scheduling.md).
  *
- * Écoute en localhost par défaut — pas d'exposition directe à internet.
- * Si un accès distant est souhaité plus tard, passer par un reverse proxy
- * (Caddy/Nginx) avec TLS, plutôt qu'exposer ce process nu.
+ * Listens on localhost by default — no direct exposure to the internet.
+ * If remote access is wanted later, put a reverse proxy (Caddy/Nginx) with TLS
+ * in front rather than exposing this bare process.
  */
 import "dotenv/config";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
@@ -56,9 +56,9 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 /**
- * Jeton admin accepté en header Bearer (curl/scripts) ou en ?token= (liens
- * navigateur de l'UI, ex. /auth/login). UI de debug sur réseau local — le
- * jeton en query n'est acceptable que dans ce cadre.
+ * Admin token accepted in a Bearer header (curl/scripts) or as ?token= (UI
+ * browser links, e.g. /auth/login). Debug UI on the local network — the token
+ * in the query string is only acceptable in that context.
  */
 function isAdmin(req: IncomingMessage, url: URL): boolean {
   if (env.ADMIN_TOKEN.length === 0) return false;
@@ -92,7 +92,7 @@ const server = createServer(async (req, res) => {
       return res.end(uiHtml);
     }
 
-    // ---------- santé (public, sans secret) ----------
+    // ---------- health (public, no secret) ----------
     if (req.method === "GET" && url.pathname === "/health") {
       const auth = authStatus(env);
       return json(res, {
@@ -103,7 +103,7 @@ const server = createServer(async (req, res) => {
       });
     }
 
-    // ---------- connexion du compte Spotify (flow §7, via l'UI) ----------
+    // ---------- Spotify account connection (flow §7, via the UI) ----------
     if (req.method === "GET" && url.pathname === "/auth/login") {
       if (!isAdmin(req, url)) return json(res, { error: "unauthorized" }, 401);
       const state = randomBytes(16).toString("hex");
@@ -126,7 +126,7 @@ const server = createServer(async (req, res) => {
         await exchangeCode(env, code);
         return redirect(res, `${base}/?connected=1`, [clearState]);
       } catch (e) {
-        console.error("échec de l'échange de code OAuth :", e);
+        console.error("OAuth code exchange failed:", e);
         return redirect(res, `${base}/?auth_error=exchange_failed`, [clearState]);
       }
     }
@@ -145,7 +145,7 @@ const server = createServer(async (req, res) => {
       return json(res, statsSnapshot(env));
     }
 
-    // ---------- API JSON de navigation (UI de debug) ----------
+    // ---------- JSON browsing API (debug UI) ----------
     if (req.method === "GET" && url.pathname === "/api/events") {
       if (!isAdmin(req, url)) return json(res, { error: "unauthorized" }, 401);
       return json(
@@ -174,17 +174,17 @@ const server = createServer(async (req, res) => {
 
     json(res, { error: "not found" }, 404);
   } catch (e) {
-    console.error("erreur serveur :", e);
+    console.error("server error:", e);
     json(res, { error: "internal error" }, 500);
   }
 });
 
 server.listen(port, host, () => {
-  console.log(`API poller sur http://${host}:${port} (db: ${dbPath})`);
+  console.log(`Poller API on http://${host}:${port} (db: ${dbPath})`);
   if (schedulerEnabled()) {
     startScheduler(env, schedulerOptionsFromProcess());
   } else {
-    console.log("[scheduler] désactivé (SCHEDULE_ENABLED != 1) — collecte pilotée par systemd/run-once");
+    console.log("[scheduler] disabled (SCHEDULE_ENABLED != 1) — collection driven by systemd/run-once");
   }
 });
 

@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 /**
- * Script JETABLE (spec §7) — obtient le refresh token une seule fois, en local.
- * Le flow OAuth n'est PAS implémenté dans le Worker.
+ * THROWAWAY script (spec §7) — obtains the refresh token once, locally.
+ * The OAuth flow is NOT implemented in the Worker.
  *
- * Prérequis côté dashboard Spotify (developer.spotify.com) :
- *   Redirect URI de l'app = http://127.0.0.1:8888/callback
+ * Prerequisite on the Spotify dashboard (developer.spotify.com):
+ *   the app's Redirect URI = http://127.0.0.1:8888/callback
  *
- * Usage :
+ * Usage:
  *   SPOTIFY_CLIENT_ID=xxx SPOTIFY_CLIENT_SECRET=yyy node scripts/get-refresh-token.mjs
  *
- * Puis :
- *   wrangler secret put SPOTIFY_REFRESH_TOKEN   (coller la valeur affichée)
+ * Then:
+ *   wrangler secret put SPOTIFY_REFRESH_TOKEN   (paste the printed value)
  */
 import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
@@ -21,7 +21,7 @@ const REDIRECT_URI = "http://127.0.0.1:8888/callback";
 const SCOPES = "user-read-recently-played user-library-read";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
-  console.error("SPOTIFY_CLIENT_ID et SPOTIFY_CLIENT_SECRET requis en variables d'environnement.");
+  console.error("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are required as environment variables.");
   process.exit(1);
 }
 
@@ -46,7 +46,7 @@ const server = createServer(async (req, res) => {
   }
   const code = url.searchParams.get("code");
   if (!code) {
-    res.writeHead(400).end(`erreur: ${url.searchParams.get("error")}`);
+    res.writeHead(400).end(`error: ${url.searchParams.get("error")}`);
     return;
   }
 
@@ -65,18 +65,18 @@ const server = createServer(async (req, res) => {
   const tokens = await tokenRes.json();
 
   if (!tokens.refresh_token) {
-    console.error("Pas de refresh_token dans la réponse :", tokens);
-    res.writeHead(500).end("échec, voir la console");
+    console.error("No refresh_token in the response:", tokens);
+    res.writeHead(500).end("failed, see the console");
   } else {
-    console.log("\n=== REFRESH TOKEN (à installer via `wrangler secret put SPOTIFY_REFRESH_TOKEN`) ===\n");
+    console.log("\n=== REFRESH TOKEN (install it with `wrangler secret put SPOTIFY_REFRESH_TOKEN`) ===\n");
     console.log(tokens.refresh_token);
-    console.log("\nScopes accordés :", tokens.scope);
-    res.end("OK — refresh token affiché dans le terminal. Tu peux fermer cet onglet.");
+    console.log("\nGranted scopes:", tokens.scope);
+    res.end("OK — refresh token printed in the terminal. You can close this tab.");
   }
   server.close();
 });
 
 server.listen(8888, "127.0.0.1", () => {
-  console.log("Ouvre cette URL dans ton navigateur :\n");
+  console.log("Open this URL in your browser:\n");
   console.log(authUrl.toString());
 });

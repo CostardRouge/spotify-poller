@@ -1,23 +1,23 @@
 import { Env } from "./types";
 
 /**
- * Dead man's switch (spec §9). La surveillance est EXTERNE :
- * un watchdog hébergé ici se tairait en même temps que le Worker.
+ * Dead man's switch (spec §9). The monitoring is EXTERNAL:
+ * a watchdog hosted here would go silent at the same time as the Worker.
  *
- * Convention healthchecks.io :
- *   GET <url>       -> ping de succès (le check attend un ping < 2 h)
- *   GET <url>/fail  -> alerte immédiate
+ * healthchecks.io convention:
+ *   GET <url>       -> success ping (the check expects a ping < 2 h)
+ *   GET <url>/fail  -> immediate alert
  *
- * Seul le collecteur A (critique) envoie le ping de succès ;
- * les erreurs des deux collecteurs pingent /fail.
+ * Only collector A (the critical one) sends the success ping;
+ * errors from both collectors ping /fail.
  */
 export async function pingSuccess(env: Env): Promise<void> {
-  if (!env.WATCHDOG_URL) return; // dev local uniquement — obligatoire en prod
+  if (!env.WATCHDOG_URL) return; // local dev only — mandatory in production
   try {
     await fetch(env.WATCHDOG_URL, { method: "GET" });
   } catch {
-    // Un échec de ping ne doit pas faire échouer l'exécution :
-    // le silence déclenchera l'alerte côté watchdog, c'est son rôle.
+    // A failed ping must not fail the run: the silence will trigger the
+    // alert on the watchdog side, that is its job.
   }
 }
 
@@ -29,6 +29,6 @@ export async function pingFailure(env: Env, reason: string): Promise<void> {
       body: reason.slice(0, 1000),
     });
   } catch {
-    /* idem */
+    /* same */
   }
 }

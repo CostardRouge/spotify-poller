@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { Env, RunStatus, nowIso } from "./types";
 
-// ---------- couche brute (invariant I3) ----------
+// ---------- raw layer (invariant I3) ----------
 
 export function insertRaw(
   env: Env,
@@ -16,7 +16,7 @@ export function insertRaw(
   ).run(collector, nowIso(), httpStatus, requestUrl, payload);
 }
 
-// ---------- événements (invariant I2) ----------
+// ---------- events (invariant I2) ----------
 
 export interface EventRow {
   id: string;
@@ -30,8 +30,8 @@ export interface EventRow {
 }
 
 /**
- * INSERT OR IGNORE en transaction. Retourne le nombre réellement inséré
- * (better-sqlite3 : changes vaut 0 pour chaque ligne ignorée par la dédup).
+ * INSERT OR IGNORE inside a transaction. Returns the number actually inserted
+ * (better-sqlite3: changes is 0 for every row skipped by the dedup).
  */
 export function insertEvents(env: Env, rows: EventRow[]): number {
   if (rows.length === 0) return 0;
@@ -52,7 +52,7 @@ export function insertEvents(env: Env, rows: EventRow[]): number {
   return inserted;
 }
 
-// ---------- état ----------
+// ---------- state ----------
 
 export function getState(env: Env, key: string): string | null {
   const row = env.DB.prepare(`SELECT value FROM poller_state WHERE key = ?`).get(key) as
@@ -68,7 +68,7 @@ export function setState(env: Env, key: string, value: string): void {
   ).run(key, value, nowIso());
 }
 
-// ---------- journal (invariant I1) ----------
+// ---------- run log (invariant I1) ----------
 
 export function startRun(env: Env, collector: "A" | "B", trigger: "cron" | "manual"): number {
   const r = env.DB.prepare(
@@ -92,7 +92,7 @@ export function finishRun(
   ).run(nowIso(), status, fetched, inserted, error, runId);
 }
 
-// ---------- trous ----------
+// ---------- gaps ----------
 
 export function insertGap(env: Env, collector: string, fromUtc: string, toUtc: string, note: string): void {
   env.DB.prepare(
@@ -100,7 +100,7 @@ export function insertGap(env: Env, collector: string, fromUtc: string, toUtc: s
   ).run(collector, fromUtc, toUtc, nowIso(), note);
 }
 
-// ---------- lecture pour /health et /stats ----------
+// ---------- reads for /health and /stats ----------
 
 export function healthSnapshot(env: Env) {
   const lastA = getState(env, "A.last_success_at");
@@ -116,14 +116,14 @@ export function healthSnapshot(env: Env) {
   };
 }
 
-// ---------- navigation paginée pour l'UI de debug ----------
+// ---------- paginated browsing for the debug UI ----------
 
 export interface EventFilter {
   type?: string; // 'listen' | 'like' | ...
-  q?: string; // recherche LIKE sur title/subtitle
-  from?: string; // ISO8601, borne incluse sur ts_utc
+  q?: string; // LIKE search on title/subtitle
+  from?: string; // ISO8601, inclusive bound on ts_utc
   to?: string;
-  order?: "asc" | "desc"; // sur ts_utc, desc par défaut
+  order?: "asc" | "desc"; // on ts_utc, desc by default
   limit: number;
   offset: number;
 }

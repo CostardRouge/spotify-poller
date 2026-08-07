@@ -2,15 +2,15 @@ import { getState, setState } from "./db";
 import { AuthError, Env, TransientError, nowIso } from "./types";
 
 /**
- * Authorization Code Flow avec client_secret (spec §7) :
- * le refresh token est STABLE (pas de rotation PKCE).
- * L'access token vit 1 h — on le rafraîchit à chaque exécution, sans cache.
+ * Authorization Code Flow with client_secret (spec §7):
+ * the refresh token is STABLE (no PKCE rotation).
+ * The access token lives 1 h — we refresh it on every run, without caching.
  *
- * Deux sources possibles pour le refresh token, dans cet ordre :
- *  1. poller_state (`auth.refresh_token`) — écrit par le flow de connexion de
- *     l'UI (/auth/login → /auth/callback), c'est la voie normale ;
- *  2. SPOTIFY_REFRESH_TOKEN en variable d'environnement — fallback compatible
- *     avec l'installation historique via scripts/get-refresh-token.mjs.
+ * Two possible sources for the refresh token, in this order:
+ *  1. poller_state (`auth.refresh_token`) — written by the UI connection flow
+ *     (/auth/login → /auth/callback), this is the normal path;
+ *  2. SPOTIFY_REFRESH_TOKEN as an environment variable — fallback compatible
+ *     with the legacy install via scripts/get-refresh-token.mjs.
  */
 
 const TOKEN_URL = "https://accounts.spotify.com/api/token";
@@ -19,7 +19,7 @@ const KEY_REFRESH = "auth.refresh_token";
 const KEY_SCOPE = "auth.scope";
 const KEY_CONNECTED_AT = "auth.connected_at";
 
-const MAX_TOKEN_RETRIES = 2; // réseau uniquement — borné, comme spotify-api.ts
+const MAX_TOKEN_RETRIES = 2; // network only — bounded, like spotify-api.ts
 
 function basicAuthHeader(env: Env): string {
   return "Basic " + Buffer.from(`${env.SPOTIFY_CLIENT_ID}:${env.SPOTIFY_CLIENT_SECRET}`).toString("base64");
@@ -30,9 +30,9 @@ export function redirectUri(env: Env): string {
 }
 
 /**
- * Base publique de l'UI, dérivée du redirect URI — jamais de l'hôte de la
- * requête, qui derrière Docker serait l'hôte interne du conteneur
- * (convention appBaseUrl du Spotify Calendar).
+ * Public base URL of the UI, derived from the redirect URI — never from the
+ * request host, which behind Docker would be the container's internal host
+ * (appBaseUrl convention from the Spotify Calendar).
  */
 export function appBaseUrl(env: Env): string {
   return redirectUri(env).replace(/\/auth\/callback\/?$/, "");
@@ -66,7 +66,7 @@ export function authStatus(env: Env): {
   };
 }
 
-/** URL d'autorisation Spotify pour le flow de connexion de l'UI. */
+/** Spotify authorization URL for the UI connection flow. */
 export function buildAuthorizeUrl(env: Env, state: string): string {
   const params = new URLSearchParams({
     response_type: "code",
@@ -74,16 +74,16 @@ export function buildAuthorizeUrl(env: Env, state: string): string {
     scope: SCOPES,
     redirect_uri: redirectUri(env),
     state,
-    // Force l'écran de consentement pour qu'un scope ajouté plus tard soit
-    // re-approuvé — sans ça, Spotify réutilise silencieusement l'ancien grant
-    // et les tokens rafraîchis 401-ent sur les endpoints nouvellement scopés
-    // (« scope drift », convention Spotify Calendar).
+    // Force the consent screen so that a scope added later gets re-approved —
+    // without it, Spotify silently reuses the old grant and refreshed tokens
+    // 401 on newly scoped endpoints ("scope drift", Spotify Calendar
+    // convention).
     show_dialog: "true",
   });
   return "https://accounts.spotify.com/authorize?" + params.toString();
 }
 
-/** Échange le code d'autorisation, persiste le refresh token dans poller_state. */
+/** Exchanges the authorization code, persists the refresh token in poller_state. */
 export async function exchangeCode(env: Env, code: string): Promise<void> {
   const res = await fetch(TOKEN_URL, {
     method: "POST",
@@ -110,8 +110,8 @@ export async function exchangeCode(env: Env, code: string): Promise<void> {
 export async function getAccessToken(env: Env): Promise<string> {
   const rt = getRefreshToken(env);
   if (!rt) {
-    // Pas de compte connecté : la collecte est morte pour de bon — bruyant.
-    throw new AuthError("aucun refresh token : connecter le compte via l'UI (/auth/login) ou définir SPOTIFY_REFRESH_TOKEN");
+    // No connected account: collection is dead for good — be loud.
+    throw new AuthError("no refresh token: connect the account through the UI (/auth/login) or set SPOTIFY_REFRESH_TOKEN");
   }
 
   let res: Response | null = null;
@@ -133,14 +133,14 @@ export async function getAccessToken(env: Env): Promise<string> {
         await new Promise((r) => setTimeout(r, 500 * 2 ** attempt));
         continue;
       }
-      // Réseau : transitoire, le prochain passage rattrape.
+      // Network: transient, the next run catches up.
       throw new TransientError(`token endpoint unreachable: ${String(e)}`);
     }
   }
 
   if (res.status === 400 || res.status === 401 || res.status === 403) {
-    // Refresh token invalide/révoqué : arrêt définitif de la collecte.
-    // Doit être BRUYANT (§8) — AuthError déclenche l'alerte immédiate.
+    // Invalid/revoked refresh token: collection stops for good.
+    // Must be LOUD (§8) — AuthError triggers the immediate alert.
     const body = await res.text().catch(() => "");
     throw new AuthError(`refresh token rejected (${res.status}): ${body.slice(0, 300)}`);
   }
@@ -152,9 +152,9 @@ export async function getAccessToken(env: Env): Promise<string> {
   if (!json.access_token) {
     throw new AuthError("token response missing access_token");
   }
-  // Spotify peut occasionnellement renvoyer un nouveau refresh token même en
-  // code flow classique : le persister quand la source est la base, pour ne
-  // jamais continuer sur un token périmé.
+  // Spotify may occasionally return a new refresh token even in the classic
+  // code flow: persist it when the source is the database, so we never keep
+  // going with a stale token.
   if (json.refresh_token && rt.source === "ui") {
     storeRefreshToken(env, json.refresh_token, json.scope);
   }

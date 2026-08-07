@@ -1,5 +1,5 @@
 [Unit]
-Description=Poller Spotify — collecteur B (liked-tracks)
+Description=Spotify Poller — collector B (liked-tracks)
 After=network-online.target
 Wants=network-online.target
 

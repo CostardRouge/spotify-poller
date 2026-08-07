@@ -20,19 +20,19 @@ interface RpItem {
 }
 
 /**
- * Spec §5 — décision délibérée : PAS de paramètre `after`.
- * On refetch les 50 derniers à chaque passage ; INSERT OR IGNORE trie.
- * `A.last_played_at` ne sert qu'à la détection de trous, jamais à la requête.
+ * Spec §5 — deliberate decision: NO `after` parameter.
+ * We refetch the last 50 on every run; INSERT OR IGNORE sorts it out.
+ * `A.last_played_at` is only used for gap detection, never for the request.
  */
 export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> {
   const token = await getAccessToken(env);
 
-  // spotifyGet gère réseau/5xx (retry borné), 429 (cooldown persisté + throw)
-  // et écrit raw_spotify à chaque tentative (I3).
+  // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
+  // throw) and writes raw_spotify on every attempt (I3).
   let r = await spotifyGet(env, "recently_played", URL_RP, token);
 
   if (r.status === 401) {
-    // 401 isolé : un seul rafraîchissement de token puis nouvel essai (§10).
+    // Isolated 401: a single token refresh, then one retry (§10).
     const retryToken = await getAccessToken(env);
     r = await spotifyGet(env, "recently_played", URL_RP, retryToken);
   }
@@ -77,7 +77,7 @@ export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> 
   const last = getState(env, "A.last_played_at");
 
   if (last && Date.parse(oldest) > Date.parse(last) + GAP_TOLERANCE_MS && inserted === items.length) {
-    insertGap(env, "A", last, oldest, "buffer entièrement renouvelé entre deux passages");
+    insertGap(env, "A", last, oldest, "buffer fully renewed between two runs");
   }
 
   if (!last || Date.parse(newest) > Date.parse(last)) {

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Applique les migrations 0001..000N dans l'ordre, sur une base neuve ou existante.
- * Idempotent au sens large : ne réapplique pas une migration déjà marquée appliquée.
+ * Applies migrations 0001..000N in order, on a fresh or existing database.
+ * Idempotent in the broad sense: does not re-apply a migration already marked
+ * as applied.
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -30,10 +31,10 @@ const files = readdirSync(migrationsDir)
 
 for (const file of files) {
   if (applied.has(file)) {
-    console.log(`déjà appliquée : ${file}`);
+    console.log(`already applied: ${file}`);
     continue;
   }
-  console.log(`application : ${file}`);
+  console.log(`applying: ${file}`);
   const sql = readFileSync(join(migrationsDir, file), "utf8");
   const tx = db.transaction(() => {
     db.exec(sql);
@@ -45,5 +46,5 @@ for (const file of files) {
   tx();
 }
 
-console.log(`OK — base à jour : ${dbPath}`);
+console.log(`OK — database up to date: ${dbPath}`);
 db.close();

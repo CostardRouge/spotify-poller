@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Exécution unique d'un collecteur, invoquée par systemd (voir systemd/*.service).
- * Remplace le handler `scheduled` du Worker : ici, c'est le timer systemd qui
- * décide de la cadence, ce script ne fait qu'exécuter un passage et sortir.
+ * Single run of a collector, invoked by systemd (see systemd/*.service).
+ * Replaces the Worker's `scheduled` handler: here the systemd timer decides
+ * the cadence, this script only performs one run and exits.
  *
- * Usage : node dist/run-once.js A
- *         node dist/run-once.js B
+ * Usage: node dist/run-once.js A
+ *        node dist/run-once.js B
  */
 import "dotenv/config";
 import Database from "better-sqlite3";
@@ -20,20 +20,20 @@ if (collector !== "A" && collector !== "B") {
 
 const dbPath = process.env.DB_PATH ?? "./data/life-events.db";
 const db = new Database(dbPath);
-db.pragma("journal_mode = WAL"); // tolère mieux une coupure brutale (kill -9, panne) qu'en mode rollback
+db.pragma("journal_mode = WAL"); // survives an abrupt shutdown (kill -9, power cut) better than rollback mode
 
 const env = loadEnvFromProcess(db);
 
 runCollector(collector, "cron", env)
   .then((result) => {
-    console.log(`[${new Date().toISOString()}] collecteur ${collector} :`, result);
+    console.log(`[${new Date().toISOString()}] collector ${collector}:`, result);
     db.close();
-    // exit(1) sur 'error' : le systemd service peut alors être configuré en
-    // Restart=on-failure si on veut une relance immédiate en plus du timer.
+    // exit(1) on 'error': the systemd service can then be configured with
+    // Restart=on-failure for an immediate retry on top of the timer.
     process.exit(result.status === "error" ? 1 : 0);
   })
   .catch((e) => {
-    console.error("erreur non capturée :", e);
+    console.error("uncaught error:", e);
     db.close();
     process.exit(1);
   });

@@ -34,8 +34,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
 ENV API_PORT=8787
-# La base SQLite vit sur /data — TOUJOURS un volume monté (compose), jamais la
-# couche writable du conteneur : la donnée collectée est irremplaçable (§1).
+# The SQLite database lives on /data — ALWAYS a mounted volume (compose), never
+# the container's writable layer: the collected data is irreplaceable (§1).
 ENV DB_PATH=/data/life-events.db
 
 # Run as an unprivileged user.

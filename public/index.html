@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,67 +46,67 @@
 <body>
 <header>
   <h1>spotify-poller</h1>
-  <span id="badge-auth" class="badge">compte : …</span>
-  <span id="badge-a" class="badge">A : …</span>
-  <span id="badge-b" class="badge">B : …</span>
+  <span id="badge-auth" class="badge">account: …</span>
+  <span id="badge-a" class="badge">A: …</span>
+  <span id="badge-b" class="badge">B: …</span>
   <span id="badge-rl" class="badge" hidden>rate-limit</span>
   <span style="flex:1"></span>
-  <input id="token" type="password" placeholder="ADMIN_TOKEN" title="Jeton admin (stocké dans localStorage)">
-  <button id="btn-connect" class="primary">Connecter Spotify</button>
+  <input id="token" type="password" placeholder="ADMIN_TOKEN" title="Admin token (stored in localStorage)">
+  <button id="btn-connect" class="primary">Connect Spotify</button>
   <button id="btn-run-a">Run A</button>
   <button id="btn-run-b">Run B</button>
   <div id="msg"></div>
 </header>
 <main>
   <nav class="tabs">
-    <button data-tab="events" class="active">Événements</button>
-    <button data-tab="runs">Exécutions</button>
-    <button data-tab="gaps">Trous</button>
+    <button data-tab="events" class="active">Events</button>
+    <button data-tab="runs">Runs</button>
+    <button data-tab="gaps">Gaps</button>
     <button data-tab="stats">Stats</button>
   </nav>
 
   <section id="tab-events">
     <div class="filters">
       <select id="f-type">
-        <option value="">tous types</option>
+        <option value="">all types</option>
         <option value="listen">listen</option>
         <option value="like">like</option>
       </select>
-      <input id="f-q" type="text" placeholder="recherche titre / artiste">
-      <input id="f-from" type="date" title="depuis (UTC)">
-      <input id="f-to" type="date" title="jusqu'à (UTC)">
-      <select id="f-order"><option value="desc">plus récents d'abord</option><option value="asc">plus anciens d'abord</option></select>
-      <button id="f-apply" class="primary">Filtrer</button>
+      <input id="f-q" type="text" placeholder="search title / artist">
+      <input id="f-from" type="date" title="from (UTC)">
+      <input id="f-to" type="date" title="to (UTC)">
+      <select id="f-order"><option value="desc">newest first</option><option value="asc">oldest first</option></select>
+      <button id="f-apply" class="primary">Filter</button>
     </div>
     <div class="tablewrap"><table id="t-events">
-      <thead><tr><th>ts_utc</th><th>type</th><th>titre</th><th>sous-titre</th><th>durée</th><th>payload</th></tr></thead>
+      <thead><tr><th>ts_utc</th><th>type</th><th>title</th><th>subtitle</th><th>duration</th><th>payload</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <div class="pager">
-      <button id="ev-prev">← préc.</button>
+      <button id="ev-prev">← prev</button>
       <span id="ev-info" class="muted"></span>
-      <button id="ev-next">suiv. →</button>
+      <button id="ev-next">next →</button>
     </div>
   </section>
 
   <section id="tab-runs" hidden>
     <div class="tablewrap"><table id="t-runs">
-      <thead><tr><th>#</th><th>coll.</th><th>déclencheur</th><th>début</th><th>fin</th><th>statut</th><th>récupérés</th><th>insérés</th><th>erreur</th></tr></thead>
+      <thead><tr><th>#</th><th>coll.</th><th>trigger</th><th>started</th><th>finished</th><th>status</th><th>fetched</th><th>inserted</th><th>error</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <div class="pager">
-      <button id="run-prev">← préc.</button>
+      <button id="run-prev">← prev</button>
       <span id="run-info" class="muted"></span>
-      <button id="run-next">suiv. →</button>
+      <button id="run-next">next →</button>
     </div>
   </section>
 
   <section id="tab-gaps" hidden>
     <div class="tablewrap"><table id="t-gaps">
-      <thead><tr><th>#</th><th>coll.</th><th>de</th><th>à</th><th>détecté</th><th>note</th></tr></thead>
+      <thead><tr><th>#</th><th>coll.</th><th>from</th><th>to</th><th>detected</th><th>note</th></tr></thead>
       <tbody></tbody>
     </table></div>
-    <p class="muted">Un trou déclaré vaut mieux qu'un jour vide qui ressemble mensongèrement à « rien écouté ».</p>
+    <p class="muted">A declared gap beats an empty day that deceptively looks like "listened to nothing".</p>
   </section>
 
   <section id="tab-stats" hidden>
@@ -128,33 +128,33 @@
 
   async function api(path, opts = {}) {
     const res = await fetch(path, { ...opts, headers: { Authorization: "Bearer " + tokenInput.value } });
-    if (res.status === 401) { msg("401 — renseigner le jeton admin (en haut à droite)."); throw new Error("unauthorized"); }
+    if (res.status === 401) { msg("401 — enter the admin token (top right)."); throw new Error("unauthorized"); }
     return res.json();
   }
 
   function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
   function fmtDur(s) { if (s == null) return ""; return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
-  // ---------- santé ----------
+  // ---------- health ----------
   async function refreshHealth() {
     try {
       const h = await (await fetch("/health")).json();
       const setBadge = (el, label, val) => {
-        el.textContent = label + " : " + (val ? val.replace("T", " ").slice(0, 19) : "jamais");
+        el.textContent = label + ": " + (val ? val.replace("T", " ").slice(0, 19) : "never");
         el.className = "badge " + (val ? "ok" : "ko");
       };
       setBadge($("#badge-a"), "A", h.collector_A_last_success);
       setBadge($("#badge-b"), "B", h.collector_B_last_success);
       const a = $("#badge-auth");
-      a.textContent = h.auth.connected ? "compte : connecté (" + h.auth.source + ")" : "compte : non connecté";
+      a.textContent = h.auth.connected ? "account: connected (" + h.auth.source + ")" : "account: not connected";
       a.className = "badge " + (h.auth.connected ? "ok" : "ko");
       const rl = $("#badge-rl");
       rl.hidden = !h.rate_limit.limited;
       if (h.rate_limit.limited) { rl.textContent = "rate-limited → " + h.rate_limit.until; rl.className = "badge ko"; }
-    } catch { msg("serveur injoignable"); }
+    } catch { msg("server unreachable"); }
   }
 
-  // ---------- événements ----------
+  // ---------- events ----------
   async function loadEvents() {
     const p = new URLSearchParams({ limit: PAGE, offset: state.events.offset, order: $("#f-order").value });
     if ($("#f-type").value) p.set("type", $("#f-type").value);
@@ -175,14 +175,14 @@
     $("#ev-next").disabled = d.offset + PAGE >= d.total;
   }
 
-  // ---------- exécutions ----------
+  // ---------- runs ----------
   async function loadRuns() {
     const d = await api(`/api/runs?limit=${PAGE}&offset=${state.runs.offset}`);
     $("#t-runs tbody").innerHTML = d.items.map((r) => `<tr>
       <td>${r.id}</td><td>${esc(r.collector)}</td><td>${esc(r.trigger_kind)}</td>
       <td>${esc((r.started_at || "").replace("T", " ").slice(0, 19))}</td>
       <td>${esc((r.finished_at || "—").replace("T", " ").slice(0, 19))}</td>
-      <td class="status-${esc(r.status || "error")}">${esc(r.status || "jamais terminé")}</td>
+      <td class="status-${esc(r.status || "error")}">${esc(r.status || "never finished")}</td>
       <td>${r.items_fetched}</td><td>${r.items_inserted}</td>
       <td class="wrap muted">${esc(r.error || "")}</td>
     </tr>`).join("");
@@ -196,14 +196,14 @@
     $("#t-gaps tbody").innerHTML = d.items.length
       ? d.items.map((g) => `<tr><td>${g.id}</td><td>${esc(g.collector)}</td><td>${esc(g.from_utc)}</td>
           <td>${esc(g.to_utc)}</td><td>${esc(g.detected_at)}</td><td class="wrap">${esc(g.note || "")}</td></tr>`).join("")
-      : `<tr><td colspan="6" class="muted">aucun trou déclaré 🎉</td></tr>`;
+      : `<tr><td colspan="6" class="muted">no declared gaps 🎉</td></tr>`;
   }
 
   async function loadStats() {
     $("#stats-out").textContent = JSON.stringify(await api("/stats"), null, 2);
   }
 
-  // ---------- onglets ----------
+  // ---------- tabs ----------
   const loaders = { events: loadEvents, runs: loadRuns, gaps: loadGaps, stats: loadStats };
   document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("nav.tabs button").forEach((x) => x.classList.toggle("active", x === b));
@@ -213,13 +213,13 @@
 
   // ---------- actions ----------
   $("#btn-connect").addEventListener("click", () => {
-    if (!tokenInput.value) return msg("renseigner d'abord le jeton admin");
+    if (!tokenInput.value) return msg("enter the admin token first");
     location.href = "/auth/login?token=" + encodeURIComponent(tokenInput.value);
   });
   async function run(c) {
-    msg(`exécution du collecteur ${c}…`);
+    msg(`running collector ${c}…`);
     const r = await api(`/run?collector=${c}`, { method: "POST" });
-    msg(`collecteur ${c} : ${r.status} — récupérés ${r.fetched}, insérés ${r.inserted}${r.note ? " (" + r.note + ")" : ""}`);
+    msg(`collector ${c}: ${r.status} — fetched ${r.fetched}, inserted ${r.inserted}${r.note ? " (" + r.note + ")" : ""}`);
     refreshHealth(); loadEvents().catch(() => {});
   }
   $("#btn-run-a").addEventListener("click", () => run("A").catch(() => {}));
@@ -232,10 +232,10 @@
   $("#run-prev").addEventListener("click", () => { state.runs.offset = Math.max(0, state.runs.offset - PAGE); loadRuns(); });
   $("#run-next").addEventListener("click", () => { state.runs.offset += PAGE; loadRuns(); });
 
-  // ---------- retour du flow OAuth ----------
+  // ---------- OAuth flow return ----------
   const qp = new URLSearchParams(location.search);
-  if (qp.get("connected")) msg("compte Spotify connecté ✔");
-  if (qp.get("auth_error")) msg("échec de connexion : " + qp.get("auth_error"));
+  if (qp.get("connected")) msg("Spotify account connected ✔");
+  if (qp.get("auth_error")) msg("connection failed: " + qp.get("auth_error"));
   if (qp.get("connected") || qp.get("auth_error")) history.replaceState(null, "", "/");
 
   refreshHealth();

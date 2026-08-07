@@ -1,11 +1,11 @@
 [Unit]
-Description=Cadence du collecteur A (toutes les 30 min, spec §3)
+Description=Collector A cadence (every 30 min, spec §3)
 
 [Timer]
 OnCalendar=*:0/30
-# Si l'OptiPlex était éteint/rebooté au moment prévu (mise à jour, coupure
-# hors fenêtre de l'onduleur), on rattrape au démarrage plutôt que d'attendre
-# le prochain créneau — limite la fenêtre de perte définie en §1.
+# If the OptiPlex was off/rebooting at the scheduled time (update, outage
+# beyond the UPS window), we catch up at startup rather than waiting for the
+# next slot — this bounds the loss window defined in §1.
 Persistent=true
 AccuracySec=1min
 

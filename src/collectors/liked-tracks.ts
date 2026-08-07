@@ -4,8 +4,8 @@ import { spotifyGet } from "../spotify-api";
 import { CollectorResult, Env, TransientError, nowIso } from "../types";
 
 const PAGE_SIZE = 50;
-// Pas de limite de sous-requêtes en self-host, mais on garde un budget par
-// exécution pour ne pas monopoliser le rate-limit Spotify sur un seul run.
+// No subrequest limit when self-hosted, but we keep a per-run budget so a
+// single run does not monopolize the Spotify rate limit.
 const MAX_PAGES_PER_RUN = 30;
 
 interface LikedItem {
@@ -42,8 +42,8 @@ function toRow(it: LikedItem): EventRow {
 
 async function fetchPage(env: Env, token: string, offset: number): Promise<LikedItem[]> {
   const url = `https://api.spotify.com/v1/me/tracks?limit=${PAGE_SIZE}&offset=${offset}`;
-  // spotifyGet gère réseau/5xx (retry borné), 429 (cooldown persisté + throw)
-  // et écrit raw_spotify à chaque tentative (I3).
+  // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
+  // throw) and writes raw_spotify on every attempt (I3).
   const r = await spotifyGet(env, "liked_tracks", url, token);
   if (r.status < 200 || r.status >= 300) throw new TransientError(`spotify ${r.status}`);
 
@@ -51,8 +51,8 @@ async function fetchPage(env: Env, token: string, offset: number): Promise<Liked
 }
 
 /**
- * Spec §6 : backfill par offset (première installation) puis mode incrémental.
- * Un unlike ne retire rien — l'événement a bien eu lieu (comportement voulu).
+ * Spec §6: offset-based backfill (first install), then incremental mode.
+ * An unlike removes nothing — the event did happen (intended behaviour).
  */
 export async function collectLikedTracks(env: Env): Promise<CollectorResult> {
   const token = await getAccessToken(env);
@@ -77,13 +77,13 @@ export async function collectLikedTracks(env: Env): Promise<CollectorResult> {
         setState(env, "B.backfill_done", "1");
         setState(env, "B.last_added_at", maxAddedAt);
         setState(env, "B.last_success_at", nowIso());
-        return { status: "ok", fetched, inserted, note: "backfill terminé" };
+        return { status: "ok", fetched, inserted, note: "backfill complete" };
       }
     }
     setState(env, "B.backfill_offset", String(offset));
     if (maxAddedAt) setState(env, "B.last_added_at", maxAddedAt);
     setState(env, "B.last_success_at", nowIso());
-    return { status: "partial", fetched, inserted, note: `backfill en cours, offset=${offset}` };
+    return { status: "partial", fetched, inserted, note: `backfill in progress, offset=${offset}` };
   }
 
   const lastAddedAt = getState(env, "B.last_added_at") ?? "";
