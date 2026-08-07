@@ -27,6 +27,7 @@ import { Readable } from "node:stream";
 import Database from "better-sqlite3";
 import { COLLECTOR_IDS, Env, GLOBAL_SCOPE, loadEnvFromProcess, parseCollectorId } from "./types";
 import {
+  disconnectAccount,
   getAccount,
   getActiveAccountId,
   eventCountsByAccount,
@@ -34,6 +35,7 @@ import {
   listAccounts,
   listEvents,
   listGaps,
+  listPlaybackSessions,
   listRuns,
   setActiveAccountId,
   statsSnapshot,
@@ -43,7 +45,14 @@ import { countEvents, iterateEventsNdjson } from "./export";
 import { runBackup } from "./backup";
 import { getRateLimit } from "./spotify-api";
 import { runCollector } from "./run-core";
-import { schedulerEnabled, schedulerOptionsFromProcess, startScheduler } from "./scheduler";
+import {
+  playbackEnabled,
+  playbackOptionsFromProcess,
+  schedulerEnabled,
+  schedulerOptionsFromProcess,
+  startPlaybackTicker,
+  startScheduler,
+} from "./scheduler";
 
 const dbPath = process.env.DB_PATH ?? "./data/life-events.db";
 const port = Number(process.env.API_PORT ?? "8787");
@@ -105,7 +114,12 @@ function readCookie(req: IncomingMessage, name: string): string | null {
 }
 
 function intParam(url: URL, name: string, fallback: number, max: number): number {
-  const raw = Number(url.searchParams.get(name));
+  // An absent param must fall back, not read as 0 — Number(null) is 0, which
+  // silently turned `GET /api/events` with no ?limit into limit=0. The UI never
+  // hit it because it always sends one; curl did.
+  const s = url.searchParams.get(name);
+  if (s === null || s.trim() === "") return fallback;
+  const raw = Number(s);
   if (!Number.isFinite(raw) || raw < 0) return fallback;
   return Math.min(Math.floor(raw), max);
 }
@@ -207,12 +221,41 @@ const server = createServer(async (req, res) => {
       return json(res, { active_account_id: id });
     }
 
+    /**
+     * Forgets an account's connection. Reconnecting does NOT need this:
+     * /auth/login already carries show_dialog=true, so it re-shows the consent
+     * screen and the new grant overwrites the old. This exists to deliberately
+     * drop an account — its collected data stays.
+     */
+    if (req.method === "POST" && url.pathname === "/api/accounts/disconnect") {
+      if (!isAuthorized(req, url)) return unauthorized();
+      const id = url.searchParams.get("id");
+      if (!id) return json(res, { error: "missing id" }, 400);
+      if (!getAccount(env, id)) return json(res, { error: "unknown account" }, 404);
+      const { removed, remaining } = disconnectAccount(env, id);
+      // Without this warning the answer would be a lie: resolveActiveAccount
+      // re-bootstraps from the env variable on the very next run.
+      const envFallback = Boolean(env.SPOTIFY_REFRESH_TOKEN);
+      return json(res, {
+        disconnected: removed,
+        remaining_accounts: remaining,
+        env_fallback_active: envFallback,
+        note: envFallback
+          ? "SPOTIFY_REFRESH_TOKEN is still set: the next run will reconnect an account from it. Remove it from the environment for a real disconnect."
+          : "Collected data was kept. Spotify has no revocation endpoint — to withdraw access for good, remove the app at spotify.com/account/apps.",
+      });
+    }
+
     // ---------- administration ----------
     if (req.method === "POST" && url.pathname === "/run") {
       if (!isAuthorized(req, url)) return unauthorized();
       // 'A'/'B' still resolve (parseCollectorId) so an old bookmark or script
       // does not break, but the documented names are the explicit ones.
-      const c = parseCollectorId(url.searchParams.get("collector"));
+      const c0 = parseCollectorId(url.searchParams.get("collector"));
+      if (c0 === "playback" && !env.PLAYBACK_ENABLED) {
+        return json(res, { error: "playback collector is off — set PLAYBACK_ENABLED=1" }, 400);
+      }
+      const c = c0;
       if (c === null) {
         return json(res, { error: `collector must be one of: ${COLLECTOR_IDS.join(", ")}` }, 400);
       }
@@ -288,6 +331,22 @@ const server = createServer(async (req, res) => {
       );
     }
 
+    if (req.method === "GET" && url.pathname === "/api/playback") {
+      if (!isAuthorized(req, url)) return unauthorized();
+      if (!env.PLAYBACK_ENABLED) {
+        return json(res, { enabled: false, total: 0, limit: 0, offset: 0, items: [] });
+      }
+      return json(res, {
+        enabled: true,
+        ...listPlaybackSessions(env, scopeParam(url), {
+          from: url.searchParams.get("from") ?? undefined,
+          to: url.searchParams.get("to") ?? undefined,
+          limit: intParam(url, "limit", 50, 200),
+          offset: intParam(url, "offset", 0, Number.MAX_SAFE_INTEGER),
+        }),
+      });
+    }
+
     json(res, { error: "not found" }, 404);
   } catch (e) {
     console.error("server error:", e);
@@ -317,8 +376,14 @@ server.listen(port, host, () => {
   warnAboutExposure(env);
   if (schedulerEnabled()) {
     startScheduler(env, schedulerOptionsFromProcess());
+    // Sub-minute polling only makes sense inside this long-running process —
+    // systemd timers cannot drive it, so playback is scheduler-only on purpose.
+    if (playbackEnabled()) startPlaybackTicker(env, playbackOptionsFromProcess());
   } else {
     console.log("[scheduler] disabled (SCHEDULE_ENABLED != 1) — collection driven by systemd/run-once");
+    if (playbackEnabled()) {
+      console.log("[playback] PLAYBACK_ENABLED=1 but SCHEDULE_ENABLED != 1 — the ticker needs the in-process scheduler, playback stays off");
+    }
   }
 });
 

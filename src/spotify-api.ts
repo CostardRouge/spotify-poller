@@ -68,13 +68,21 @@ export async function spotifyGet(
   accountId: string,
   collector: string,
   url: string,
-  token: string
+  token: string,
+  opts: { logRaw?: boolean } = {}
 ): Promise<SpotifyResponse> {
+  // The playback collector polls every ~15 s; a raw row per response would be
+  // thousands of JSON blobs a day for what is an opt-in bonus. It opts out here
+  // and writes its own raw row on state CHANGES and on errors — see
+  // collectors/playback.ts. Every other caller keeps the unconditional I3 write.
+  const logRaw = opts.logRaw !== false;
+
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
       res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     } catch (e) {
+      // A network failure is rare and worth keeping whatever the policy.
       insertRaw(env, accountId, collector, 0, url, null);
       if (attempt < MAX_RETRIES) {
         await sleep(500 * 2 ** attempt);
@@ -84,10 +92,12 @@ export async function spotifyGet(
     }
 
     const bodyText = await res.text();
-    insertRaw(env, accountId, collector, res.status, url, bodyText);
+    if (logRaw) insertRaw(env, accountId, collector, res.status, url, bodyText);
 
     if (res.status === 429) {
       const retryAfterS = Number(res.headers.get("Retry-After")) || 60;
+      // A 429 is never dropped, even when the caller opted out of raw logging.
+      if (!logRaw) insertRaw(env, accountId, collector, res.status, url, bodyText);
       noteRateLimit(env, retryAfterS);
       throw new RateLimitError(`429, Retry-After=${retryAfterS}s`, retryAfterS);
     }

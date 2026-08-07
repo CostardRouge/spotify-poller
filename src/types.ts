@@ -61,6 +61,13 @@ export interface Env {
    * UTC (ts_utc), nothing here touches the DB. Defaults to "UTC".
    */
   TIMEZONE: string;
+  /**
+   * Opt-in playback collector (GET /me/player). OFF by default: it is a bonus
+   * on top of 'played', it needs an extra scope, and it only works under the
+   * in-process scheduler. Carried on Env rather than read from process.env
+   * because it decides which scopes a connected account is REQUIRED to hold.
+   */
+  PLAYBACK_ENABLED: boolean;
 }
 
 /** A connected Spotify account. `id` is the Spotify user id — stable, never reused. */
@@ -83,12 +90,13 @@ export type RunStatus = "ok" | "partial" | "error";
  * Collector identifiers. Explicit code names rather than 'A'/'B': they show up
  * in the URL (`POST /run?collector=played`), in the CLI, in the UI buttons and
  * in every DB row — one vocabulary end to end, nothing to memorise.
- *  - 'played' → recently-played (every 30 min, the critical one)
- *  - 'liked'  → liked tracks (daily, plus the initial backfill)
+ *  - 'played'   → recently-played (every 30 min, the critical one)
+ *  - 'liked'    → liked tracks (daily, plus the initial backfill)
+ *  - 'playback' → current playback state (opt-in, PLAYBACK_ENABLED=1)
  */
-export type CollectorId = "played" | "liked";
+export type CollectorId = "played" | "liked" | "playback";
 
-export const COLLECTOR_IDS: readonly CollectorId[] = ["played", "liked"];
+export const COLLECTOR_IDS: readonly CollectorId[] = ["played", "liked", "playback"];
 
 /** Legacy ids, still accepted so a systemd unit installed before the rename keeps working. */
 const COLLECTOR_ALIASES: Record<string, CollectorId> = {
@@ -202,5 +210,6 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     BACKUP_KEEP: intFromEnv("BACKUP_KEEP", 14),
     BACKUP_ENABLED: process.env.BACKUP_ENABLED === "1",
     TIMEZONE: timezone,
+    PLAYBACK_ENABLED: process.env.PLAYBACK_ENABLED === "1",
   };
 }

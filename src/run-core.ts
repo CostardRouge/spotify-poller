@@ -1,6 +1,7 @@
 import { appBaseUrl, resolveActiveAccount } from "./auth";
 import { collectRecentlyPlayed } from "./collectors/recently-played";
 import { collectLikedTracks } from "./collectors/liked-tracks";
+import { collectPlayback } from "./collectors/playback";
 import { finishRun, lastRunStatus, startRun, touchAccount } from "./db";
 import { heartbeat, heartbeatFail, notifyOnce, notifyRecovered } from "./notify";
 import { getRateLimit } from "./spotify-api";
@@ -46,10 +47,16 @@ export async function runCollector(
     if (rl.limited) {
       result = { status: "partial", fetched: 0, inserted: 0, note: `rate-limited, resuming after ${rl.until}` };
     } else {
-      result =
-        collector === "played"
-          ? await collectRecentlyPlayed(env, account)
-          : await collectLikedTracks(env, account);
+      if (collector === "played") {
+        result = await collectRecentlyPlayed(env, account);
+      } else if (collector === "liked") {
+        result = await collectLikedTracks(env, account);
+      } else {
+        // 'playback' normally runs from the ticker, which bypasses this wrapper
+        // to avoid one poller_runs row every 15 s. Coming through here means a
+        // manual POST /run?collector=playback — a single tick, worth logging.
+        result = await collectPlayback(env, account);
+      }
       touchAccount(env, account.id);
     }
   } catch (e) {

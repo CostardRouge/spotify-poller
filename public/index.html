@@ -23,6 +23,10 @@
   .badge { padding: .15rem .55rem; border-radius: 999px; border: 1px solid #33333d; font-size: .8rem; }
   .badge.ok { border-color: #1db954; color: #6fe09a; }
   .badge.ko { border-color: #b91d3a; color: #e06f83; }
+  .banner { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+            padding: .7rem 1.2rem; background: #2a1f10; border-bottom: 1px solid #7a5a1e;
+            color: #e6cd85; font-size: .85rem; }
+  .badge.warn { border-color: #7a5a1e; color: #e6cd85; }
   nav.tabs { display: flex; gap: .4rem; margin: 1rem 0; }
   nav.tabs button.active { background: #14391f; border-color: #1db954; }
   .filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; align-items: center; }
@@ -50,6 +54,7 @@
   <span id="badge-auth" class="badge">account: …</span>
   <span id="badge-played" class="badge">played: …</span>
   <span id="badge-liked" class="badge">liked: …</span>
+  <span id="badge-np" class="badge" hidden>♪</span>
   <span id="badge-rl" class="badge" hidden>rate-limit</span>
   <span style="flex:1"></span>
   <input id="token" type="password" placeholder="ADMIN_TOKEN" title="Admin token (stored in localStorage)">
@@ -60,9 +65,14 @@
   <button id="btn-backup" title="Write a full .db snapshot into BACKUP_DIR on the host">Backup</button>
   <div id="msg"></div>
 </header>
+<div id="scope-banner" class="banner" hidden>
+  <span id="scope-banner-text"></span>
+  <button id="btn-reconnect" class="primary">Reconnect Spotify</button>
+</div>
 <main>
   <nav class="tabs">
     <button data-tab="events" class="active">Events</button>
+    <button data-tab="playback">Playback</button>
     <button data-tab="runs">Runs</button>
     <button data-tab="gaps">Gaps</button>
     <button data-tab="stats">Stats</button>
@@ -91,6 +101,22 @@
       <span id="ev-info" class="muted"></span>
       <button id="ev-next">next →</button>
     </div>
+  </section>
+
+  <section id="tab-playback" hidden>
+    <div class="tablewrap"><table id="t-playback">
+      <thead><tr><th>started</th><th>title</th><th>artist</th><th>played</th><th>device</th>
+        <th>vol</th><th>mode</th><th>context</th><th>event</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pager">
+      <button id="pb-prev">← prev</button>
+      <span id="pb-info" class="muted"></span>
+      <button id="pb-next">next →</button>
+    </div>
+    <p class="muted">Opt-in (PLAYBACK_ENABLED=1), in-process scheduler only. Completion is inferred from
+      sampled progress, so it is accurate to about one polling interval — and it is computed from the
+      furthest point reached, since seeking makes progress go backwards.</p>
   </section>
 
   <section id="tab-runs" hidden>
@@ -140,7 +166,7 @@
   const PAGE = 50;
   // `scope` is the account being VIEWED; the active account is the one being
   // collected. They are allowed to differ.
-  const state = { events: { offset: 0 }, runs: { offset: 0 }, scope: null, active: null, authMode: "token", timezone: "UTC" };
+  const state = { events: { offset: 0 }, runs: { offset: 0 }, playback: { offset: 0 }, scope: null, active: null, authMode: "token", timezone: "UTC" };
 
   // In proxy mode the reverse proxy authenticates and there is no token to type.
   function tokenHeaders() {
@@ -181,6 +207,7 @@
 
   function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
   function fmtDur(s) { if (s == null) return ""; return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+  function fmtPct(r) { return r == null ? "—" : Math.round(r * 100) + "%"; }
 
   // ---------- status ----------
   // /health is public and deliberately says almost nothing; /status carries the
@@ -235,6 +262,31 @@
         a.className = "badge ok";
       }
 
+      // Scope drift: Spotify silently keeps honouring the OLD grant, so a newly
+      // required scope only surfaces as a 403 deep inside a collector. Say it here.
+      const banner = $("#scope-banner");
+      let warn = "";
+      if (h.auth.connected && h.auth.scope_state === "missing") {
+        warn = "Missing Spotify permission on the collecting account: " + (h.auth.scopes_missing || []).join(", ")
+             + ". Reconnect to grant it — collection continues meanwhile, minus that feature.";
+      } else if (h.auth.connected && h.auth.scope_state === "unknown" && h.playback && h.playback.enabled) {
+        warn = "The grant of the collecting account was never recorded, so we cannot tell whether "
+             + "user-read-playback-state was given. Reconnect to be sure.";
+      }
+      banner.hidden = warn === "";
+      $("#scope-banner-text").textContent = warn;
+
+      const np = $("#badge-np");
+      const cur = h.playback && h.playback.now_playing;
+      np.hidden = !cur;
+      if (cur) {
+        np.textContent = "♪ " + (cur.title || cur.item_id)
+          + (cur.device_name ? " · " + cur.device_name : "")
+          + (cur.volume_last == null ? "" : " · vol " + cur.volume_last + "%")
+          + " · " + fmtPct(cur.completion_ratio);
+        np.className = "badge " + (cur.last_is_playing ? "ok" : "warn");
+      }
+
       const rl = $("#badge-rl");
       rl.hidden = !h.rate_limit.limited;
       if (h.rate_limit.limited) { rl.textContent = "rate-limited → " + h.rate_limit.until; rl.className = "badge ko"; }
@@ -253,13 +305,22 @@
           <td>${esc((a.connected_at || "").replace("T", " ").slice(0, 19))}</td>
           <td>${esc((a.last_seen_at || "—").replace("T", " ").slice(0, 19))}</td>
           <td class="${a.status === "ok" ? "status-ok" : "status-error"}">${esc(a.status)}${a.id === d.active_account_id ? " · active" : ""}</td>
-          <td>${a.id === d.active_account_id ? "" : `<button data-activate="${esc(a.id)}">collect this one</button>`}</td>
+          <td>${a.id === d.active_account_id ? "" : `<button data-activate="${esc(a.id)}">collect this one</button>`}
+              <button data-disconnect="${esc(a.id)}" title="Forget this connection — collected data is kept">disconnect</button></td>
         </tr>`).join("")
       : `<tr><td colspan="7" class="muted">no account connected yet</td></tr>`;
 
     $("#t-accounts").querySelectorAll("[data-activate]").forEach((b) => b.addEventListener("click", async () => {
       await api("/api/accounts/activate?id=" + encodeURIComponent(b.dataset.activate), { method: "POST" });
       msg("now collecting for " + b.dataset.activate);
+      await refreshStatus(); await loadAccounts();
+    }));
+
+    $("#t-accounts").querySelectorAll("[data-disconnect]").forEach((b) => b.addEventListener("click", async () => {
+      const id = b.dataset.disconnect;
+      if (!confirm("Forget the connection for " + id + "?\n\nIts collected data is KEPT — only the token goes.")) return;
+      const r = await api("/api/accounts/disconnect?id=" + encodeURIComponent(id), { method: "POST" });
+      msg(r.env_fallback_active ? "disconnected — but " + r.note : "disconnected ✔ " + r.note);
       await refreshStatus(); await loadAccounts();
     }));
   }
@@ -301,6 +362,39 @@
     $("#run-next").disabled = d.offset + PAGE >= d.total;
   }
 
+  // ---------- playback ----------
+  async function loadPlayback() {
+    const d = await api(withScope(`/api/playback?limit=${PAGE}&offset=${state.playback.offset}`));
+    const tbody = $("#t-playback tbody");
+    if (d.enabled === false) {
+      tbody.innerHTML = `<tr><td colspan="9" class="muted">playback collector is off — set PLAYBACK_ENABLED=1</td></tr>`;
+      $("#pb-info").textContent = "";
+      $("#pb-prev").disabled = $("#pb-next").disabled = true;
+      return;
+    }
+    tbody.innerHTML = d.items.length ? d.items.map((x) => {
+      const mode = [x.shuffle_state ? "shuffle" : "",
+                    x.repeat_state && x.repeat_state !== "off" ? "repeat:" + x.repeat_state : "",
+                    x.is_private_session ? "private" : ""].filter(Boolean).join(" ") || "—";
+      const played = fmtPct(x.completion_ratio) + (x.skipped ? " skipped" : "")
+                   + (x.close_reason && x.close_reason !== "track_change" ? " (" + x.close_reason + ")" : "");
+      return `<tr>
+        <td>${esc(fmtTs(x.started_at))}</td>
+        <td class="wrap">${esc(x.title)}</td>
+        <td class="wrap">${esc(x.subtitle)}</td>
+        <td class="${x.skipped ? "status-partial" : "status-ok"}">${esc(played)}</td>
+        <td>${esc(x.device_name || "")}${x.device_type ? ' <span class="muted">' + esc(x.device_type) + "</span>" : ""}</td>
+        <td>${x.volume_last == null ? "" : esc(x.volume_last + "%")}</td>
+        <td class="muted">${esc(mode)}</td>
+        <td class="wrap muted">${esc(x.context_uri || "")}</td>
+        <td class="muted">${x.event_id ? "linked" : "—"}</td>
+      </tr>`;
+    }).join("") : `<tr><td colspan="9" class="muted">no playback sessions recorded yet</td></tr>`;
+    $("#pb-info").textContent = `${d.total ? d.offset + 1 : 0}–${Math.min(d.offset + PAGE, d.total)} / ${d.total}`;
+    $("#pb-prev").disabled = d.offset === 0;
+    $("#pb-next").disabled = d.offset + PAGE >= d.total;
+  }
+
   async function loadGaps() {
     const d = await api(withScope(`/api/gaps?limit=200&offset=0`));
     $("#t-gaps tbody").innerHTML = d.items.length
@@ -314,7 +408,7 @@
   }
 
   // ---------- tabs ----------
-  const loaders = { events: loadEvents, runs: loadRuns, gaps: loadGaps, stats: loadStats, accounts: loadAccounts };
+  const loaders = { events: loadEvents, playback: loadPlayback, runs: loadRuns, gaps: loadGaps, stats: loadStats, accounts: loadAccounts };
   document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("nav.tabs button").forEach((x) => x.classList.toggle("active", x === b));
     for (const t of Object.keys(loaders)) $("#tab-" + t).hidden = t !== b.dataset.tab;
@@ -322,15 +416,21 @@
   }));
 
   // ---------- actions ----------
-  $("#btn-connect").addEventListener("click", () => {
-    // Connecting a DIFFERENT Spotify account is safe: it creates a new scope,
-    // it never overwrites the one already stored (show_dialog=true lets you
-    // pick which account to sign in with).
+  // Connecting a DIFFERENT Spotify account is safe: it creates a new scope,
+  // it never overwrites the one already stored (show_dialog=true lets you
+  // pick which account to sign in with).
+  //
+  // Reconnecting is the SAME call: show_dialog=true re-shows the consent
+  // screen, and signing back in as the same account overwrites its grant with
+  // the scopes we now ask for. Nothing to disconnect first.
+  function connect() {
     if (!tokenInput.value && state.authMode !== "proxy") return msg("enter the admin token first");
     location.href = tokenInput.value
       ? "/auth/login?token=" + encodeURIComponent(tokenInput.value)
       : "/auth/login";
-  });
+  }
+  $("#btn-connect").addEventListener("click", connect);
+  $("#btn-reconnect").addEventListener("click", connect);
 
   $("#account").addEventListener("change", () => {
     state.scope = $("#account").value || null;
@@ -368,6 +468,8 @@
   $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-apply").click(); });
   $("#ev-prev").addEventListener("click", () => { state.events.offset = Math.max(0, state.events.offset - PAGE); loadEvents(); });
   $("#ev-next").addEventListener("click", () => { state.events.offset += PAGE; loadEvents(); });
+  $("#pb-prev").addEventListener("click", () => { state.playback.offset = Math.max(0, state.playback.offset - PAGE); loadPlayback(); });
+  $("#pb-next").addEventListener("click", () => { state.playback.offset += PAGE; loadPlayback(); });
   $("#run-prev").addEventListener("click", () => { state.runs.offset = Math.max(0, state.runs.offset - PAGE); loadRuns(); });
   $("#run-next").addEventListener("click", () => { state.runs.offset += PAGE; loadRuns(); });
 

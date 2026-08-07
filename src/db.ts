@@ -103,6 +103,11 @@ export function setGlobalState(env: Env, key: string, value: string): void {
   setState(env, GLOBAL_SCOPE, key, value);
 }
 
+/** Forgets a key entirely — used by the disconnect flow (db.disconnectAccount). */
+export function deleteState(env: Env, accountId: string, key: string): void {
+  env.DB.prepare(`DELETE FROM poller_state WHERE account_id = ? AND key = ?`).run(accountId, key);
+}
+
 // ---------- accounts ----------
 
 const KEY_ACTIVE = "accounts.active_id";
@@ -167,6 +172,33 @@ export function getActiveAccountId(env: Env): string | null {
 
 export function setActiveAccountId(env: Env, id: string): void {
   setGlobalState(env, KEY_ACTIVE, id);
+}
+
+/**
+ * Forgets an account's CONNECTION — its row, its token, and the active pointer
+ * if it led here. resolveActiveAccount then falls back to another account on
+ * its own, so the pointer only needs clearing, not reassigning.
+ *
+ * Kept on purpose: everything collected (events, runs, gaps, playback) and the
+ * collector cursors. Those plays happened, and reconnecting the same Spotify id
+ * resumes exactly where it stopped instead of replaying the whole liked
+ * backfill.
+ *
+ * The legacy `auth.refresh_token` key goes too. adoptLegacyRows() normally
+ * drops it already, but leaving a stale copy behind would let
+ * resolveActiveAccount silently re-bootstrap the account we were just asked to
+ * forget. SPOTIFY_REFRESH_TOKEN cannot be unset from here — it is reported to
+ * the caller rather than quietly ignored.
+ */
+export function disconnectAccount(env: Env, id: string): { removed: boolean; remaining: number } {
+  const tx = env.DB.transaction(() => {
+    const info = env.DB.prepare(`DELETE FROM accounts WHERE id = ?`).run(id);
+    if (getActiveAccountId(env) === id) deleteState(env, GLOBAL_SCOPE, KEY_ACTIVE);
+    deleteState(env, GLOBAL_SCOPE, "auth.refresh_token");
+    return info.changes > 0;
+  });
+  const removed = tx();
+  return { removed, remaining: countAccounts(env) };
 }
 
 /**
@@ -243,6 +275,31 @@ export function finishRun(
   ).run(nowIso(), status, fetched, inserted, error, runId);
 }
 
+/**
+ * Writes an already-finished run in one INSERT.
+ *
+ * The playback ticker fires every ~15 s; a start/finish pair per tick would put
+ * ~5760 rows a day in the Runs tab and drown the two collectors that matter.
+ * It logs an hourly SUMMARY (and every error) through this instead.
+ */
+export function logRun(
+  env: Env,
+  accountId: string,
+  collector: CollectorId,
+  trigger: "cron" | "manual",
+  startedAt: string,
+  status: RunStatus,
+  fetched: number,
+  inserted: number,
+  error: string | null
+): void {
+  env.DB.prepare(
+    `INSERT INTO poller_runs
+       (account_id, collector, trigger_kind, started_at, finished_at, status, items_fetched, items_inserted, error)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(accountId, collector, trigger, startedAt, nowIso(), status, fetched, inserted, error);
+}
+
 /** Status of the previous run of the same collector, for recovery detection. */
 export function lastRunStatus(env: Env, accountId: string, collector: CollectorId): RunStatus | null {
   const row = env.DB.prepare(
@@ -269,6 +326,235 @@ export function insertGap(
   ).run(accountId, collector, fromUtc, toUtc, nowIso(), note);
 }
 
+// ---------- playback (opt-in collector) ----------
+
+export interface PlaybackSampleRow {
+  observed_at: string;
+  spotify_ts: number | null;
+  item_id: string | null;
+  item_type: string | null;
+  progress_ms: number | null;
+  duration_ms: number | null;
+  is_playing: number;
+  device_id: string | null;
+  device_name: string | null;
+  device_type: string | null;
+  volume_percent: number | null;
+  is_private_session: number | null;
+  shuffle_state: number | null;
+  repeat_state: string | null;
+  context_uri: string | null;
+}
+
+export interface PlaybackSessionRow {
+  id: string;
+  item_id: string;
+  item_type: string;
+  title: string | null;
+  subtitle: string | null;
+  started_at: string;
+  ended_at: string | null;
+  duration_ms: number | null;
+  first_progress_ms: number | null;
+  max_progress_ms: number | null;
+  last_progress_ms: number | null;
+  listened_ms: number;
+  completion_ratio: number | null;
+  skipped: number | null;
+  close_reason: string | null;
+  sample_count: number;
+  pause_count: number;
+  paused_ms: number;
+  device_id: string | null;
+  device_name: string | null;
+  device_type: string | null;
+  volume_min: number | null;
+  volume_max: number | null;
+  volume_last: number | null;
+  shuffle_state: number | null;
+  repeat_state: string | null;
+  context_uri: string | null;
+  is_private_session: number | null;
+  last_is_playing: number;
+  event_id: string | null;
+  closed: number;
+  updated_at: string;
+}
+
+export function insertPlaybackSample(env: Env, accountId: string, s: PlaybackSampleRow): void {
+  env.DB.prepare(
+    `INSERT INTO playback_samples
+       (account_id, observed_at, spotify_ts, item_id, item_type, progress_ms, duration_ms, is_playing,
+        device_id, device_name, device_type, volume_percent, is_private_session,
+        shuffle_state, repeat_state, context_uri)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    accountId, s.observed_at, s.spotify_ts, s.item_id, s.item_type, s.progress_ms, s.duration_ms, s.is_playing,
+    s.device_id, s.device_name, s.device_type, s.volume_percent, s.is_private_session,
+    s.shuffle_state, s.repeat_state, s.context_uri
+  );
+}
+
+/** Last transition written — the baseline the "has anything changed?" test compares against. */
+export function getLastPlaybackSample(env: Env, accountId: string): PlaybackSampleRow | null {
+  return (env.DB.prepare(
+    `SELECT * FROM playback_samples WHERE account_id = ? ORDER BY id DESC LIMIT 1`
+  ).get(accountId) as PlaybackSampleRow | undefined) ?? null;
+}
+
+/**
+ * The in-progress listen. Kept in the table rather than in process memory so a
+ * container restart resumes where it left off — same reasoning as the liked
+ * backfill offset. At most one row per account can have closed = 0.
+ */
+export function getOpenPlaybackSession(env: Env, accountId: string): PlaybackSessionRow | null {
+  return (env.DB.prepare(
+    `SELECT * FROM playback_sessions WHERE account_id = ? AND closed = 0 LIMIT 1`
+  ).get(accountId) as PlaybackSessionRow | undefined) ?? null;
+}
+
+export function insertPlaybackSession(env: Env, accountId: string, s: PlaybackSessionRow): void {
+  env.DB.prepare(
+    `INSERT OR IGNORE INTO playback_sessions
+       (account_id, id, item_id, item_type, title, subtitle, started_at, ended_at, duration_ms,
+        first_progress_ms, max_progress_ms, last_progress_ms, listened_ms, completion_ratio,
+        skipped, close_reason, sample_count, pause_count, paused_ms,
+        device_id, device_name, device_type, volume_min, volume_max, volume_last,
+        shuffle_state, repeat_state, context_uri, is_private_session, last_is_playing,
+        event_id, closed, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    accountId, s.id, s.item_id, s.item_type, s.title, s.subtitle, s.started_at, s.ended_at, s.duration_ms,
+    s.first_progress_ms, s.max_progress_ms, s.last_progress_ms, s.listened_ms, s.completion_ratio,
+    s.skipped, s.close_reason, s.sample_count, s.pause_count, s.paused_ms,
+    s.device_id, s.device_name, s.device_type, s.volume_min, s.volume_max, s.volume_last,
+    s.shuffle_state, s.repeat_state, s.context_uri, s.is_private_session, s.last_is_playing,
+    s.event_id, s.closed, s.updated_at
+  );
+}
+
+/** Refreshes the aggregates of the open session — runs on every tick, so no INSERT. */
+export function updatePlaybackSession(env: Env, accountId: string, s: PlaybackSessionRow): void {
+  env.DB.prepare(
+    `UPDATE playback_sessions SET
+       max_progress_ms = ?, last_progress_ms = ?, listened_ms = ?, completion_ratio = ?,
+       sample_count = ?, pause_count = ?, paused_ms = ?,
+       device_id = ?, device_name = ?, device_type = ?,
+       volume_min = ?, volume_max = ?, volume_last = ?,
+       shuffle_state = ?, repeat_state = ?, context_uri = ?, is_private_session = ?,
+       last_is_playing = ?, updated_at = ?
+     WHERE account_id = ? AND id = ?`
+  ).run(
+    s.max_progress_ms, s.last_progress_ms, s.listened_ms, s.completion_ratio,
+    s.sample_count, s.pause_count, s.paused_ms,
+    s.device_id, s.device_name, s.device_type,
+    s.volume_min, s.volume_max, s.volume_last,
+    s.shuffle_state, s.repeat_state, s.context_uri, s.is_private_session,
+    s.last_is_playing, s.updated_at, accountId, s.id
+  );
+}
+
+export function closePlaybackSession(
+  env: Env,
+  accountId: string,
+  id: string,
+  endedAt: string,
+  reason: string,
+  skipped: number
+): void {
+  env.DB.prepare(
+    `UPDATE playback_sessions
+     SET ended_at = ?, close_reason = ?, skipped = ?, closed = 1, updated_at = ?
+     WHERE account_id = ? AND id = ?`
+  ).run(endedAt, reason, skipped, nowIso(), accountId, id);
+}
+
+/**
+ * Best-effort link from a finished listen to the events row 'played' wrote for
+ * it. Runs after a 'played' collection, because that is when the events appear.
+ *
+ * Matches on track id inside a WIDE time window on purpose: it is still an open
+ * question whether Spotify's played_at is the start or the end of the track
+ * (docs/findings.md), and this must not depend on the answer. An event already
+ * claimed by another session is skipped, and finding nothing is a normal
+ * outcome — event_id simply stays NULL.
+ */
+export function linkPlaybackSessions(env: Env, accountId: string, lookbackHours = 48): number {
+  const since = new Date(Date.now() - lookbackHours * 3_600_000).toISOString();
+  const pending = env.DB.prepare(
+    `SELECT id, item_id, started_at, ended_at, duration_ms
+     FROM playback_sessions
+     WHERE account_id = ? AND closed = 1 AND event_id IS NULL AND started_at >= ?`
+  ).all(accountId, since) as {
+    id: string; item_id: string; started_at: string; ended_at: string | null; duration_ms: number | null;
+  }[];
+
+  const find = env.DB.prepare(
+    `SELECT e.id FROM events e
+     WHERE e.account_id = ? AND e.type = 'listen'
+       AND json_extract(e.payload, '$.track_id') = ?
+       AND e.ts_utc >= ? AND e.ts_utc <= ?
+       AND NOT EXISTS (
+         SELECT 1 FROM playback_sessions p WHERE p.account_id = e.account_id AND p.event_id = e.id
+       )
+     ORDER BY abs(julianday(e.ts_utc) - julianday(?)) ASC
+     LIMIT 1`
+  );
+  const link = env.DB.prepare(`UPDATE playback_sessions SET event_id = ? WHERE account_id = ? AND id = ?`);
+
+  let linked = 0;
+  const tx = env.DB.transaction(() => {
+    for (const s of pending) {
+      // played_at may sit at either end of the track: widen by its duration.
+      const margin = (s.duration_ms ?? 0) + 5 * 60 * 1000;
+      const lo = new Date(Date.parse(s.started_at) - margin).toISOString();
+      const hi = new Date(Date.parse(s.ended_at ?? s.started_at) + margin).toISOString();
+      const hit = find.get(accountId, s.item_id, lo, hi, s.started_at) as { id: string } | undefined;
+      if (hit) {
+        link.run(hit.id, accountId, s.id);
+        linked++;
+      }
+    }
+  });
+  tx();
+  return linked;
+}
+
+/**
+ * Retention on the transition log only — sessions are the value, they are kept.
+ * Not scoped to an account: retention is a disk-space policy, and a
+ * disconnected account's samples should age out too.
+ */
+export function purgePlaybackSamples(env: Env, retentionDays: number): number {
+  const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
+  return env.DB.prepare(`DELETE FROM playback_samples WHERE observed_at < ?`).run(cutoff).changes;
+}
+
+export function listPlaybackSessions(
+  env: Env,
+  accountId: string,
+  f: { from?: string; to?: string; limit: number; offset: number }
+) {
+  const where = ["account_id = ?"];
+  const params: unknown[] = [accountId];
+  if (f.from) {
+    where.push("started_at >= ?");
+    params.push(f.from);
+  }
+  if (f.to) {
+    where.push("started_at <= ?");
+    params.push(f.to);
+  }
+  const whereSql = `WHERE ${where.join(" AND ")}`;
+  const total = (
+    env.DB.prepare(`SELECT COUNT(*) AS n FROM playback_sessions ${whereSql}`).get(...params) as { n: number }
+  ).n;
+  const items = env.DB.prepare(
+    `SELECT * FROM playback_sessions ${whereSql} ORDER BY started_at DESC LIMIT ? OFFSET ?`
+  ).all(...params, f.limit, f.offset);
+  return { total, limit: f.limit, offset: f.offset, items };
+}
+
 // ---------- reads for /status and /stats ----------
 
 export function healthSnapshot(env: Env, accountId: string) {
@@ -279,6 +565,15 @@ export function healthSnapshot(env: Env, accountId: string) {
     collector_played_last_success: getState(env, accountId, "played.last_success_at"),
     collector_liked_last_success: getState(env, accountId, "liked.last_success_at"),
     events_by_type: Object.fromEntries(counts.map((r) => [r.type, r.n])),
+    // Gated on the flag so an install that never enabled playback (and may
+    // therefore not have run migration 0006 yet) never touches the new tables.
+    playback: env.PLAYBACK_ENABLED
+      ? {
+          enabled: true,
+          last_success: getState(env, accountId, "playback.last_success_at"),
+          now_playing: getOpenPlaybackSession(env, accountId),
+        }
+      : { enabled: false, last_success: null, now_playing: null },
   };
 }
 

@@ -101,12 +101,17 @@ Served on `/` by the server (no dependencies, a single `public/index.html`
 file). Minimal, designed to verify collection:
 
 - health status: last `played`/`liked` success, connected account, ongoing
-  rate limit;
+  rate limit, and — when the playback collector is on — what is playing right
+  now;
 - Spotify account connection (Authorization Code flow, spec §7 — stable token
-  stored in the `accounts` table);
+  stored in the `accounts` table), plus **Reconnect** and, per account,
+  **disconnect**;
+- a **scope banner**: the scopes an account granted are compared with what the
+  current configuration requires, so a missing permission is stated up front
+  instead of surfacing as an opaque `403` inside a collector;
 - browsing of **all** collected events: type filters / title-artist search /
   date bounds, sorting, pagination, expandable JSON payload;
-- run log (`poller_runs`), declared gaps (`gaps`), stats;
+- run log (`poller_runs`), declared gaps (`gaps`), stats, playback sessions;
 - manual triggering of the `played` and `liked` collectors (idempotent — I2).
 
 In the default mode the UI asks for the `ADMIN_TOKEN` (stored in the browser's
@@ -126,17 +131,94 @@ debug UI *displays* them; it changes nothing in the database.
 | `GET /status` | yes | last success, counters, accounts, rate limit, scheduler, display timezone |
 | `GET /auth/login` | yes | starts the OAuth connection flow |
 | `GET /auth/callback` | state cookie | Spotify return, stores the refresh token |
-| `POST /run?collector=played\|liked` | yes | manual trigger (idempotent) |
+| `POST /run?collector=played\|liked\|playback` | yes | manual trigger (idempotent) |
 | `GET /stats` | yes | volumes, gaps, last 20 runs |
 | `GET /api/events` | yes | pagination + `type`, `q`, `from`, `to`, `order` filters |
+| `GET /api/playback` | yes | playback sessions, pagination + `from`, `to` |
 | `GET /api/runs`, `GET /api/gaps` | yes | paginated logs |
 | `GET /api/accounts` | yes | connected accounts (never their tokens) |
 | `POST /api/accounts/activate?id=` | yes | choose which account is collected |
+| `POST /api/accounts/disconnect?id=` | yes | forget an account's token — its data is kept |
 | `GET /export` | yes | NDJSON export of the events — no secret inside |
 | `POST /backup` | yes | writes a `.db` snapshot to `BACKUP_DIR` (not downloadable) |
 
 Every read endpoint accepts `?account=<spotify-user-id>` and defaults to the
 active account.
+
+### Reconnecting and disconnecting
+
+**Reconnect** is just `/auth/login` again: the authorize URL carries
+`show_dialog=true`, so Spotify re-shows the consent screen and signing back in
+as the same account overwrites its grant. That matters because Spotify
+otherwise keeps honouring the existing grant silently — a scope added later
+would never be requested, and the newly scoped endpoint would simply start
+answering `403`.
+
+The UI compares the scopes an account actually granted (`accounts.scope`)
+against what the current configuration requires, and raises a banner naming the
+missing one. `unknown` means the grant was never recorded — an account adopted
+from a legacy token — in which case reconnecting is the only way to be sure.
+
+**Disconnect** (`POST /api/accounts/disconnect?id=`) drops the account row and
+its token. Everything it collected is **kept**, and so are its cursors, so
+reconnecting the same Spotify id resumes instead of replaying the whole liked
+backfill. Two caveats it reports rather than hides:
+
+- if `SPOTIFY_REFRESH_TOKEN` is set, the next run re-bootstraps an account from
+  it — the response says so (`env_fallback_active`);
+- Spotify has no revocation endpoint. Withdrawing access for good is done by
+  the user at [spotify.com/account/apps](https://www.spotify.com/account/apps/).
+
+## Playback collector (opt-in)
+
+Off by default. `PLAYBACK_ENABLED=1` turns on a third collector that polls
+`GET /me/player` — adaptively, every 15 s while something plays and every 60 s
+once idle.
+
+It **complements** `played`, it does not replace it. `played` remains the
+authoritative history: it reads Spotify's 50-track buffer and therefore
+back-fills across downtime, whereas the playback ticker only sees what happens
+while the process is running. What it adds is everything `recently-played`
+cannot tell you: **which device**, **what volume**, which playlist the track
+came from, shuffle/repeat state, private-session flag, and whether the track
+was **finished or skipped**.
+
+Two things to know about the data:
+
+- *"Played in full"* is not a field Spotify exposes — it is inferred by
+  sampling `progress_ms`, so it is an estimate accurate to about one polling
+  interval. Seeking makes progress non-monotonic, so completion is computed
+  from the **furthest point reached**, never the last value read. A return to
+  ~0 counts as a replay only when the previous maximum had reached the end, so
+  a rewind does not fabricate a second listen.
+- Results land in `playback_sessions` (one row per listen) and
+  `playback_samples` (a transition log), both partitioned by `account_id` like
+  every other table. They are **not** written into `events`: `played` writes
+  its listen rows up to 30 min later keyed on `played_at`, and whether
+  `played_at` marks the start or the end of a track is still an open question
+  (`docs/findings.md`). A session carries a best-effort `event_id` link
+  instead, filled in after a `played` run — `NULL` is a normal outcome, and no
+  `events` row is ever mutated.
+
+Two deliberate departures from the usual conventions, both so a bonus feature
+stays cheap:
+
+- a `raw_spotify` row and a `playback_samples` row are written only when the
+  observable state **changes** (track, play/pause, device, volume, shuffle,
+  repeat, context) or on a seek — roughly 100-200 rows a day instead of ~5760.
+  Invariant I3's intent, evidence recorded before interpretation, is kept for
+  every transition, which is what the derived data is built from. Errors and
+  `429`s are always logged in full;
+- the ticker writes one `poller_runs` **summary per hour** rather than a row
+  per tick, plus a row for every fatal error. It therefore re-implements what
+  `run-core` gave it: resolving the active account, the persisted `429` check,
+  and always closing a window with a logged row.
+
+It requires `SCHEDULE_ENABLED=1`: sub-minute polling cannot be driven by a
+systemd timer, so bare-metal installs do not get playback (the server logs this
+at startup rather than failing silently). It also requires the
+`user-read-playback-state` scope — after enabling it, the UI raises the scope
+banner until you reconnect.
 
 `GET /health` is deliberately almost empty. It used to return the collector
 timestamps and the per-type event counters while being public — enough to leak
