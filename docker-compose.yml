@@ -15,11 +15,14 @@ services:
       - API_HOST=0.0.0.0
       - DB_PATH=/data/life-events.db
       - SCHEDULE_ENABLED=${SCHEDULE_ENABLED:-1}
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-0}
+      - BACKUP_DIR=/backups
     volumes:
       - .:/app # live source
       - /app/node_modules # keep container's node_modules (native bindings)
       - /app/dist # keep container's build output
       - spotify-poller-dev-data:/data # SQLite outside the ephemeral layer, even in dev
+      - ./backups:/backups # snapshots land on the host, never in the volume
     restart: unless-stopped
 
 volumes:

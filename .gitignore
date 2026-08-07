@@ -2,3 +2,7 @@ node_modules/
 dist/
 data/
 .env
+
+# Backups hold the Spotify refresh token in clear — never commit them.
+backups/
+*.ndjson

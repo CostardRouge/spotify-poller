@@ -1,4 +1,4 @@
-import { getState, insertRaw, setState } from "./db";
+import { getGlobalState, insertRaw, setGlobalState } from "./db";
 import { Env, RateLimitError, TransientError } from "./types";
 
 /**
@@ -16,6 +16,10 @@ import { Env, RateLimitError, TransientError } from "./types";
  * Deliberate difference from the calendar: here the cooldown survives
  * restarts (poller_state, not process memory), because the poller is driven by
  * short repeated runs rather than a long-lived web server.
+ *
+ * The cooldown is stored in the GLOBAL scope, not per account: Spotify computes
+ * its rate limit per app (client_id), so switching account must not be a way to
+ * keep querying during a ban — that would only extend it.
  */
 
 const MAX_RETRIES = 3; // network / 5xx — bounded
@@ -28,15 +32,15 @@ function sleep(ms: number): Promise<void> {
 /** Records a 429. Never shortens a cooldown already in progress. */
 export function noteRateLimit(env: Env, retryAfterS: number): void {
   const until = Date.now() + Math.max(0, retryAfterS) * 1000;
-  const current = getState(env, RL_KEY);
+  const current = getGlobalState(env, RL_KEY);
   if (!current || Date.parse(current) < until) {
-    setState(env, RL_KEY, new Date(until).toISOString());
+    setGlobalState(env, RL_KEY, new Date(until).toISOString());
   }
 }
 
 /** Ongoing 429 cooldown, read from poller_state (survives restarts). */
 export function getRateLimit(env: Env): { limited: boolean; until: string | null; retryAfterS: number } {
-  const until = getState(env, RL_KEY);
+  const until = getGlobalState(env, RL_KEY);
   if (!until || Date.parse(until) <= Date.now()) {
     return { limited: false, until: null, retryAfterS: 0 };
   }
@@ -59,13 +63,19 @@ export interface SpotifyResponse {
  * TransientError once the network/5xx retries are exhausted.
  * Other statuses (including 401) are returned to the caller.
  */
-export async function spotifyGet(env: Env, collector: string, url: string, token: string): Promise<SpotifyResponse> {
+export async function spotifyGet(
+  env: Env,
+  accountId: string,
+  collector: string,
+  url: string,
+  token: string
+): Promise<SpotifyResponse> {
   for (let attempt = 0; ; attempt++) {
     let res: Response;
     try {
       res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     } catch (e) {
-      insertRaw(env, collector, 0, url, null);
+      insertRaw(env, accountId, collector, 0, url, null);
       if (attempt < MAX_RETRIES) {
         await sleep(500 * 2 ** attempt);
         continue;
@@ -74,7 +84,7 @@ export async function spotifyGet(env: Env, collector: string, url: string, token
     }
 
     const bodyText = await res.text();
-    insertRaw(env, collector, res.status, url, bodyText);
+    insertRaw(env, accountId, collector, res.status, url, bodyText);
 
     if (res.status === 429) {
       const retryAfterS = Number(res.headers.get("Retry-After")) || 60;

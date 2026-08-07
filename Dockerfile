@@ -37,6 +37,9 @@ ENV API_PORT=8787
 # The SQLite database lives on /data — ALWAYS a mounted volume (compose), never
 # the container's writable layer: the collected data is irreplaceable (§1).
 ENV DB_PATH=/data/life-events.db
+# Snapshots go to /backups — a HOST bind mount in docker-compose.prod.yml, so a
+# lost data volume does not take the backups with it.
+ENV BACKUP_DIR=/backups
 
 # Run as an unprivileged user.
 RUN addgroup --system --gid 1001 nodejs \
@@ -48,7 +51,7 @@ COPY migrations ./migrations
 COPY public ./public
 COPY package.json ./
 
-RUN mkdir -p /data && chown poller:nodejs /data
+RUN mkdir -p /data /backups && chown poller:nodejs /data /backups
 VOLUME /data
 
 USER poller

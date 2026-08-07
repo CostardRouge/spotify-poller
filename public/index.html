@@ -46,6 +46,7 @@
 <body>
 <header>
   <h1>spotify-poller</h1>
+  <select id="account" title="Account whose data is displayed — switching the view does not switch collection"></select>
   <span id="badge-auth" class="badge">account: …</span>
   <span id="badge-played" class="badge">played: …</span>
   <span id="badge-liked" class="badge">liked: …</span>
@@ -55,6 +56,8 @@
   <button id="btn-connect" class="primary">Connect Spotify</button>
   <button id="btn-run-played" title="Collect the recently played tracks (Spotify's last 50)">Run played</button>
   <button id="btn-run-liked" title="Collect the liked tracks (and advance the initial backfill)">Run liked</button>
+  <button id="btn-export" title="Download the events of the displayed account as NDJSON (contains no secret)">Export</button>
+  <button id="btn-backup" title="Write a full .db snapshot into BACKUP_DIR on the host">Backup</button>
   <div id="msg"></div>
 </header>
 <main>
@@ -63,6 +66,7 @@
     <button data-tab="runs">Runs</button>
     <button data-tab="gaps">Gaps</button>
     <button data-tab="stats">Stats</button>
+    <button data-tab="accounts">Accounts</button>
   </nav>
 
   <section id="tab-events">
@@ -112,6 +116,18 @@
   <section id="tab-stats" hidden>
     <pre class="block" id="stats-out">…</pre>
   </section>
+
+  <section id="tab-accounts" hidden>
+    <div class="tablewrap"><table id="t-accounts">
+      <thead><tr><th>id</th><th>name</th><th>events</th><th>connected</th><th>last seen</th><th>status</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="muted">
+      Each connected account owns its data, its cursors and its token — connecting another
+      one never overwrites the previous. Exactly one account is <em>collected</em> at a time
+      (the active one); the selector at the top only changes what you are <em>looking at</em>.
+    </p>
+  </section>
 </main>
 
 <script>
@@ -122,36 +138,109 @@
   tokenInput.addEventListener("change", () => localStorage.setItem("admin_token", tokenInput.value));
 
   const PAGE = 50;
-  const state = { events: { offset: 0 }, runs: { offset: 0 } };
+  // `scope` is the account being VIEWED; the active account is the one being
+  // collected. They are allowed to differ.
+  const state = { events: { offset: 0 }, runs: { offset: 0 }, scope: null, active: null, authMode: "token" };
+
+  // In proxy mode the reverse proxy authenticates and there is no token to type.
+  function tokenHeaders() {
+    return tokenInput.value ? { Authorization: "Bearer " + tokenInput.value } : {};
+  }
+  function withScope(path) {
+    if (!state.scope) return path;
+    return path + (path.includes("?") ? "&" : "?") + "account=" + encodeURIComponent(state.scope);
+  }
 
   function msg(text) { $("#msg").textContent = text; if (text) setTimeout(() => { $("#msg").textContent = ""; }, 8000); }
 
   async function api(path, opts = {}) {
-    const res = await fetch(path, { ...opts, headers: { Authorization: "Bearer " + tokenInput.value } });
-    if (res.status === 401) { msg("401 — enter the admin token (top right)."); throw new Error("unauthorized"); }
+    const res = await fetch(path, { ...opts, headers: tokenHeaders() });
+    if (res.status === 401) {
+      msg(state.authMode === "proxy"
+        ? "401 — the proxy did not authenticate this request."
+        : "401 — enter the admin token (top right).");
+      throw new Error("unauthorized");
+    }
     return res.json();
   }
 
   function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
   function fmtDur(s) { if (s == null) return ""; return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 
-  // ---------- health ----------
-  async function refreshHealth() {
+  // ---------- status ----------
+  // /health is public and deliberately says almost nothing; /status carries the
+  // detail and requires auth.
+  async function refreshMode() {
     try {
       const h = await (await fetch("/health")).json();
+      state.authMode = h.auth_mode || "token";
+      // Nothing to type in proxy mode — hide the field rather than lie about it.
+      tokenInput.hidden = state.authMode === "proxy" && !tokenInput.value;
+    } catch { msg("server unreachable"); }
+  }
+
+  function renderAccountSelect(accounts, activeId) {
+    const sel = $("#account");
+    sel.innerHTML = accounts.map((a) => {
+      const label = (a.display_name || a.id) + (a.id === activeId ? " (collected)" : "");
+      return `<option value="${esc(a.id)}"${a.id === state.scope ? " selected" : ""}>${esc(label)}</option>`;
+    }).join("") || `<option value="">no account</option>`;
+  }
+
+  async function refreshStatus() {
+    try {
+      const h = await api(withScope("/status"));
+      state.active = h.auth.active_account_id;
+      if (!state.scope) state.scope = h.auth.active_account_id;
+      renderAccountSelect(h.auth.accounts, h.auth.active_account_id);
+
       const setBadge = (el, label, val) => {
         el.textContent = label + ": " + (val ? val.replace("T", " ").slice(0, 19) : "never");
         el.className = "badge " + (val ? "ok" : "ko");
       };
       setBadge($("#badge-played"), "played", h.collector_played_last_success);
       setBadge($("#badge-liked"), "liked", h.collector_liked_last_success);
+
       const a = $("#badge-auth");
-      a.textContent = h.auth.connected ? "account: connected (" + h.auth.source + ")" : "account: not connected";
-      a.className = "badge " + (h.auth.connected ? "ok" : "ko");
+      const active = (h.auth.accounts || []).find((x) => x.id === h.auth.active_account_id);
+      if (!h.auth.connected) {
+        a.textContent = "account: not connected";
+        a.className = "badge ko";
+      } else if (active && active.status === "revoked") {
+        a.textContent = "account: REVOKED — reconnect";
+        a.className = "badge ko";
+      } else {
+        a.textContent = "collecting: " + (active ? (active.display_name || active.id) : "pending");
+        a.className = "badge ok";
+      }
+
       const rl = $("#badge-rl");
       rl.hidden = !h.rate_limit.limited;
       if (h.rate_limit.limited) { rl.textContent = "rate-limited → " + h.rate_limit.until; rl.className = "badge ko"; }
-    } catch { msg("server unreachable"); }
+    } catch { /* api() already reported it */ }
+  }
+
+  // ---------- accounts ----------
+  async function loadAccounts() {
+    const d = await api("/api/accounts");
+    const counts = d.events_by_account || {};
+    $("#t-accounts tbody").innerHTML = d.items.length
+      ? d.items.map((a) => `<tr>
+          <td>${esc(a.id)}</td>
+          <td class="wrap">${esc(a.display_name || "")}</td>
+          <td>${counts[a.id] || 0}</td>
+          <td>${esc((a.connected_at || "").replace("T", " ").slice(0, 19))}</td>
+          <td>${esc((a.last_seen_at || "—").replace("T", " ").slice(0, 19))}</td>
+          <td class="${a.status === "ok" ? "status-ok" : "status-error"}">${esc(a.status)}${a.id === d.active_account_id ? " · active" : ""}</td>
+          <td>${a.id === d.active_account_id ? "" : `<button data-activate="${esc(a.id)}">collect this one</button>`}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="7" class="muted">no account connected yet</td></tr>`;
+
+    $("#t-accounts").querySelectorAll("[data-activate]").forEach((b) => b.addEventListener("click", async () => {
+      await api("/api/accounts/activate?id=" + encodeURIComponent(b.dataset.activate), { method: "POST" });
+      msg("now collecting for " + b.dataset.activate);
+      await refreshStatus(); await loadAccounts();
+    }));
   }
 
   // ---------- events ----------
@@ -161,7 +250,7 @@
     if ($("#f-q").value) p.set("q", $("#f-q").value);
     if ($("#f-from").value) p.set("from", $("#f-from").value + "T00:00:00Z");
     if ($("#f-to").value) p.set("to", $("#f-to").value + "T23:59:59Z");
-    const d = await api("/api/events?" + p);
+    const d = await api(withScope("/api/events?" + p));
     $("#t-events tbody").innerHTML = d.items.map((e) => `<tr>
       <td>${esc(e.ts_utc.replace("T", " ").slice(0, 19))}</td>
       <td>${esc(e.type)}</td>
@@ -177,7 +266,7 @@
 
   // ---------- runs ----------
   async function loadRuns() {
-    const d = await api(`/api/runs?limit=${PAGE}&offset=${state.runs.offset}`);
+    const d = await api(withScope(`/api/runs?limit=${PAGE}&offset=${state.runs.offset}`));
     $("#t-runs tbody").innerHTML = d.items.map((r) => `<tr>
       <td>${r.id}</td><td>${esc(r.collector)}</td><td>${esc(r.trigger_kind)}</td>
       <td>${esc((r.started_at || "").replace("T", " ").slice(0, 19))}</td>
@@ -192,7 +281,7 @@
   }
 
   async function loadGaps() {
-    const d = await api(`/api/gaps?limit=200&offset=0`);
+    const d = await api(withScope(`/api/gaps?limit=200&offset=0`));
     $("#t-gaps tbody").innerHTML = d.items.length
       ? d.items.map((g) => `<tr><td>${g.id}</td><td>${esc(g.collector)}</td><td>${esc(g.from_utc)}</td>
           <td>${esc(g.to_utc)}</td><td>${esc(g.detected_at)}</td><td class="wrap">${esc(g.note || "")}</td></tr>`).join("")
@@ -200,11 +289,11 @@
   }
 
   async function loadStats() {
-    $("#stats-out").textContent = JSON.stringify(await api("/stats"), null, 2);
+    $("#stats-out").textContent = JSON.stringify(await api(withScope("/stats")), null, 2);
   }
 
   // ---------- tabs ----------
-  const loaders = { events: loadEvents, runs: loadRuns, gaps: loadGaps, stats: loadStats };
+  const loaders = { events: loadEvents, runs: loadRuns, gaps: loadGaps, stats: loadStats, accounts: loadAccounts };
   document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => {
     document.querySelectorAll("nav.tabs button").forEach((x) => x.classList.toggle("active", x === b));
     for (const t of Object.keys(loaders)) $("#tab-" + t).hidden = t !== b.dataset.tab;
@@ -213,14 +302,43 @@
 
   // ---------- actions ----------
   $("#btn-connect").addEventListener("click", () => {
-    if (!tokenInput.value) return msg("enter the admin token first");
-    location.href = "/auth/login?token=" + encodeURIComponent(tokenInput.value);
+    // Connecting a DIFFERENT Spotify account is safe: it creates a new scope,
+    // it never overwrites the one already stored (show_dialog=true lets you
+    // pick which account to sign in with).
+    if (!tokenInput.value && state.authMode !== "proxy") return msg("enter the admin token first");
+    location.href = tokenInput.value
+      ? "/auth/login?token=" + encodeURIComponent(tokenInput.value)
+      : "/auth/login";
+  });
+
+  $("#account").addEventListener("change", () => {
+    state.scope = $("#account").value || null;
+    state.events.offset = 0; state.runs.offset = 0;
+    refreshStatus(); loadEvents().catch(() => {});
+  });
+
+  $("#btn-export").addEventListener("click", () => {
+    // A plain navigation so the browser handles the download; the NDJSON export
+    // carries no secret, unlike the .db snapshot.
+    const p = new URLSearchParams();
+    if (state.scope) p.set("account", state.scope);
+    if ($("#f-type").value) p.set("type", $("#f-type").value);
+    if (tokenInput.value) p.set("token", tokenInput.value);
+    location.href = "/export?" + p;
+  });
+
+  $("#btn-backup").addEventListener("click", async () => {
+    msg("writing backup…");
+    try {
+      const r = await api("/backup", { method: "POST" });
+      msg(`backup written: ${r.file} (${(r.bytes / 1048576).toFixed(1)} MB)`);
+    } catch { /* api() already reported it */ }
   });
   async function run(c) {
     msg(`running collector ${c}…`);
     const r = await api(`/run?collector=${c}`, { method: "POST" });
     msg(`collector ${c}: ${r.status} — fetched ${r.fetched}, inserted ${r.inserted}${r.note ? " (" + r.note + ")" : ""}`);
-    refreshHealth(); loadEvents().catch(() => {});
+    refreshStatus(); loadEvents().catch(() => {});
   }
   $("#btn-run-played").addEventListener("click", () => run("played").catch(() => {}));
   $("#btn-run-liked").addEventListener("click", () => run("liked").catch(() => {}));
@@ -234,13 +352,21 @@
 
   // ---------- OAuth flow return ----------
   const qp = new URLSearchParams(location.search);
-  if (qp.get("connected")) msg("Spotify account connected ✔");
+  if (qp.get("connected")) msg("Spotify account connected ✔ (" + qp.get("connected") + ")");
   if (qp.get("auth_error")) msg("connection failed: " + qp.get("auth_error"));
   if (qp.get("connected") || qp.get("auth_error")) history.replaceState(null, "", "/");
 
-  refreshHealth();
-  setInterval(refreshHealth, 60_000);
-  if (tokenInput.value) loadEvents().catch(() => {});
+  (async () => {
+    await refreshMode();
+    if (!tokenInput.value && state.authMode !== "proxy") return; // nothing we can query yet
+    await refreshStatus();
+    loadEvents().catch(() => {});
+  })();
+  setInterval(() => { refreshStatus().catch(() => {}); }, 60_000);
+
+  tokenInput.addEventListener("change", () => {
+    refreshStatus().then(() => loadEvents()).catch(() => {});
+  });
 })();
 </script>
 </body>

@@ -1,7 +1,7 @@
 import { getAccessToken } from "../auth";
 import { EventRow, getState, insertEvents, insertGap, setState } from "../db";
 import { spotifyGet } from "../spotify-api";
-import { CollectorResult, Env, TransientError, nowIso } from "../types";
+import { Account, CollectorResult, Env, TransientError, nowIso } from "../types";
 
 const URL_RP = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
 const GAP_TOLERANCE_MS = 5 * 60 * 1000; // §5.4
@@ -23,18 +23,21 @@ interface RpItem {
  * Spec §5 — deliberate decision: NO `after` parameter.
  * We refetch the last 50 on every run; INSERT OR IGNORE sorts it out.
  * `played.last_played_at` is only used for gap detection, never for the request.
+ *
+ * Every read and write is scoped to `account`: cursors, raw rows, events and
+ * gaps all belong to the account the run collected for.
  */
-export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> {
-  const token = await getAccessToken(env);
+export async function collectRecentlyPlayed(env: Env, account: Account): Promise<CollectorResult> {
+  const token = await getAccessToken(env, account);
 
   // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
   // throw) and writes raw_spotify on every attempt (I3).
-  let r = await spotifyGet(env, "played", URL_RP, token);
+  let r = await spotifyGet(env, account.id, "played", URL_RP, token);
 
   if (r.status === 401) {
     // Isolated 401: a single token refresh, then one retry (§10).
-    const retryToken = await getAccessToken(env);
-    r = await spotifyGet(env, "played", URL_RP, retryToken);
+    const retryToken = await getAccessToken(env, account);
+    r = await spotifyGet(env, account.id, "played", URL_RP, retryToken);
   }
 
   if (r.status >= 500) {
@@ -46,7 +49,7 @@ export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> 
 
   const items: RpItem[] = (JSON.parse(r.bodyText).items ?? []) as RpItem[];
   if (items.length === 0) {
-    setState(env, "played.last_success_at", nowIso());
+    setState(env, account.id, "played.last_success_at", nowIso());
     return { status: "ok", fetched: 0, inserted: 0, note: "empty buffer" };
   }
 
@@ -69,21 +72,30 @@ export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> 
     }),
   }));
 
-  const inserted = insertEvents(env, rows);
+  const inserted = insertEvents(env, account.id, rows);
 
   const playedAts = items.map((i) => i.played_at).sort();
   const oldest = playedAts[0];
   const newest = playedAts[playedAts.length - 1];
-  const last = getState(env, "played.last_played_at");
+  const last = getState(env, account.id, "played.last_played_at");
 
+  let gapDetected: { from: string; to: string } | null = null;
   if (last && Date.parse(oldest) > Date.parse(last) + GAP_TOLERANCE_MS && inserted === items.length) {
-    insertGap(env, "played", last, oldest, "buffer fully renewed between two runs");
+    insertGap(env, account.id, "played", last, oldest, "buffer fully renewed between two runs");
+    gapDetected = { from: last, to: oldest };
   }
 
   if (!last || Date.parse(newest) > Date.parse(last)) {
-    setState(env, "played.last_played_at", newest);
+    setState(env, account.id, "played.last_played_at", newest);
   }
-  setState(env, "played.last_success_at", nowIso());
+  setState(env, account.id, "played.last_success_at", nowIso());
 
-  return { status: "ok", fetched: items.length, inserted };
+  return {
+    status: "ok",
+    fetched: items.length,
+    inserted,
+    // Surfaced so run-core can alert: a gap is history lost for good, the API
+    // will never hand those plays back.
+    gap: gapDetected,
+  };
 }

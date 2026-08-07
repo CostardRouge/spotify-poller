@@ -21,10 +21,18 @@ services:
       # Container-internal scheduling — decision documented in
       # docs/scheduling.md. 'played' every 30 min, 'liked' daily.
       - SCHEDULE_ENABLED=1
+      # Daily .db snapshot onto the host bind mount below.
+      - BACKUP_ENABLED=${BACKUP_ENABLED:-1}
+      - BACKUP_DIR=/backups
     volumes:
       # The SQLite database is IRREPLACEABLE (spec §1): a named volume is
       # mandatory, never the container's writable layer. Include it in backups.
       - spotify-poller-data:/data
+      # Backups live on the HOST filesystem, deliberately outside the data
+      # volume: a snapshot stored inside the volume it protects is not a backup.
+      # These files contain the Spotify refresh token — keep them as private
+      # as .env, and include them in the host's off-site backups.
+      - ./backups:/backups
     restart: unless-stopped
     healthcheck:
       test:

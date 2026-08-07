@@ -7,7 +7,10 @@
     "migrate": "node dist/migrate.js",
     "run:a": "node dist/run-once.js A",
     "run:b": "node dist/run-once.js B",
-    "serve": "node dist/server.js"
+    "serve": "node dist/server.js",
+    "backup": "node dist/backup.js",
+    "export": "node dist/export.js",
+    "import": "node dist/import.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
