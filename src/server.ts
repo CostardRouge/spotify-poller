@@ -154,6 +154,7 @@ const server = createServer(async (req, res) => {
         scheduler: schedulerEnabled() ? schedulerOptionsFromProcess() : null,
         backup: { enabled: env.BACKUP_ENABLED, dir: env.BACKUP_DIR, keep: env.BACKUP_KEEP },
         notifications: { ntfy: !!env.NTFY_URL, heartbeat: !!env.WATCHDOG_URL },
+        timezone: env.TIMEZONE,
       });
     }
 
