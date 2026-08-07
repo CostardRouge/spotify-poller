@@ -1,5 +1,5 @@
 [Unit]
-Description=Cadence du collecteur B (quotidien, spec §3)
+Description=Collector B cadence (daily, spec §3)
 
 [Timer]
 OnCalendar=*-*-* 04:17:00

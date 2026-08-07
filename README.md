@@ -1,113 +1,113 @@
-# Poller Spotify — collecte continue de l'historique d'écoute
+# Spotify Poller — continuous listening-history collection
 
-Collecte l'historique d'écoute (et les likes) d'un compte Spotify personnel
-dans une base SQLite locale, en continu et sans supervision. Voir la spec pour
-le pourquoi ; l'essentiel : l'API Spotify n'expose que les **50 derniers
-morceaux**, toute période non collectée à temps est perdue pour toujours.
+Continuously and unattended, collects the listening history (and likes) of a
+personal Spotify account into a local SQLite database. See the spec for the
+why; the gist: the Spotify API only exposes the **last 50 tracks**, so any
+period not collected in time is lost forever.
 
-**Ce qui reste critique quel que soit le mode de déploiement** : le watchdog
-externe (healthchecks.io). L'onduleur protège la perte d'alimentation, rien
-d'autre. Panne FAI, reboot sans relance propre, disque plein, crash silencieux
-du process : seul le watchdog les rend bruyants. Le `HEALTHCHECK` Docker le
-complète (redémarrage local d'un process coincé) mais ne le remplace jamais —
-un hôte éteint ne redémarre rien tout seul.
+**What stays critical whatever the deployment mode**: the external watchdog
+(healthchecks.io). The UPS protects against power loss, nothing else. ISP
+outage, reboot without a clean restart, full disk, silent process crash: only
+the watchdog makes those loud. The Docker `HEALTHCHECK` complements it (local
+restart of a stuck process) but never replaces it — a powered-off host
+restarts nothing on its own.
 
-## Déploiement recommandé : Docker (conventions Spotify Calendar)
+## Recommended deployment: Docker (Spotify Calendar conventions)
 
 ```bash
-make init          # crée .env depuis .env.example + build de l'image dev
-# éditer .env : SPOTIFY_CLIENT_ID/SECRET, SPOTIFY_REDIRECT_URI, ADMIN_TOKEN, WATCHDOG_URL
-make up            # démarre la stack dev (http://127.0.0.1:8787)
+make init          # creates .env from .env.example + builds the dev image
+# edit .env: SPOTIFY_CLIENT_ID/SECRET, SPOTIFY_REDIRECT_URI, ADMIN_TOKEN, WATCHDOG_URL
+make up            # starts the dev stack (http://127.0.0.1:8787)
 make logs
 ```
 
-Puis ouvrir http://127.0.0.1:8787, coller l'`ADMIN_TOKEN` (en haut à droite)
-et cliquer **« Connecter Spotify »** : le refresh token est stocké en base
-(`poller_state`, sur le volume de données), plus besoin du script jetable.
-Le fallback `SPOTIFY_REFRESH_TOKEN` en `.env` reste supporté
+Then open http://127.0.0.1:8787, paste the `ADMIN_TOKEN` (top right) and click
+**"Connect Spotify"**: the refresh token is stored in the database
+(`poller_state`, on the data volume), so the throwaway script is no longer
+needed. The `SPOTIFY_REFRESH_TOKEN` fallback in `.env` is still supported
 (`scripts/get-refresh-token.mjs`).
 
 ### Home Lab (OptiPlex)
 
-L'image est construite et publiée sur GHCR par
-`.github/workflows/docker-build.yml` à chaque push sur `main` — même schéma
-que le Spotify Calendar (tags `main`/`latest` mouvants + `sha-<court>`
-immuable pour rollback, redéploiement Watchtower optionnel).
+The image is built and published to GHCR by
+`.github/workflows/docker-build.yml` on every push to `main` — same scheme as
+the Spotify Calendar (moving `main`/`latest` tags + immutable `sha-<short>`
+for rollback, optional Watchtower redeployment).
 
 ```bash
-make prod-pull && make prod-up     # ou : make prod-deploy
+make prod-pull && make prod-up     # or: make prod-deploy
 make prod-logs
-make prod-run-a                    # passage manuel du collecteur A
+make prod-run-a                    # manual run of collector A
 ```
 
-Points non négociables, câblés dans `docker-compose.prod.yml` :
+Non-negotiable points, wired into `docker-compose.prod.yml`:
 
-- **la base SQLite vit sur le volume nommé `spotify-poller-data`** — jamais
-  dans la couche writable du conteneur : la donnée est irremplaçable, à
-  inclure dans les sauvegardes de l'hôte ;
-- **aucun secret dans l'image** — tout vient de `.env` via `env_file` au
-  lancement ;
-- **planification interne au conteneur** (`SCHEDULE_ENABLED=1`) : A toutes
-  les 30 min, B quotidien. Décision et alternatives : `docs/scheduling.md` ;
-- healthcheck Docker sur `/health`, en complément du watchdog externe.
+- **the SQLite database lives on the named volume `spotify-poller-data`** —
+  never in the container's writable layer: the data is irreplaceable and must
+  be included in the host's backups;
+- **no secret in the image** — everything comes from `.env` via `env_file` at
+  launch time;
+- **container-internal scheduling** (`SCHEDULE_ENABLED=1`): A every 30 min, B
+  daily. Decision and alternatives: `docs/scheduling.md`;
+- Docker healthcheck on `/health`, complementing the external watchdog.
 
-### Cibles Makefile
+### Makefile targets
 
-`make help` liste tout — mêmes conventions que le Spotify Calendar
-(`build/up/down/logs/shell`, `prod-*`), plus les opérations poller :
-`migrate`, `run-a`, `run-b` (et leurs variantes `prod-`).
+`make help` lists everything — same conventions as the Spotify Calendar
+(`build/up/down/logs/shell`, `prod-*`), plus the poller operations:
+`migrate`, `run-a`, `run-b` (and their `prod-` variants).
 
-## UI de debug
+## Debug UI
 
-Servie sur `/` par le serveur (aucune dépendance, un fichier
-`public/index.html`). Minimaliste, pensée pour vérifier la collecte :
+Served on `/` by the server (no dependencies, a single `public/index.html`
+file). Minimal, designed to verify collection:
 
-- état de santé : dernier succès A/B, compte connecté, rate-limit en cours ;
-- connexion du compte Spotify (flow Authorization Code, spec §7 — token
-  stable stocké dans `poller_state`) ;
-- navigation de **tous** les événements collectés : filtres type / recherche
-  titre-artiste / bornes de dates, tri, pagination, payload JSON dépliable ;
-- journal des exécutions (`poller_runs`), trous déclarés (`gaps`), stats ;
-- déclenchement manuel des collecteurs A et B (idempotent — I2).
+- health status: last A/B success, connected account, ongoing rate limit;
+- Spotify account connection (Authorization Code flow, spec §7 — stable token
+  stored in `poller_state`);
+- browsing of **all** collected events: type filters / title-artist search /
+  date bounds, sorting, pagination, expandable JSON payload;
+- run log (`poller_runs`), declared gaps (`gaps`), stats;
+- manual triggering of collectors A and B (idempotent — I2).
 
-L'UI demande l'`ADMIN_TOKEN` (stocké dans le localStorage du navigateur).
-Le serveur n'est pas fait pour être exposé à internet : réseau local
-uniquement, reverse proxy TLS si accès distant un jour.
+The UI asks for the `ADMIN_TOKEN` (stored in the browser's localStorage). The
+server is not meant to be exposed to the internet: local network only, TLS
+reverse proxy if remote access is ever needed.
 
 ## Endpoints
 
-| Route | Auth | Rôle |
+| Route | Auth | Role |
 |---|---|---|
-| `GET /` | — | UI de debug |
-| `GET /health` | — | dernier succès par collecteur, auth, rate-limit, scheduler |
-| `GET /auth/login` | jeton (query) | démarre le flow OAuth de connexion |
-| `GET /auth/callback` | state cookie | retour Spotify, stocke le refresh token |
-| `POST /run?collector=A\|B` | Bearer/query | déclenchement manuel (idempotent) |
-| `GET /stats` | Bearer/query | volumétrie, trous, 20 dernières exécutions |
-| `GET /api/events` | Bearer/query | pagination + filtres `type`, `q`, `from`, `to`, `order` |
-| `GET /api/runs`, `GET /api/gaps` | Bearer/query | journaux paginés |
+| `GET /` | — | debug UI |
+| `GET /health` | — | last success per collector, auth, rate limit, scheduler |
+| `GET /auth/login` | token (query) | starts the OAuth connection flow |
+| `GET /auth/callback` | state cookie | Spotify return, stores the refresh token |
+| `POST /run?collector=A\|B` | Bearer/query | manual trigger (idempotent) |
+| `GET /stats` | Bearer/query | volumes, gaps, last 20 runs |
+| `GET /api/events` | Bearer/query | pagination + `type`, `q`, `from`, `to`, `order` filters |
+| `GET /api/runs`, `GET /api/gaps` | Bearer/query | paginated logs |
 
-## Rate limit & résilience API (repris du Spotify Calendar)
+## Rate limit & API resilience (carried over from the Spotify Calendar)
 
-- retry **borné** (backoff exponentiel) sur erreurs réseau et 5xx — tout
-  appel se termine en temps fini ;
-- `429` : jamais de retry dans la même exécution ; le cooldown `Retry-After`
-  est **persisté** (`poller_state`) et les exécutions suivantes s'abstiennent
-  tant qu'il court — requêter pendant un ban le prolonge ;
-- chaque tentative écrit sa ligne `raw_spotify` avant tout parsing (I3) ;
-- `401` isolé : un rafraîchissement de token puis un seul nouvel essai ;
-- échec du refresh token : `AuthError`, bruyant, alerte watchdog immédiate.
+- **bounded** retry (exponential backoff) on network errors and 5xx — every
+  call terminates in finite time;
+- `429`: never retried within the same run; the `Retry-After` cooldown is
+  **persisted** (`poller_state`) and subsequent runs abstain while it lasts —
+  querying during a ban extends it;
+- every attempt writes its `raw_spotify` row before any parsing (I3);
+- isolated `401`: one token refresh, then a single retry;
+- refresh-token failure: `AuthError`, loud, immediate watchdog alert.
 
-## Alternative bare-metal : systemd (mode historique)
+## Bare-metal alternative: systemd (legacy mode)
 
 <details>
-<summary>Déploiement direct sur l'OptiPlex sans Docker (déplié)</summary>
+<summary>Deploying directly on the OptiPlex without Docker (expanded)</summary>
 
-### Prérequis
+### Prerequisites
 
 ```bash
 node --version   # Node 20 LTS minimum
-sudo apt install -y build-essential python3   # better-sqlite3 compile au install
+sudo apt install -y build-essential python3   # better-sqlite3 compiles at install time
 ```
 
 ### Installation
@@ -137,65 +137,63 @@ sudo systemctl enable --now spotify-poller-b.timer
 sudo systemctl enable --now spotify-poller-api.service
 ```
 
-En bare-metal, laisser `SCHEDULE_ENABLED` non défini : les timers systemd
-pilotent `run-once.ts`, jamais deux planificateurs en parallèle
-(`docs/scheduling.md`).
+On bare metal, leave `SCHEDULE_ENABLED` unset: the systemd timers drive
+`run-once.ts`, never two schedulers in parallel (`docs/scheduling.md`).
 
-`Persistent=true` sur les timers garantit qu'un passage manqué pendant un
-redémarrage est rattrapé dès que la machine revient.
+`Persistent=true` on the timers guarantees that a run missed during a restart
+is caught up as soon as the machine comes back.
 
-### Sécurité self-host
+### Self-host security
 
-- service system dédié (`poller`), sans privilèges, sans shell ;
-- `ProtectSystem=strict` + `ReadWritePaths` restreint à `data/` ;
-- `.env` en `600`, jamais commité.
+- dedicated system service (`poller`), unprivileged, no shell;
+- `ProtectSystem=strict` + `ReadWritePaths` restricted to `data/`;
+- `.env` at `600`, never committed.
 
 </details>
 
-## Tests d'acceptation (inchangés)
+## Acceptance tests (unchanged)
 
 ```bash
-# Idempotence (I2) : rejouer A deux fois de suite
+# Idempotence (I2): replay A twice in a row
 curl -X POST "http://127.0.0.1:8787/run?collector=A" -H "Authorization: Bearer $ADMIN_TOKEN"
-# -> inserted > 0, puis rejouer : inserted: 0
+# -> inserted > 0, then replay: inserted: 0
 
-# Watchdog : couper le service, attendre 2 h, confirmer l'alerte healthchecks.io
-make down   # (ou systemctl stop spotify-poller-a.timer)
+# Watchdog: stop the service, wait 2 h, confirm the healthchecks.io alert
+make down   # (or systemctl stop spotify-poller-a.timer)
 
-# Résilience au reboot : sudo reboot puis vérifier
-docker ps            # restart: unless-stopped doit avoir relancé le conteneur
-make prod-logs       # premier passage A ~15 s après le démarrage
+# Reboot resilience: sudo reboot, then check
+docker ps            # restart: unless-stopped must have brought the container back
+make prod-logs       # first A run ~15 s after startup
 ```
 
-## Backfill des likes
+## Likes backfill
 
-Bouton « Run B » de l'UI (ou `make run-b`), à relancer jusqu'à
-`note: "backfill terminé"` — ou laisser la cadence quotidienne finir
-(tant que le backfill est en cours, le scheduler fait tourner B toutes les
-heures par tranches bornées).
+The UI's "Run B" button (or `make run-b`), to be re-run until
+`note: "backfill complete"` — or just let the daily cadence finish (while the
+backfill is in progress, the scheduler runs B every hour in bounded batches).
 
-## Les 5 tests empiriques
+## The 5 empirical tests
 
-`docs/findings.md` — inchangé, indépendant de l'infra. Le test 2 (hors-ligne)
-reste le plus important.
+`docs/findings.md` — unchanged, independent of the infrastructure. Test 2
+(offline) remains the most important.
 
-## Sauvegarde
+## Backup
 
-La base est un fichier sur le volume `spotify-poller-data`. Backup simple
-depuis l'hôte :
+The database is a file on the `spotify-poller-data` volume. Simple backup from
+the host:
 ```bash
 docker compose -f docker-compose.prod.yml exec spotify-poller \
   node -e "require('better-sqlite3')(process.env.DB_PATH).backup('/data/backup-'+new Date().toISOString().slice(0,10)+'.db')"
 ```
-À automatiser (cron hôte ou conteneur dédié) avant que le fichier contienne
-des mois d'historique irremplaçable.
+To be automated (host cron or dedicated container) before the file holds
+months of irreplaceable history.
 
-## Hors périmètre (inchangé, §14 de la spec)
+## Out of scope (unchanged, §14 of the spec)
 
-Corrélation, photos, GPX, analyse audio, import de l'export RGPD, purge de
-`raw_spotify`.
+Correlation, photos, GPX, audio analysis, GDPR export import, `raw_spotify`
+purge.
 
 ---
 
-**Pense-bête indépendant de l'infra** : demander l'export RGPD
-« Extended streaming history » sur spotify.com/account/privacy (~30 jours de délai).
+**Infrastructure-independent reminder**: request the GDPR
+"Extended streaming history" export at spotify.com/account/privacy (~30-day delay).

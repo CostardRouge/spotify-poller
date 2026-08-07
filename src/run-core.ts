@@ -6,15 +6,15 @@ import { AuthError, CollectorResult, Env, TransientError } from "./types";
 import { pingFailure, pingSuccess } from "./watchdog";
 
 /**
- * Spec §8, inchangée par le passage au self-host :
- *  - ligne poller_runs écrite au démarrage, complétée dans un finally (I1)
- *  - AuthError / erreur DB / exception imprévue -> 'error' + alerte immédiate
- *  - TransientError -> 'partial', silencieux : la prochaine exécution rattrape
- *  - succès du collecteur A -> ping watchdog (dead man's switch, §9)
+ * Spec §8, unchanged by the move to self-hosting:
+ *  - poller_runs row written at start, completed in a finally (I1)
+ *  - AuthError / DB error / unexpected exception -> 'error' + immediate alert
+ *  - TransientError -> 'partial', silent: the next run catches up
+ *  - collector A success -> watchdog ping (dead man's switch, §9)
  *
- * Le watchdog est PLUS important ici qu'sur Workers : les causes de silence
- * sont plus nombreuses (reboot, coupure réseau locale, disque plein, crash
- * process) et l'onduleur ne couvre que la perte d'alimentation électrique.
+ * The watchdog matters MORE here than on Workers: there are more causes of
+ * silence (reboot, local network outage, full disk, process crash) and the UPS
+ * only covers a loss of mains power.
  */
 export async function runCollector(collector: "A" | "B", trigger: "cron" | "manual", env: Env): Promise<CollectorResult> {
   let runId: number | null = null;
@@ -23,12 +23,12 @@ export async function runCollector(collector: "A" | "B", trigger: "cron" | "manu
 
   try {
     runId = startRun(env, collector, trigger);
-    // Cooldown 429 persisté (spotify-api.ts) : requêter pendant un ban actif
-    // compte contre l'app et peut le prolonger — on s'abstient, le run est
-    // quand même journalisé (I1) et le prochain passage rattrape.
+    // Persisted 429 cooldown (spotify-api.ts): querying during an active ban
+    // counts against the app and may extend it — we abstain, the run is still
+    // logged (I1) and the next one catches up.
     const rl = getRateLimit(env);
     if (rl.limited) {
-      result = { status: "partial", fetched: 0, inserted: 0, note: `rate-limited, reprise après ${rl.until}` };
+      result = { status: "partial", fetched: 0, inserted: 0, note: `rate-limited, resuming after ${rl.until}` };
     } else {
       result = collector === "A" ? await collectRecentlyPlayed(env) : await collectLikedTracks(env);
     }
@@ -45,7 +45,7 @@ export async function runCollector(collector: "A" | "B", trigger: "cron" | "manu
       try {
         finishRun(env, runId, result.status, result.fetched, result.inserted, errorMsg ?? result.note ?? null);
       } catch {
-        // L'échec du journal ne doit pas masquer le résultat réel.
+        // A logging failure must not mask the real result.
       }
     }
   }

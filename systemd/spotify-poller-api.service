@@ -1,5 +1,5 @@
 [Unit]
-Description=API poller Spotify (/health /run /stats)
+Description=Spotify Poller API (/health /run /stats)
 After=network-online.target
 Wants=network-online.target
 

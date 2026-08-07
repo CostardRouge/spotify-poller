@@ -1,15 +1,15 @@
--- État persistant des collecteurs.
--- Clés : 'A.last_played_at', 'A.last_success_at',
---        'B.last_added_at',  'B.last_success_at',
---        'B.backfill_done',  'B.backfill_offset'
+-- Persistent collector state.
+-- Keys: 'A.last_played_at', 'A.last_success_at',
+--       'B.last_added_at',  'B.last_success_at',
+--       'B.backfill_done',  'B.backfill_offset'
 CREATE TABLE poller_state (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
--- Journal d'exécution : ce qui rend l'invariant I1 vérifiable.
--- Ligne écrite au démarrage, complétée dans un finally.
+-- Run log: what makes invariant I1 verifiable.
+-- Row written at start, completed in a finally.
 CREATE TABLE poller_runs (
   id             INTEGER PRIMARY KEY AUTOINCREMENT,
   collector      TEXT    NOT NULL,   -- 'A' | 'B'
@@ -24,7 +24,7 @@ CREATE TABLE poller_runs (
 
 CREATE INDEX idx_runs_collector ON poller_runs(collector, started_at DESC);
 
--- Trous de collecte déclarés : un trou honnête vaut mieux qu'un zéro mensonger (§4.4).
+-- Declared collection gaps: an honest gap beats a lying zero (§4.4).
 CREATE TABLE gaps (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   collector   TEXT NOT NULL,

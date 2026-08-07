@@ -5,13 +5,14 @@ export interface Env {
   SPOTIFY_CLIENT_ID: string;
   SPOTIFY_CLIENT_SECRET: string;
   /**
-   * Fallback si aucun compte n'a été connecté via l'UI (/auth/login).
-   * Le token obtenu via l'UI est stocké dans poller_state et prime sur l'env.
+   * Fallback when no account has been connected through the UI (/auth/login).
+   * The token obtained through the UI is stored in poller_state and takes
+   * precedence over the env variable.
    */
   SPOTIFY_REFRESH_TOKEN?: string;
-  /** Doit correspondre EXACTEMENT à un Redirect URI déclaré dans l'app Spotify. */
+  /** Must match EXACTLY a Redirect URI declared in the Spotify app. */
   SPOTIFY_REDIRECT_URI?: string;
-  WATCHDOG_URL?: string; // obligatoire en usage réel — voir §9, encore plus vrai en self-host
+  WATCHDOG_URL?: string; // mandatory in real use — see §9, even more so when self-hosted
   ADMIN_TOKEN: string;
 }
 
@@ -24,7 +25,7 @@ export interface CollectorResult {
   note?: string;
 }
 
-/** Échec du refresh token : le seul cas où la collecte est morte pour de bon (§8). */
+/** Refresh token failure: the only case where collection is dead for good (§8). */
 export class AuthError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -32,7 +33,7 @@ export class AuthError extends Error {
   }
 }
 
-/** Erreur transitoire (429, 5xx, réseau) : la prochaine exécution rattrape. */
+/** Transient error (429, 5xx, network): the next run catches up. */
 export class TransientError extends Error {
   constructor(msg: string) {
     super(msg);
@@ -41,10 +42,10 @@ export class TransientError extends Error {
 }
 
 /**
- * 429 Spotify : transitoire, mais porte le cooldown annoncé par Retry-After.
- * Toute requête pendant un ban actif compte contre l'app et peut le prolonger —
- * le cooldown est persisté dans poller_state pour que les exécutions suivantes
- * (timer ou manuelles) s'abstiennent tant qu'il court.
+ * Spotify 429: transient, but carries the cooldown announced by Retry-After.
+ * Any request during an active ban counts against the app and may extend it —
+ * the cooldown is persisted in poller_state so that subsequent runs (timer or
+ * manual) abstain while it lasts.
  */
 export class RateLimitError extends TransientError {
   readonly retryAfterS: number;
@@ -60,21 +61,21 @@ export function nowIso(): string {
 }
 
 /**
- * Charge les variables requises depuis process.env (rempli par dotenv).
- * Échoue tôt et clairement si un secret manque — préférable à un
- * comportement dégradé silencieux au premier appel réseau.
+ * Loads the required variables from process.env (populated by dotenv).
+ * Fails early and clearly if a secret is missing — better than silently
+ * degraded behaviour on the first network call.
  */
 export function loadEnvFromProcess(db: Database.Database): Env {
   const need = (k: string): string => {
     const v = process.env[k];
-    if (!v) throw new Error(`variable d'environnement manquante: ${k}`);
+    if (!v) throw new Error(`missing environment variable: ${k}`);
     return v;
   };
   return {
     DB: db,
     SPOTIFY_CLIENT_ID: need("SPOTIFY_CLIENT_ID"),
     SPOTIFY_CLIENT_SECRET: need("SPOTIFY_CLIENT_SECRET"),
-    // Optionnel depuis l'UI de connexion : le token peut venir de poller_state.
+    // Optional since the connection UI exists: the token may come from poller_state.
     SPOTIFY_REFRESH_TOKEN: process.env.SPOTIFY_REFRESH_TOKEN,
     SPOTIFY_REDIRECT_URI: process.env.SPOTIFY_REDIRECT_URI,
     WATCHDOG_URL: process.env.WATCHDOG_URL,

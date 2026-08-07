@@ -3,24 +3,22 @@ import { runCollector } from "./run-core";
 import { Env } from "./types";
 
 /**
- * Planification interne au conteneur (décision §13 documentée dans
- * docs/scheduling.md) : le serveur long-running porte la boucle de
- * planification, comme le Spotify Calendar porte tout dans un unique
- * conteneur `restart: unless-stopped`.
+ * Container-internal scheduling (decision §13, documented in
+ * docs/scheduling.md): the long-running server carries the scheduling loop,
+ * just as the Spotify Calendar carries everything in a single
+ * `restart: unless-stopped` container.
  *
- *  - Collecteur A : toutes les SCHEDULE_A_MINUTES (30 par défaut), premier
- *    passage peu après le démarrage — un redémarrage ne fait donc jamais
- *    perdre plus d'une fenêtre.
- *  - Collecteur B : cadence pilotée par l'horloge PERSISTÉE
- *    (`B.last_success_at`), vérifiée toutes les heures — la cadence
- *    quotidienne ne dérive pas au fil des redémarrages du conteneur.
- *    Exception : tant que le backfill n'est pas terminé, B tourne à chaque
- *    vérification horaire pour avancer le backfill par tranches bornées.
+ *  - Collector A: every SCHEDULE_A_MINUTES (30 by default), first run shortly
+ *    after startup — so a restart never loses more than one window.
+ *  - Collector B: cadence driven by the PERSISTED clock
+ *    (`B.last_success_at`), checked every hour — the daily cadence does not
+ *    drift across container restarts.
+ *    Exception: as long as the backfill is not finished, B runs at every
+ *    hourly check to advance the backfill in bounded batches.
  *
- * Désactivé par défaut (SCHEDULE_ENABLED=1 pour l'activer) : en bare-metal,
- * ce sont les timers systemd qui pilotent run-once.ts, et l'API ne doit pas
- * collecter en double — même si l'idempotence (I2) rendrait ce doublon
- * inoffensif pour les données.
+ * Disabled by default (SCHEDULE_ENABLED=1 to turn it on): on bare metal the
+ * systemd timers drive run-once.ts, and the API must not collect twice — even
+ * though idempotence (I2) would make that duplicate harmless for the data.
  */
 
 export interface SchedulerOptions {
@@ -40,7 +38,7 @@ export function schedulerEnabled(): boolean {
 }
 
 export function startScheduler(env: Env, opts: SchedulerOptions): void {
-  // Verrou anti-chevauchement : un passage encore en cours n'est jamais doublé.
+  // Anti-overlap lock: a run still in progress is never doubled up.
   const running: Record<"A" | "B", boolean> = { A: false, B: false };
 
   const tick = async (collector: "A" | "B"): Promise<void> => {
@@ -48,10 +46,11 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     running[collector] = true;
     try {
       const result = await runCollector(collector, "cron", env);
-      console.log(`[scheduler] collecteur ${collector} :`, JSON.stringify(result));
+      console.log(`[scheduler] collector ${collector}:`, JSON.stringify(result));
     } catch (e) {
-      // runCollector capture déjà tout (I1) — ceci n'attrape que l'imprévu.
-      console.error(`[scheduler] collecteur ${collector} : erreur non capturée`, e);
+      // runCollector already catches everything (I1) — this only catches the
+      // unexpected.
+      console.error(`[scheduler] collector ${collector}: uncaught error`, e);
     } finally {
       running[collector] = false;
     }
@@ -74,6 +73,6 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
   }, 3_600_000);
 
   console.log(
-    `[scheduler] actif — A toutes les ${opts.aEveryMinutes} min, B toutes les ${opts.bEveryHours} h (vérification horaire)`
+    `[scheduler] active — A every ${opts.aEveryMinutes} min, B every ${opts.bEveryHours} h (hourly check)`
   );
 }
