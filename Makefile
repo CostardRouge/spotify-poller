@@ -71,13 +71,13 @@ shell: ## Open a shell inside the dev container
 migrate: ## Apply pending SQL migrations inside the dev container
 	$(DC) exec poller node dist/migrate.js
 
-.PHONY: run-a
-run-a: ## Run collector A (recently played) once inside the dev container
-	$(DC) exec poller node dist/run-once.js A
+.PHONY: run-played
+run-played: ## Run the 'played' collector (recently played) once in the dev container
+	$(DC) exec poller node dist/run-once.js played
 
-.PHONY: run-b
-run-b: ## Run collector B (liked tracks) once inside the dev container
-	$(DC) exec poller node dist/run-once.js B
+.PHONY: run-liked
+run-liked: ## Run the 'liked' collector (liked tracks) once in the dev container
+	$(DC) exec poller node dist/run-once.js liked
 
 # ---- Home Lab / production --------------------------------------------------
 # The image is built & published to GHCR by .github/workflows/docker-build.yml
@@ -116,13 +116,13 @@ prod-shell: ## Open a shell inside the Home Lab container
 prod-migrate: ## Apply pending SQL migrations inside the Home Lab container
 	$(DC_PROD) exec spotify-poller node dist/migrate.js
 
-.PHONY: prod-run-a
-prod-run-a: ## Run collector A once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller node dist/run-once.js A
+.PHONY: prod-run-played
+prod-run-played: ## Run the 'played' collector once inside the Home Lab container
+	$(DC_PROD) exec spotify-poller node dist/run-once.js played
 
-.PHONY: prod-run-b
-prod-run-b: ## Run collector B once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller node dist/run-once.js B
+.PHONY: prod-run-liked
+prod-run-liked: ## Run the 'liked' collector once inside the Home Lab container
+	$(DC_PROD) exec spotify-poller node dist/run-once.js liked
 
 # ---- Housekeeping -----------------------------------------------------------
 .PHONY: ps

@@ -4,17 +4,19 @@
  * Replaces the Worker's `scheduled` handler: here the systemd timer decides
  * the cadence, this script only performs one run and exits.
  *
- * Usage: node dist/run-once.js A
- *        node dist/run-once.js B
+ * Usage: node dist/run-once.js played
+ *        node dist/run-once.js liked
  */
 import "dotenv/config";
 import Database from "better-sqlite3";
-import { loadEnvFromProcess } from "./types";
+import { COLLECTOR_IDS, loadEnvFromProcess, parseCollectorId } from "./types";
 import { runCollector } from "./run-core";
 
-const collector = process.argv[2];
-if (collector !== "A" && collector !== "B") {
-  console.error("usage: run-once.js A|B");
+// 'A'/'B' still resolve: a systemd unit installed before the rename keeps
+// working until the units are reinstalled.
+const collector = parseCollectorId(process.argv[2]);
+if (collector === null) {
+  console.error(`usage: run-once.js ${COLLECTOR_IDS.join("|")}`);
   process.exit(2);
 }
 
