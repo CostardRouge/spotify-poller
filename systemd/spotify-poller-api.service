@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller API (/health /run /stats)
+Description=Spotify Poller dashboard + admin API (Next.js) — run `npm run build` first
 After=network-online.target
 Wants=network-online.target
 
@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 WorkingDirectory=/opt/spotify-poller
 EnvironmentFile=/opt/spotify-poller/.env
-ExecStart=/usr/bin/node dist/server.js
+ExecStart=/bin/sh -c 'node_modules/.bin/next start -H ${API_HOST:-127.0.0.1} -p ${API_PORT:-3000}'
 User=poller
 Group=poller
 Restart=on-failure

@@ -8,6 +8,7 @@ DC        := docker compose
 DEV_FILE  := docker-compose.yml
 PROD_FILE := docker-compose.prod.yml
 DC_PROD   := $(DC) -f $(PROD_FILE)
+TSX       := node_modules/.bin/tsx
 
 .DEFAULT_GOAL := help
 
@@ -43,6 +44,10 @@ up: ## Start the dev stack in the background
 start: ## Start the dev stack in the foreground (Ctrl-C to stop)
 	$(DC) up
 
+.PHONY: stop
+stop: ## Pause the dev stack (containers kept, `make start`/`up` resumes fast)
+	$(DC) stop
+
 .PHONY: down
 down: ## Stop and remove the dev stack
 	$(DC) down
@@ -56,7 +61,7 @@ reset: ## Full clean rebuild: tear down (+volumes), rebuild image no-cache, star
 	$(DC) down -v --remove-orphans
 	$(DC) build --no-cache
 	$(DC) up -d
-	@echo "Reset complete — poller running on http://127.0.0.1:$${APP_PORT:-8787}"
+	@echo "Reset complete — poller running on http://127.0.0.1:$${APP_PORT:-3000}"
 
 .PHONY: logs
 logs: ## Follow dev logs
@@ -69,28 +74,28 @@ shell: ## Open a shell inside the dev container
 # ---- Poller operations (dev stack) ------------------------------------------
 .PHONY: migrate
 migrate: ## Apply pending SQL migrations inside the dev container
-	$(DC) exec poller node dist/migrate.js
+	$(DC) exec poller $(TSX) scripts/migrate.ts
 
 .PHONY: run-played
 run-played: ## Run the 'played' collector (recently played) once in the dev container
-	$(DC) exec poller node dist/run-once.js played
+	$(DC) exec poller $(TSX) scripts/run-once.ts played
 
 .PHONY: run-liked
 run-liked: ## Run the 'liked' collector (liked tracks) once in the dev container
-	$(DC) exec poller node dist/run-once.js liked
+	$(DC) exec poller $(TSX) scripts/run-once.ts liked
 
 .PHONY: backup
 backup: ## Write a full .db snapshot into BACKUP_DIR (dev container)
-	$(DC) exec poller node dist/backup.js
+	$(DC) exec poller $(TSX) scripts/backup.ts
 
 .PHONY: export
 export: ## Dump the active account's events as NDJSON to stdout (no secret inside)
-	@$(DC) exec -T poller node dist/export.js
+	@$(DC) exec -T poller $(TSX) scripts/export.ts
 
 .PHONY: import
 import: ## Restore events from an NDJSON file: make import FILE=events.ndjson
 	@test -n "$(FILE)" || { echo "usage: make import FILE=events.ndjson"; exit 2; }
-	$(DC) exec -T poller node dist/import.js < "$(FILE)"
+	$(DC) exec -T poller $(TSX) scripts/import.ts < "$(FILE)"
 
 # ---- Home Lab / production --------------------------------------------------
 # The image is built & published to GHCR by .github/workflows/docker-build.yml
@@ -107,6 +112,10 @@ prod-up: ## Start the Home Lab stack in the background
 .PHONY: prod-start
 prod-start: ## Start the Home Lab stack in the foreground
 	$(DC_PROD) up
+
+.PHONY: prod-stop
+prod-stop: ## Pause the Home Lab stack (container kept, `prod-up` resumes fast)
+	$(DC_PROD) stop
 
 .PHONY: prod-down
 prod-down: ## Stop and remove the Home Lab stack
@@ -127,15 +136,15 @@ prod-shell: ## Open a shell inside the Home Lab container
 
 .PHONY: prod-migrate
 prod-migrate: ## Apply pending SQL migrations inside the Home Lab container
-	$(DC_PROD) exec spotify-poller node dist/migrate.js
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/migrate.ts
 
 .PHONY: prod-run-played
 prod-run-played: ## Run the 'played' collector once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller node dist/run-once.js played
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts played
 
 .PHONY: prod-run-liked
 prod-run-liked: ## Run the 'liked' collector once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller node dist/run-once.js liked
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts liked
 
 # The snapshot lands on ./backups, bind-mounted from the host — deliberately
 # OUTSIDE the spotify-poller-data volume. A backup stored next to the database
@@ -149,16 +158,16 @@ backups-dir: ## Create ./backups owned by the container user (uid 1001) — run 
 
 .PHONY: prod-backup
 prod-backup: ## Write a full .db snapshot into ./backups on the host
-	$(DC_PROD) exec spotify-poller node dist/backup.js
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/backup.ts
 
 .PHONY: prod-export
 prod-export: ## Dump the active account's events as NDJSON: make prod-export > events.ndjson
-	@$(DC_PROD) exec -T spotify-poller node dist/export.js
+	@$(DC_PROD) exec -T spotify-poller $(TSX) scripts/export.ts
 
 .PHONY: prod-import
 prod-import: ## Restore events from NDJSON: make prod-import FILE=events.ndjson
 	@test -n "$(FILE)" || { echo "usage: make prod-import FILE=events.ndjson"; exit 2; }
-	$(DC_PROD) exec -T spotify-poller node dist/import.js < "$(FILE)"
+	$(DC_PROD) exec -T spotify-poller $(TSX) scripts/import.ts < "$(FILE)"
 
 # ---- Housekeeping -----------------------------------------------------------
 .PHONY: ps

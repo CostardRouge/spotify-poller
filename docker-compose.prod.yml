@@ -9,9 +9,9 @@ services:
     image: ghcr.io/costardrouge/spotify-poller:latest
     container_name: spotify-poller
     ports:
-      # Debug UI + admin API: keep them on the local network (no direct
+      # Dashboard + admin API: keep them on the local network (no direct
       # internet exposure — TLS reverse proxy if remote access is needed).
-      - "${APP_PORT:-8787}:8787"
+      - "${APP_PORT:-3000}:3000"
     env_file:
       - .env
     environment:
@@ -36,7 +36,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test:
-        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8787/health"]
+        ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3

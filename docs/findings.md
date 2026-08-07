@@ -56,7 +56,7 @@ sampled progress.
 
 A track going back to ~0 is either a replay or a seek to the start. The
 collector calls it a replay only when the previous maximum had reached ~90 % of
-the track (`NEAR_END_RATIO` in `src/collectors/playback.ts`).
+the track (`NEAR_END_RATIO` in `lib/server/collectors/playback.ts`).
 
 - **Method**: (a) let a track finish then replay it; (b) play halfway, seek back
   to 0. Check that (a) produces two sessions and (b) exactly one.

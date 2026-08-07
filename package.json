@@ -1,24 +1,45 @@
 {
-  "name": "spotify-poller-homelab",
+  "name": "spotify-poller",
+  "version": "2.0.0",
   "private": true,
+  "description": "Continuously and unattended, collects the listening history (and likes) of a personal Spotify account into a local SQLite database.",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -H ${API_HOST:-127.0.0.1} -p ${API_PORT:-3000}",
+    "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
-    "migrate": "node dist/migrate.js",
-    "run:a": "node dist/run-once.js A",
-    "run:b": "node dist/run-once.js B",
-    "serve": "node dist/server.js",
-    "backup": "node dist/backup.js",
-    "export": "node dist/export.js",
-    "import": "node dist/import.js"
+    "migrate": "tsx scripts/migrate.ts",
+    "run:played": "tsx scripts/run-once.ts played",
+    "run:liked": "tsx scripts/run-once.ts liked",
+    "backup": "tsx scripts/backup.ts",
+    "export": "tsx scripts/export.ts",
+    "import": "tsx scripts/import.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "jose": "^5.9.6",
+    "next": "16.2.12",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/better-sqlite3": "^7.6.11",
     "@types/node": "^20.14.0",
-    "typescript": "^5.5.0"
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.2.12",
+    "playwright": "^1.48.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.6.0"
   }
 }

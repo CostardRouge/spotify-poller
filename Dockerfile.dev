@@ -9,9 +9,9 @@ RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json* ./
 RUN npm install
 
-EXPOSE 8787
+EXPOSE 3000
 ENV NODE_ENV=development
 ENV API_HOST=0.0.0.0
 ENV DB_PATH=/data/life-events.db
 
-CMD ["sh", "-c", "npm run build && node dist/migrate.js && node dist/server.js"]
+CMD ["sh", "-c", "node_modules/.bin/tsx scripts/migrate.ts && node_modules/.bin/next dev -H 0.0.0.0 -p 3000"]

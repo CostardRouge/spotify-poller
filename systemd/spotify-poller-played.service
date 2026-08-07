@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 WorkingDirectory=/opt/spotify-poller
 EnvironmentFile=/opt/spotify-poller/.env
-ExecStart=/usr/bin/node dist/run-once.js played
+ExecStart=/opt/spotify-poller/node_modules/.bin/tsx scripts/run-once.ts played
 User=poller
 Group=poller
 # Defence in depth, with no impact on the business logic:

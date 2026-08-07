@@ -1,8 +1,12 @@
 node_modules/
-dist/
+.next/
+next-env.d.ts
 data/
 .env
+.env.test
+site/
 
 # Backups hold the Spotify refresh token in clear — never commit them.
 backups/
 *.ndjson
+tsconfig.tsbuildinfo

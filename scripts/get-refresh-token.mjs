@@ -18,8 +18,8 @@ import { randomBytes } from "node:crypto";
 const CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
 const CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET;
 const REDIRECT_URI = "http://127.0.0.1:8888/callback";
-// Keep in sync with ALL_SCOPES in src/auth.ts — this script lives outside the
-// TypeScript build, so the list cannot be imported.
+// Keep in sync with ALL_SCOPES in lib/server/spotify/auth.ts — this script
+// runs standalone (plain Node, no tsx), so the list cannot be imported.
 const SCOPES = "user-read-recently-played user-library-read user-read-playback-state";
 
 if (!CLIENT_ID || !CLIENT_SECRET) {
