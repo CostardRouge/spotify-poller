@@ -1,6 +1,7 @@
 import { collectRecentlyPlayed } from "./collectors/recently-played";
 import { collectLikedTracks } from "./collectors/liked-tracks";
 import { finishRun, startRun } from "./db";
+import { getRateLimit } from "./spotify-api";
 import { AuthError, CollectorResult, Env, TransientError } from "./types";
 import { pingFailure, pingSuccess } from "./watchdog";
 
@@ -22,7 +23,15 @@ export async function runCollector(collector: "A" | "B", trigger: "cron" | "manu
 
   try {
     runId = startRun(env, collector, trigger);
-    result = collector === "A" ? await collectRecentlyPlayed(env) : await collectLikedTracks(env);
+    // Cooldown 429 persisté (spotify-api.ts) : requêter pendant un ban actif
+    // compte contre l'app et peut le prolonger — on s'abstient, le run est
+    // quand même journalisé (I1) et le prochain passage rattrape.
+    const rl = getRateLimit(env);
+    if (rl.limited) {
+      result = { status: "partial", fetched: 0, inserted: 0, note: `rate-limited, reprise après ${rl.until}` };
+    } else {
+      result = collector === "A" ? await collectRecentlyPlayed(env) : await collectLikedTracks(env);
+    }
   } catch (e) {
     if (e instanceof TransientError) {
       result = { status: "partial", fetched: 0, inserted: 0, note: e.message };

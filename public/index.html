@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spotify Poller — debug</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+         background: #101014; color: #d7d7db; }
+  header { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+           padding: .9rem 1.2rem; border-bottom: 1px solid #26262e; }
+  h1 { font-size: 1rem; margin: 0 1rem 0 0; color: #1db954; }
+  main { padding: 1rem 1.2rem 3rem; max-width: 1100px; margin: 0 auto; }
+  button, input, select {
+    background: #1a1a21; color: #d7d7db; border: 1px solid #33333d;
+    border-radius: 6px; padding: .35rem .6rem; font: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: #1db954; }
+  button.primary { background: #14391f; border-color: #1db954; }
+  .badge { padding: .15rem .55rem; border-radius: 999px; border: 1px solid #33333d; font-size: .8rem; }
+  .badge.ok { border-color: #1db954; color: #6fe09a; }
+  .badge.ko { border-color: #b91d3a; color: #e06f83; }
+  nav.tabs { display: flex; gap: .4rem; margin: 1rem 0; }
+  nav.tabs button.active { background: #14391f; border-color: #1db954; }
+  .filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .8rem; align-items: center; }
+  .filters input[type=text] { min-width: 14rem; }
+  .tablewrap { overflow-x: auto; border: 1px solid #26262e; border-radius: 8px; }
+  table { border-collapse: collapse; width: 100%; font-size: .82rem; }
+  th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #1e1e26;
+           white-space: nowrap; vertical-align: top; }
+  th { position: sticky; top: 0; background: #16161c; color: #8a8a94; font-weight: 600; }
+  td.wrap { white-space: normal; max-width: 26rem; }
+  tr:hover td { background: #16161c; }
+  .pager { display: flex; gap: .6rem; align-items: center; margin-top: .8rem; }
+  .muted { color: #8a8a94; }
+  .status-ok { color: #6fe09a; } .status-partial { color: #e0c46f; } .status-error { color: #e06f83; }
+  details pre { margin: .3rem 0 0; padding: .5rem; background: #0b0b0e; border-radius: 6px;
+                white-space: pre-wrap; max-width: 40rem; font-size: .75rem; }
+  #msg { width: 100%; color: #e0c46f; }
+  pre.block { background: #0b0b0e; padding: .8rem; border-radius: 8px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<header>
+  <h1>spotify-poller</h1>
+  <span id="badge-auth" class="badge">compte : …</span>
+  <span id="badge-a" class="badge">A : …</span>
+  <span id="badge-b" class="badge">B : …</span>
+  <span id="badge-rl" class="badge" hidden>rate-limit</span>
+  <span style="flex:1"></span>
+  <input id="token" type="password" placeholder="ADMIN_TOKEN" title="Jeton admin (stocké dans localStorage)">
+  <button id="btn-connect" class="primary">Connecter Spotify</button>
+  <button id="btn-run-a">Run A</button>
+  <button id="btn-run-b">Run B</button>
+  <div id="msg"></div>
+</header>
+<main>
+  <nav class="tabs">
+    <button data-tab="events" class="active">Événements</button>
+    <button data-tab="runs">Exécutions</button>
+    <button data-tab="gaps">Trous</button>
+    <button data-tab="stats">Stats</button>
+  </nav>
+
+  <section id="tab-events">
+    <div class="filters">
+      <select id="f-type">
+        <option value="">tous types</option>
+        <option value="listen">listen</option>
+        <option value="like">like</option>
+      </select>
+      <input id="f-q" type="text" placeholder="recherche titre / artiste">
+      <input id="f-from" type="date" title="depuis (UTC)">
+      <input id="f-to" type="date" title="jusqu'à (UTC)">
+      <select id="f-order"><option value="desc">plus récents d'abord</option><option value="asc">plus anciens d'abord</option></select>
+      <button id="f-apply" class="primary">Filtrer</button>
+    </div>
+    <div class="tablewrap"><table id="t-events">
+      <thead><tr><th>ts_utc</th><th>type</th><th>titre</th><th>sous-titre</th><th>durée</th><th>payload</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pager">
+      <button id="ev-prev">← préc.</button>
+      <span id="ev-info" class="muted"></span>
+      <button id="ev-next">suiv. →</button>
+    </div>
+  </section>
+
+  <section id="tab-runs" hidden>
+    <div class="tablewrap"><table id="t-runs">
+      <thead><tr><th>#</th><th>coll.</th><th>déclencheur</th><th>début</th><th>fin</th><th>statut</th><th>récupérés</th><th>insérés</th><th>erreur</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="pager">
+      <button id="run-prev">← préc.</button>
+      <span id="run-info" class="muted"></span>
+      <button id="run-next">suiv. →</button>
+    </div>
+  </section>
+
+  <section id="tab-gaps" hidden>
+    <div class="tablewrap"><table id="t-gaps">
+      <thead><tr><th>#</th><th>coll.</th><th>de</th><th>à</th><th>détecté</th><th>note</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="muted">Un trou déclaré vaut mieux qu'un jour vide qui ressemble mensongèrement à « rien écouté ».</p>
+  </section>
+
+  <section id="tab-stats" hidden>
+    <pre class="block" id="stats-out">…</pre>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const tokenInput = $("#token");
+  tokenInput.value = localStorage.getItem("admin_token") || "";
+  tokenInput.addEventListener("change", () => localStorage.setItem("admin_token", tokenInput.value));
+
+  const PAGE = 50;
+  const state = { events: { offset: 0 }, runs: { offset: 0 } };
+
+  function msg(text) { $("#msg").textContent = text; if (text) setTimeout(() => { $("#msg").textContent = ""; }, 8000); }
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { ...opts, headers: { Authorization: "Bearer " + tokenInput.value } });
+    if (res.status === 401) { msg("401 — renseigner le jeton admin (en haut à droite)."); throw new Error("unauthorized"); }
+    return res.json();
+  }
+
+  function esc(s) { const d = document.createElement("div"); d.textContent = s ?? ""; return d.innerHTML; }
+  function fmtDur(s) { if (s == null) return ""; return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+
+  // ---------- santé ----------
+  async function refreshHealth() {
+    try {
+      const h = await (await fetch("/health")).json();
+      const setBadge = (el, label, val) => {
+        el.textContent = label + " : " + (val ? val.replace("T", " ").slice(0, 19) : "jamais");
+        el.className = "badge " + (val ? "ok" : "ko");
+      };
+      setBadge($("#badge-a"), "A", h.collector_A_last_success);
+      setBadge($("#badge-b"), "B", h.collector_B_last_success);
+      const a = $("#badge-auth");
+      a.textContent = h.auth.connected ? "compte : connecté (" + h.auth.source + ")" : "compte : non connecté";
+      a.className = "badge " + (h.auth.connected ? "ok" : "ko");
+      const rl = $("#badge-rl");
+      rl.hidden = !h.rate_limit.limited;
+      if (h.rate_limit.limited) { rl.textContent = "rate-limited → " + h.rate_limit.until; rl.className = "badge ko"; }
+    } catch { msg("serveur injoignable"); }
+  }
+
+  // ---------- événements ----------
+  async function loadEvents() {
+    const p = new URLSearchParams({ limit: PAGE, offset: state.events.offset, order: $("#f-order").value });
+    if ($("#f-type").value) p.set("type", $("#f-type").value);
+    if ($("#f-q").value) p.set("q", $("#f-q").value);
+    if ($("#f-from").value) p.set("from", $("#f-from").value + "T00:00:00Z");
+    if ($("#f-to").value) p.set("to", $("#f-to").value + "T23:59:59Z");
+    const d = await api("/api/events?" + p);
+    $("#t-events tbody").innerHTML = d.items.map((e) => `<tr>
+      <td>${esc(e.ts_utc.replace("T", " ").slice(0, 19))}</td>
+      <td>${esc(e.type)}</td>
+      <td class="wrap">${esc(e.title)}</td>
+      <td class="wrap">${esc(e.subtitle)}</td>
+      <td>${fmtDur(e.duration_s)}</td>
+      <td><details><summary class="muted">json</summary><pre>${esc(JSON.stringify(JSON.parse(e.payload), null, 2))}</pre></details></td>
+    </tr>`).join("");
+    $("#ev-info").textContent = `${d.total ? d.offset + 1 : 0}–${Math.min(d.offset + PAGE, d.total)} / ${d.total}`;
+    $("#ev-prev").disabled = d.offset === 0;
+    $("#ev-next").disabled = d.offset + PAGE >= d.total;
+  }
+
+  // ---------- exécutions ----------
+  async function loadRuns() {
+    const d = await api(`/api/runs?limit=${PAGE}&offset=${state.runs.offset}`);
+    $("#t-runs tbody").innerHTML = d.items.map((r) => `<tr>
+      <td>${r.id}</td><td>${esc(r.collector)}</td><td>${esc(r.trigger_kind)}</td>
+      <td>${esc((r.started_at || "").replace("T", " ").slice(0, 19))}</td>
+      <td>${esc((r.finished_at || "—").replace("T", " ").slice(0, 19))}</td>
+      <td class="status-${esc(r.status || "error")}">${esc(r.status || "jamais terminé")}</td>
+      <td>${r.items_fetched}</td><td>${r.items_inserted}</td>
+      <td class="wrap muted">${esc(r.error || "")}</td>
+    </tr>`).join("");
+    $("#run-info").textContent = `${d.total ? d.offset + 1 : 0}–${Math.min(d.offset + PAGE, d.total)} / ${d.total}`;
+    $("#run-prev").disabled = d.offset === 0;
+    $("#run-next").disabled = d.offset + PAGE >= d.total;
+  }
+
+  async function loadGaps() {
+    const d = await api(`/api/gaps?limit=200&offset=0`);
+    $("#t-gaps tbody").innerHTML = d.items.length
+      ? d.items.map((g) => `<tr><td>${g.id}</td><td>${esc(g.collector)}</td><td>${esc(g.from_utc)}</td>
+          <td>${esc(g.to_utc)}</td><td>${esc(g.detected_at)}</td><td class="wrap">${esc(g.note || "")}</td></tr>`).join("")
+      : `<tr><td colspan="6" class="muted">aucun trou déclaré 🎉</td></tr>`;
+  }
+
+  async function loadStats() {
+    $("#stats-out").textContent = JSON.stringify(await api("/stats"), null, 2);
+  }
+
+  // ---------- onglets ----------
+  const loaders = { events: loadEvents, runs: loadRuns, gaps: loadGaps, stats: loadStats };
+  document.querySelectorAll("nav.tabs button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll("nav.tabs button").forEach((x) => x.classList.toggle("active", x === b));
+    for (const t of Object.keys(loaders)) $("#tab-" + t).hidden = t !== b.dataset.tab;
+    loaders[b.dataset.tab]().catch(() => {});
+  }));
+
+  // ---------- actions ----------
+  $("#btn-connect").addEventListener("click", () => {
+    if (!tokenInput.value) return msg("renseigner d'abord le jeton admin");
+    location.href = "/auth/login?token=" + encodeURIComponent(tokenInput.value);
+  });
+  async function run(c) {
+    msg(`exécution du collecteur ${c}…`);
+    const r = await api(`/run?collector=${c}`, { method: "POST" });
+    msg(`collecteur ${c} : ${r.status} — récupérés ${r.fetched}, insérés ${r.inserted}${r.note ? " (" + r.note + ")" : ""}`);
+    refreshHealth(); loadEvents().catch(() => {});
+  }
+  $("#btn-run-a").addEventListener("click", () => run("A").catch(() => {}));
+  $("#btn-run-b").addEventListener("click", () => run("B").catch(() => {}));
+
+  $("#f-apply").addEventListener("click", () => { state.events.offset = 0; loadEvents().catch(() => {}); });
+  $("#f-q").addEventListener("keydown", (e) => { if (e.key === "Enter") $("#f-apply").click(); });
+  $("#ev-prev").addEventListener("click", () => { state.events.offset = Math.max(0, state.events.offset - PAGE); loadEvents(); });
+  $("#ev-next").addEventListener("click", () => { state.events.offset += PAGE; loadEvents(); });
+  $("#run-prev").addEventListener("click", () => { state.runs.offset = Math.max(0, state.runs.offset - PAGE); loadRuns(); });
+  $("#run-next").addEventListener("click", () => { state.runs.offset += PAGE; loadRuns(); });
+
+  // ---------- retour du flow OAuth ----------
+  const qp = new URLSearchParams(location.search);
+  if (qp.get("connected")) msg("compte Spotify connecté ✔");
+  if (qp.get("auth_error")) msg("échec de connexion : " + qp.get("auth_error"));
+  if (qp.get("connected") || qp.get("auth_error")) history.replaceState(null, "", "/");
+
+  refreshHealth();
+  setInterval(refreshHealth, 60_000);
+  if (tokenInput.value) loadEvents().catch(() => {});
+})();
+</script>
+</body>
+</html>

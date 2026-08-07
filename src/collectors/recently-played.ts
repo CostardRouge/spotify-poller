@@ -1,5 +1,6 @@
 import { getAccessToken } from "../auth";
-import { EventRow, getState, insertEvents, insertGap, insertRaw, setState } from "../db";
+import { EventRow, getState, insertEvents, insertGap, setState } from "../db";
+import { spotifyGet } from "../spotify-api";
 import { CollectorResult, Env, TransientError, nowIso } from "../types";
 
 const URL_RP = "https://api.spotify.com/v1/me/player/recently-played?limit=50";
@@ -26,34 +27,24 @@ interface RpItem {
 export async function collectRecentlyPlayed(env: Env): Promise<CollectorResult> {
   const token = await getAccessToken(env);
 
-  let res: Response;
-  try {
-    res = await fetch(URL_RP, { headers: { Authorization: `Bearer ${token}` } });
-  } catch (e) {
-    insertRaw(env, "recently_played", 0, URL_RP, null);
-    throw new TransientError(`network: ${String(e)}`);
-  }
+  // spotifyGet gère réseau/5xx (retry borné), 429 (cooldown persisté + throw)
+  // et écrit raw_spotify à chaque tentative (I3).
+  let r = await spotifyGet(env, "recently_played", URL_RP, token);
 
-  if (res.status === 401) {
+  if (r.status === 401) {
+    // 401 isolé : un seul rafraîchissement de token puis nouvel essai (§10).
     const retryToken = await getAccessToken(env);
-    res = await fetch(URL_RP, { headers: { Authorization: `Bearer ${retryToken}` } });
+    r = await spotifyGet(env, "recently_played", URL_RP, retryToken);
   }
 
-  const bodyText = await res.text();
-  insertRaw(env, "recently_played", res.status, URL_RP, bodyText);
-
-  if (res.status === 429) {
-    const retryAfter = res.headers.get("Retry-After") ?? "?";
-    return { status: "partial", fetched: 0, inserted: 0, note: `429, Retry-After=${retryAfter}s` };
+  if (r.status >= 500) {
+    return { status: "partial", fetched: 0, inserted: 0, note: `spotify ${r.status}` };
   }
-  if (res.status >= 500) {
-    return { status: "partial", fetched: 0, inserted: 0, note: `spotify ${res.status}` };
-  }
-  if (!res.ok) {
-    throw new TransientError(`unexpected ${res.status}: ${bodyText.slice(0, 200)}`);
+  if (r.status < 200 || r.status >= 300) {
+    throw new TransientError(`unexpected ${r.status}: ${r.bodyText.slice(0, 200)}`);
   }
 
-  const items: RpItem[] = (JSON.parse(bodyText).items ?? []) as RpItem[];
+  const items: RpItem[] = (JSON.parse(r.bodyText).items ?? []) as RpItem[];
   if (items.length === 0) {
     setState(env, "A.last_success_at", nowIso());
     return { status: "ok", fetched: 0, inserted: 0, note: "empty buffer" };

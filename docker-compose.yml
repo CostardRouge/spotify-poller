@@ -1,0 +1,26 @@
+# Local development stack — source bind-mounted, rebuilt at container start.
+# Usage: make up   (or: docker compose up)
+services:
+  poller:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: spotify-poller-dev
+    ports:
+      - "${APP_PORT:-8787}:8787"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - API_HOST=0.0.0.0
+      - DB_PATH=/data/life-events.db
+      - SCHEDULE_ENABLED=${SCHEDULE_ENABLED:-1}
+    volumes:
+      - .:/app # live source
+      - /app/node_modules # keep container's node_modules (native bindings)
+      - /app/dist # keep container's build output
+      - spotify-poller-dev-data:/data # SQLite hors de la couche éphémère, même en dev
+    restart: unless-stopped
+
+volumes:
+  spotify-poller-dev-data:
