@@ -55,6 +55,12 @@ export interface Env {
   BACKUP_KEEP: number;
   /** Daily backup driven by the in-container scheduler. */
   BACKUP_ENABLED: boolean;
+  /**
+   * IANA name (e.g. "Europe/Paris") the debug UI converts ts_utc to for
+   * display. Display-only: every timestamp is still stored and queried in
+   * UTC (ts_utc), nothing here touches the DB. Defaults to "UTC".
+   */
+  TIMEZONE: string;
 }
 
 /** A connected Spotify account. `id` is the Spotify user id — stable, never reused. */
@@ -163,10 +169,16 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     if (!v) throw new Error(`missing environment variable: ${k}`);
     return v;
   };
-
   const rawMode = process.env.AUTH_MODE ?? "token";
   if (rawMode !== "token" && rawMode !== "proxy") {
     throw new Error(`invalid AUTH_MODE: ${rawMode} (expected 'token' or 'proxy')`);
+  }
+
+  const timezone = process.env.TIMEZONE ?? "UTC";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    throw new Error(`invalid TIMEZONE: "${timezone}" is not a known IANA timezone name`);
   }
 
   return {
@@ -189,5 +201,6 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     BACKUP_DIR: process.env.BACKUP_DIR ?? "/backups",
     BACKUP_KEEP: intFromEnv("BACKUP_KEEP", 14),
     BACKUP_ENABLED: process.env.BACKUP_ENABLED === "1",
+    TIMEZONE: timezone,
   };
 }

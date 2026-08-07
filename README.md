@@ -113,13 +113,17 @@ In the default mode the UI asks for the `ADMIN_TOKEN` (stored in the browser's
 localStorage). Behind an authenticating reverse proxy, set `AUTH_MODE=proxy` and
 the token field disappears — see **Authentication** below.
 
+Every timestamp is stored and queried in UTC (`ts_utc`) — the `TIMEZONE` env
+var (IANA name, e.g. `Europe/Paris`, defaults to `UTC`) only controls how the
+debug UI *displays* them; it changes nothing in the database.
+
 ## Endpoints
 
 | Route | Auth | Role |
 |---|---|---|
 | `GET /` | — | debug UI (contains no data) |
 | `GET /health` | — | liveness only: `{status, auth_mode}` |
-| `GET /status` | yes | last success, counters, accounts, rate limit, scheduler |
+| `GET /status` | yes | last success, counters, accounts, rate limit, scheduler, display timezone |
 | `GET /auth/login` | yes | starts the OAuth connection flow |
 | `GET /auth/callback` | state cookie | Spotify return, stores the refresh token |
 | `POST /run?collector=played\|liked` | yes | manual trigger (idempotent) |

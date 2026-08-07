@@ -83,7 +83,7 @@
       <button id="f-apply" class="primary">Filter</button>
     </div>
     <div class="tablewrap"><table id="t-events">
-      <thead><tr><th>ts_utc</th><th>type</th><th>title</th><th>subtitle</th><th>duration</th><th>payload</th></tr></thead>
+      <thead><tr><th id="th-ts">ts (local)</th><th>type</th><th>title</th><th>subtitle</th><th>duration</th><th>payload</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <div class="pager">
@@ -140,7 +140,7 @@
   const PAGE = 50;
   // `scope` is the account being VIEWED; the active account is the one being
   // collected. They are allowed to differ.
-  const state = { events: { offset: 0 }, runs: { offset: 0 }, scope: null, active: null, authMode: "token" };
+  const state = { events: { offset: 0 }, runs: { offset: 0 }, scope: null, active: null, authMode: "token", timezone: "UTC" };
 
   // In proxy mode the reverse proxy authenticates and there is no token to type.
   function tokenHeaders() {
@@ -152,6 +152,21 @@
   }
 
   function msg(text) { $("#msg").textContent = text; if (text) setTimeout(() => { $("#msg").textContent = ""; }, 8000); }
+
+  // Every timestamp is stored and queried in UTC (ts_utc) — this only
+  // affects display, formatted into the timezone reported by /status
+  // (TIMEZONE env var, defaults to UTC).
+  function fmtTs(iso) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: state.timezone,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+    }).formatToParts(d).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+    return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+  }
 
   async function api(path, opts = {}) {
     const res = await fetch(path, { ...opts, headers: tokenHeaders() });
@@ -194,8 +209,14 @@
       if (!state.scope) state.scope = h.auth.active_account_id;
       renderAccountSelect(h.auth.accounts, h.auth.active_account_id);
 
+      if (h.timezone) {
+        state.timezone = h.timezone;
+        const th = $("#th-ts");
+        if (th) th.textContent = `ts (${h.timezone})`;
+      }
+
       const setBadge = (el, label, val) => {
-        el.textContent = label + ": " + (val ? val.replace("T", " ").slice(0, 19) : "never");
+        el.textContent = label + ": " + (val ? fmtTs(val) : "never");
         el.className = "badge " + (val ? "ok" : "ko");
       };
       setBadge($("#badge-played"), "played", h.collector_played_last_success);
@@ -252,7 +273,7 @@
     if ($("#f-to").value) p.set("to", $("#f-to").value + "T23:59:59Z");
     const d = await api(withScope("/api/events?" + p));
     $("#t-events tbody").innerHTML = d.items.map((e) => `<tr>
-      <td>${esc(e.ts_utc.replace("T", " ").slice(0, 19))}</td>
+      <td>${esc(fmtTs(e.ts_utc))}</td>
       <td>${esc(e.type)}</td>
       <td class="wrap">${esc(e.title)}</td>
       <td class="wrap">${esc(e.subtitle)}</td>
@@ -269,8 +290,8 @@
     const d = await api(withScope(`/api/runs?limit=${PAGE}&offset=${state.runs.offset}`));
     $("#t-runs tbody").innerHTML = d.items.map((r) => `<tr>
       <td>${r.id}</td><td>${esc(r.collector)}</td><td>${esc(r.trigger_kind)}</td>
-      <td>${esc((r.started_at || "").replace("T", " ").slice(0, 19))}</td>
-      <td>${esc((r.finished_at || "—").replace("T", " ").slice(0, 19))}</td>
+      <td>${esc(r.started_at ? fmtTs(r.started_at) : "")}</td>
+      <td>${esc(r.finished_at ? fmtTs(r.finished_at) : "—")}</td>
       <td class="status-${esc(r.status || "error")}">${esc(r.status || "never finished")}</td>
       <td>${r.items_fetched}</td><td>${r.items_inserted}</td>
       <td class="wrap muted">${esc(r.error || "")}</td>
