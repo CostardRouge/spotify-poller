@@ -1,20 +1,75 @@
 import Database from "better-sqlite3";
 
+/**
+ * Reserved account scope for rows that belong to the application rather than
+ * to a Spotify account.
+ *
+ * Two distinct uses:
+ *  - poller_state: the 429 cooldown lives here. Spotify computes its rate
+ *    limit per app (client_id), not per user — scoping it per account would
+ *    let a account switch ignore a ban in progress and extend it.
+ *  - the other tables: rows collected before the multi-account migration, and
+ *    runs that failed before any account could be resolved.
+ */
+export const GLOBAL_SCOPE = "";
+
+export type AuthMode = "token" | "proxy";
+
 export interface Env {
   DB: Database.Database;
   SPOTIFY_CLIENT_ID: string;
   SPOTIFY_CLIENT_SECRET: string;
   /**
-   * Fallback when no account has been connected through the UI (/auth/login).
-   * The token obtained through the UI is stored in poller_state and takes
-   * precedence over the env variable.
+   * Fallback when no account has ever been connected through the UI
+   * (/auth/login). On first use it is resolved against /v1/me and adopted into
+   * the accounts table, so it only ever bootstraps a single account.
    */
   SPOTIFY_REFRESH_TOKEN?: string;
   /** Must match EXACTLY a Redirect URI declared in the Spotify app. */
   SPOTIFY_REDIRECT_URI?: string;
-  WATCHDOG_URL?: string; // mandatory in real use — see §9, even more so when self-hosted
+  /**
+   * Heartbeat URL pinged on every successful 'played' run — healthchecks.io, or an
+   * Uptime Kuma "Push" monitor for a fully self-hosted setup. This is the ONLY
+   * thing that detects silence: ntfy cannot alert about a host that is off,
+   * because a dead poller sends nothing.
+   */
+  WATCHDOG_URL?: string;
+  /** Empty string is legal in proxy mode — see AUTH_MODE. */
   ADMIN_TOKEN: string;
+  /**
+   * 'token' (default): every admin route requires ADMIN_TOKEN.
+   * 'proxy': the reverse proxy (Cloudflare Access, Traefik…) is the
+   * authenticator. Pair it with PROXY_AUTH_HEADER so a request reaching the
+   * origin directly — bypassing the proxy — is still rejected.
+   */
+  AUTH_MODE: AuthMode;
+  /** e.g. 'Cf-Access-Authenticated-User-Email'. Must be present and non-empty. */
+  PROXY_AUTH_HEADER?: string;
+  /** Full ntfy topic URL, e.g. https://ntfy.example.org/spotify-poller */
+  NTFY_URL?: string;
+  /** Optional ntfy access token (Bearer) for a protected topic. */
+  NTFY_TOKEN?: string;
+  /** Hours between two identical notifications — anti-spam, see notify.ts. */
+  NTFY_THROTTLE_HOURS: number;
+  BACKUP_DIR: string;
+  BACKUP_KEEP: number;
+  /** Daily backup driven by the in-container scheduler. */
+  BACKUP_ENABLED: boolean;
 }
+
+/** A connected Spotify account. `id` is the Spotify user id — stable, never reused. */
+export interface Account {
+  id: string;
+  display_name: string | null;
+  refresh_token: string;
+  scope: string | null;
+  connected_at: string;
+  last_seen_at: string | null;
+  status: "ok" | "revoked";
+}
+
+/** Account view safe to serve over HTTP — no refresh token. */
+export type PublicAccount = Omit<Account, "refresh_token">;
 
 export type RunStatus = "ok" | "partial" | "error";
 
@@ -50,6 +105,8 @@ export interface CollectorResult {
   fetched: number;
   inserted: number;
   note?: string;
+  /** Set when this run detected a hole in the history — worth notifying about. */
+  gap?: { from: string; to: string } | null;
 }
 
 /** Refresh token failure: the only case where collection is dead for good (§8). */
@@ -87,6 +144,14 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+function intFromEnv(key: string, fallback: number): number {
+  const raw = process.env[key];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) throw new Error(`invalid ${key}: ${raw}`);
+  return Math.floor(n);
+}
+
 /**
  * Loads the required variables from process.env (populated by dotenv).
  * Fails early and clearly if a secret is missing — better than silently
@@ -98,14 +163,31 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     if (!v) throw new Error(`missing environment variable: ${k}`);
     return v;
   };
+
+  const rawMode = process.env.AUTH_MODE ?? "token";
+  if (rawMode !== "token" && rawMode !== "proxy") {
+    throw new Error(`invalid AUTH_MODE: ${rawMode} (expected 'token' or 'proxy')`);
+  }
+
   return {
     DB: db,
     SPOTIFY_CLIENT_ID: need("SPOTIFY_CLIENT_ID"),
     SPOTIFY_CLIENT_SECRET: need("SPOTIFY_CLIENT_SECRET"),
-    // Optional since the connection UI exists: the token may come from poller_state.
+    // Optional since the connection UI exists: the token may come from the
+    // accounts table.
     SPOTIFY_REFRESH_TOKEN: process.env.SPOTIFY_REFRESH_TOKEN,
     SPOTIFY_REDIRECT_URI: process.env.SPOTIFY_REDIRECT_URI,
     WATCHDOG_URL: process.env.WATCHDOG_URL,
-    ADMIN_TOKEN: need("ADMIN_TOKEN"),
+    // In proxy mode the token becomes optional: the proxy authenticates. It is
+    // still honoured when set, which keeps curl working locally.
+    ADMIN_TOKEN: rawMode === "proxy" ? (process.env.ADMIN_TOKEN ?? "") : need("ADMIN_TOKEN"),
+    AUTH_MODE: rawMode,
+    PROXY_AUTH_HEADER: process.env.PROXY_AUTH_HEADER,
+    NTFY_URL: process.env.NTFY_URL,
+    NTFY_TOKEN: process.env.NTFY_TOKEN,
+    NTFY_THROTTLE_HOURS: intFromEnv("NTFY_THROTTLE_HOURS", 6),
+    BACKUP_DIR: process.env.BACKUP_DIR ?? "/backups",
+    BACKUP_KEEP: intFromEnv("BACKUP_KEEP", 14),
+    BACKUP_ENABLED: process.env.BACKUP_ENABLED === "1",
   };
 }

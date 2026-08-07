@@ -17,7 +17,7 @@ help: ## Show this help
 	@echo "Spotify Poller — available commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
-	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 
 .PHONY: init
@@ -79,6 +79,19 @@ run-played: ## Run the 'played' collector (recently played) once in the dev cont
 run-liked: ## Run the 'liked' collector (liked tracks) once in the dev container
 	$(DC) exec poller node dist/run-once.js liked
 
+.PHONY: backup
+backup: ## Write a full .db snapshot into BACKUP_DIR (dev container)
+	$(DC) exec poller node dist/backup.js
+
+.PHONY: export
+export: ## Dump the active account's events as NDJSON to stdout (no secret inside)
+	@$(DC) exec -T poller node dist/export.js
+
+.PHONY: import
+import: ## Restore events from an NDJSON file: make import FILE=events.ndjson
+	@test -n "$(FILE)" || { echo "usage: make import FILE=events.ndjson"; exit 2; }
+	$(DC) exec -T poller node dist/import.js < "$(FILE)"
+
 # ---- Home Lab / production --------------------------------------------------
 # The image is built & published to GHCR by .github/workflows/docker-build.yml
 # on every push to main — the Home Lab stack pulls it rather than building
@@ -123,6 +136,29 @@ prod-run-played: ## Run the 'played' collector once inside the Home Lab containe
 .PHONY: prod-run-liked
 prod-run-liked: ## Run the 'liked' collector once inside the Home Lab container
 	$(DC_PROD) exec spotify-poller node dist/run-once.js liked
+
+# The snapshot lands on ./backups, bind-mounted from the host — deliberately
+# OUTSIDE the spotify-poller-data volume. A backup stored next to the database
+# it protects does not survive losing that volume.
+.PHONY: backups-dir
+backups-dir: ## Create ./backups owned by the container user (uid 1001) — run once
+	mkdir -p backups
+	sudo chown 1001:1001 backups
+	chmod 700 backups
+	@echo "./backups ready (mode 700 — snapshots contain the Spotify refresh token)"
+
+.PHONY: prod-backup
+prod-backup: ## Write a full .db snapshot into ./backups on the host
+	$(DC_PROD) exec spotify-poller node dist/backup.js
+
+.PHONY: prod-export
+prod-export: ## Dump the active account's events as NDJSON: make prod-export > events.ndjson
+	@$(DC_PROD) exec -T spotify-poller node dist/export.js
+
+.PHONY: prod-import
+prod-import: ## Restore events from NDJSON: make prod-import FILE=events.ndjson
+	@test -n "$(FILE)" || { echo "usage: make prod-import FILE=events.ndjson"; exit 2; }
+	$(DC_PROD) exec -T spotify-poller node dist/import.js < "$(FILE)"
 
 # ---- Housekeeping -----------------------------------------------------------
 .PHONY: ps

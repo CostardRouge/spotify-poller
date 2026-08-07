@@ -1,6 +1,8 @@
-import { getState } from "./db";
+import { runBackup } from "./backup";
+import { getActiveAccountId, getGlobalState, getState, setGlobalState } from "./db";
+import { notify, notifyOnce, notifyRecovered } from "./notify";
 import { runCollector } from "./run-core";
-import { CollectorId, Env } from "./types";
+import { CollectorId, Env, nowIso } from "./types";
 
 /**
  * Container-internal scheduling (decision §13, documented in
@@ -24,6 +26,7 @@ import { CollectorId, Env } from "./types";
 export interface SchedulerOptions {
   playedEveryMinutes: number;
   likedEveryHours: number;
+  backupEveryHours: number;
 }
 
 // SCHEDULE_A_MINUTES / SCHEDULE_B_HOURS stay readable as a fallback: a .env
@@ -34,12 +37,15 @@ export function schedulerOptionsFromProcess(): SchedulerOptions {
       process.env.SCHEDULE_PLAYED_MINUTES ?? process.env.SCHEDULE_A_MINUTES ?? "30"
     ),
     likedEveryHours: Number(process.env.SCHEDULE_LIKED_HOURS ?? process.env.SCHEDULE_B_HOURS ?? "24"),
+    backupEveryHours: Number(process.env.BACKUP_EVERY_HOURS ?? "24"),
   };
 }
 
 export function schedulerEnabled(): boolean {
   return process.env.SCHEDULE_ENABLED === "1";
 }
+
+const KEY_BACKUP_AT = "backup.last_success_at";
 
 export function startScheduler(env: Env, opts: SchedulerOptions): void {
   // Anti-overlap lock: a run still in progress is never doubled up.
@@ -61,9 +67,47 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
   };
 
   const likedDue = (): boolean => {
-    if (getState(env, "liked.backfill_done") !== "1") return true;
-    const last = getState(env, "liked.last_success_at");
+    // The cadence follows the ACTIVE account's cursor: switching account must
+    // not make 'liked' think it already ran today on the newcomer's behalf.
+    const accountId = getActiveAccountId(env);
+    if (accountId === null) return true; // nothing connected yet: let the run report it
+    if (getState(env, accountId, "liked.backfill_done") !== "1") return true;
+    const last = getState(env, accountId, "liked.last_success_at");
     return !last || Date.now() - Date.parse(last) >= opts.likedEveryHours * 3_600_000;
+  };
+
+  // Backup cadence is persisted like 'liked''s, so restarts do not make it
+  // drift and a container that restarts often does not back up on every boot.
+  const backupDue = (): boolean => {
+    const last = getGlobalState(env, KEY_BACKUP_AT);
+    return !last || Date.now() - Date.parse(last) >= opts.backupEveryHours * 3_600_000;
+  };
+
+  let backingUp = false;
+  const backupTick = async (): Promise<void> => {
+    if (backingUp || !backupDue()) return;
+    backingUp = true;
+    try {
+      const r = await runBackup(env);
+      setGlobalState(env, KEY_BACKUP_AT, nowIso());
+      console.log(`[scheduler] backup: ${r.file} (${(r.bytes / 1024 / 1024).toFixed(1)} MB)`);
+      await notifyRecovered(env, "backup", {
+        title: "Spotify poller — backups working again",
+        message: `Backup written to ${r.file}.`,
+      });
+    } catch (e) {
+      // A failing backup is silent by nature — nothing breaks until the day you
+      // need it. It has to be loud.
+      console.error("[scheduler] backup failed:", e);
+      await notifyOnce(env, "backup", {
+        title: "Spotify poller — backup FAILED",
+        message: `${String(e)}\nThe history is no longer protected against a disk loss.`,
+        priority: "high",
+        tags: ["floppy_disk", "warning"],
+      });
+    } finally {
+      backingUp = false;
+    }
   };
 
   setTimeout(() => void tick("played"), 15_000);
@@ -76,8 +120,24 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     if (likedDue()) void tick("liked");
   }, 3_600_000);
 
+  if (env.BACKUP_ENABLED) {
+    setTimeout(() => void backupTick(), 120_000);
+    setInterval(() => void backupTick(), 3_600_000);
+  }
+
   console.log(
     `[scheduler] active — played every ${opts.playedEveryMinutes} min, ` +
-      `liked every ${opts.likedEveryHours} h (hourly check)`
+      `liked every ${opts.likedEveryHours} h (hourly check)` +
+      (env.BACKUP_ENABLED ? `, backup every ${opts.backupEveryHours} h -> ${env.BACKUP_DIR}` : "")
   );
+}
+
+/** One-off notification when the process starts, useful after an unplanned reboot. */
+export async function announceStartup(env: Env, note: string): Promise<void> {
+  await notify(env, {
+    title: "Spotify poller — started",
+    message: note,
+    priority: "min",
+    tags: ["arrow_forward"],
+  });
 }
