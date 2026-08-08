@@ -6,6 +6,7 @@ const nextConfig = {
   // that need the full dependency tree at runtime, not just what `next start`
   // itself touches — see Dockerfile.
   serverExternalPackages: ["better-sqlite3"],
+	allowedDevOrigins: ["localhost", "127.0.0.1"],
 };
 
 export default nextConfig;

@@ -10,3 +10,4 @@ site/
 backups/
 *.ndjson
 tsconfig.tsbuildinfo
+/dist
