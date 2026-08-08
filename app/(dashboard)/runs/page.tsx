@@ -21,11 +21,11 @@ const TONE: Record<Run["status"], "ok" | "warn" | "danger"> = { ok: "ok", partia
 export default async function RunsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ offset?: string }>;
+  searchParams: Promise<{ offset?: string; account?: string }>;
 }) {
   const sp = await searchParams;
   const env = getEnv();
-  const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
+  const scope = sp.account || getActiveAccountId(env) || GLOBAL_SCOPE;
   const limit = 50;
   const offset = Math.max(0, Number(sp.offset) || 0);
   const result = listRuns(env, scope, limit, offset);

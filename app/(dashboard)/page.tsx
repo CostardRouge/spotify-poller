@@ -1,12 +1,24 @@
+import Link from "next/link";
 import { getEnv } from "@/lib/server/runtime";
-import { eventCountsByAccount, getActiveAccountId, healthSnapshot } from "@/lib/server/db";
+import { eventCountsByAccount, getActiveAccountId, healthSnapshot, listRuns } from "@/lib/server/db";
 import { authStatus } from "@/lib/server/spotify/auth";
 import { getRateLimit } from "@/lib/server/spotify/api";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
-import { relativeFromNow } from "@/lib/format";
+import { formatTimestamp, relativeFromNow } from "@/lib/format";
 import StatusPill from "@/components/StatusPill";
 import RunButtons from "@/components/RunButtons";
 import BackupButton from "@/components/BackupButton";
+
+type RecentRun = {
+  id: number;
+  collector: string;
+  started_at: string;
+  status: "ok" | "partial" | "error";
+  items_inserted: number;
+  error: string | null;
+};
+
+const RUN_TONE: Record<RecentRun["status"], "ok" | "warn" | "danger"> = { ok: "ok", partial: "warn", error: "danger" };
 
 const STALE_PLAYED_MS = 45 * 60 * 1000; // 30 min cadence + margin
 const STALE_LIKED_MS = 26 * 60 * 60 * 1000; // daily cadence + margin
@@ -27,6 +39,7 @@ export default async function DashboardPage({
   const { connected, auth_error } = await searchParams;
   const env = getEnv();
   const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
+  const recentRuns = listRuns(env, scope, 5, 0).items as RecentRun[];
   const health = healthSnapshot(env, scope);
   const auth = authStatus(env);
   const rateLimit = getRateLimit(env);
@@ -140,6 +153,28 @@ export default async function DashboardPage({
       </div>
 
       <div className="mt-8 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-[color:var(--text)]">Recent runs</h2>
+          <Link href="/runs" className="text-xs text-[color:var(--accent)] underline">
+            all runs
+          </Link>
+        </div>
+        <ul className="mt-2 flex flex-col gap-1.5">
+          {recentRuns.map((r) => (
+            <li key={r.id} className="flex items-center gap-3 text-sm">
+              <StatusPill tone={RUN_TONE[r.status]}>{r.status}</StatusPill>
+              <span className="text-[color:var(--text)]">{r.collector}</span>
+              <span className="text-xs text-[color:var(--muted)]">{formatTimestamp(r.started_at, env.TIMEZONE)}</span>
+              <span className="ml-auto truncate text-xs text-[color:var(--muted)]" title={r.error ?? ""}>
+                {r.error ? r.error.slice(0, 60) : `${r.items_inserted} new`}
+              </span>
+            </li>
+          ))}
+          {recentRuns.length === 0 && <li className="text-sm text-[color:var(--muted)]">No runs logged yet.</li>}
+        </ul>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
         <h2 className="text-sm font-medium text-[color:var(--text)]">Collected</h2>
         <p className="mt-1 text-2xl font-[family-name:var(--serif)] text-[color:var(--text)]">
           {totalEvents.toLocaleString()} <span className="text-sm text-[color:var(--muted)]">events</span>

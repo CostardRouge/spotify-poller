@@ -30,11 +30,15 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const offset = Math.max(0, Number(str(sp.offset)) || 0);
   const order = str(sp.order) === "asc" ? "asc" : "desc";
 
+  // A bare date bound needs its time-of-day edges (the old UI did the same):
+  // `to=2026-08-08` must include the whole 8th, not cut off at midnight.
+  const dayStart = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T00:00:00Z` : d);
+  const dayEnd = (d: string) => (/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T23:59:59Z` : d);
   const filter = {
     type: str(sp.type) || undefined,
     q: str(sp.q) || undefined,
-    from: str(sp.from) || undefined,
-    to: str(sp.to) || undefined,
+    from: str(sp.from) ? dayStart(str(sp.from)) : undefined,
+    to: str(sp.to) ? dayEnd(str(sp.to)) : undefined,
   };
   const result = listEvents(env, scope, { ...filter, order, limit, offset });
 
@@ -72,7 +76,9 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
         <form method="get" className="flex flex-wrap gap-2">
           {str(sp.account) && <input type="hidden" name="account" value={str(sp.account)} />}
           <input
+            id="event-search"
             name="q"
+            type="search"
             defaultValue={str(sp.q)}
             placeholder="search title / artist"
             className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
@@ -111,6 +117,12 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
           </button>
         </form>
         <a
+          href={str(sp.account) ? `/events?account=${encodeURIComponent(str(sp.account))}` : "/events"}
+          className="rounded-md border border-[color:var(--line)] px-3 py-1.5 text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--text)]"
+        >
+          Clear
+        </a>
+        <a
           href={`/api/export${exportParams.size ? `?${exportParams}` : ""}`}
           className="rounded-md border border-[color:var(--line)] px-3 py-1.5 text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]"
           title="NDJSON download of the events matching the current filter — carries no secret"
@@ -144,6 +156,11 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
         >
           Next
         </a>
+        <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--muted)]">
+          {result.total === 0
+            ? "0 of 0"
+            : `${offset + 1}–${Math.min(offset + limit, result.total)} of ${result.total.toLocaleString()}`}
+        </span>
       </div>
     </div>
   );

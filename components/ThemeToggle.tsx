@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { applyTheme, getTheme, ThemeChoice } from "@/lib/theme";
 
-type ThemeChoice = "system" | "light" | "dark";
-const STORAGE_KEY = "sp-theme";
 const OPTIONS: { value: ThemeChoice; label: string }[] = [
   { value: "system", label: "System" },
   { value: "light", label: "Light" },
@@ -14,19 +13,16 @@ export default function ThemeToggle() {
   const [choice, setChoice] = useState<ThemeChoice>("system");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "dark") setChoice(stored);
+    setChoice(getTheme());
+    // Stay in sync when the theme is changed elsewhere (palette's cycle-theme).
+    const onChange = () => setChoice(getTheme());
+    window.addEventListener("sp:theme-changed", onChange);
+    return () => window.removeEventListener("sp:theme-changed", onChange);
   }, []);
 
   function apply(next: ThemeChoice) {
     setChoice(next);
-    if (next === "system") {
-      localStorage.removeItem(STORAGE_KEY);
-      document.documentElement.removeAttribute("data-theme");
-    } else {
-      localStorage.setItem(STORAGE_KEY, next);
-      document.documentElement.setAttribute("data-theme", next);
-    }
+    applyTheme(next);
   }
 
   return (

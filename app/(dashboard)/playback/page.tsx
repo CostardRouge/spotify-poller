@@ -15,7 +15,11 @@ type Session = {
   close_reason: string | null;
 };
 
-export default async function PlaybackPage({ searchParams }: { searchParams: Promise<{ offset?: string }> }) {
+export default async function PlaybackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ offset?: string; account?: string }>;
+}) {
   const sp = await searchParams;
   const env = getEnv();
 
@@ -31,7 +35,7 @@ export default async function PlaybackPage({ searchParams }: { searchParams: Pro
     );
   }
 
-  const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
+  const scope = sp.account || getActiveAccountId(env) || GLOBAL_SCOPE;
   const limit = 50;
   const offset = Math.max(0, Number(sp.offset) || 0);
   const result = listPlaybackSessions(env, scope, { limit, offset });

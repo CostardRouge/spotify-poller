@@ -130,16 +130,39 @@ honest, quiet):
 
 - **Dashboard** (`/`) — freshness of `played`/`liked` (and `playback` when
   enabled), the scope banner (missing OAuth scopes), the rate-limit banner,
-  manual collector triggers, event counts by type;
+  manual collector triggers, maintenance actions (backup, export), the five
+  most recent runs, event counts by type;
 - **Accounts** (`/accounts`) — Spotify account connection (Authorization Code
   flow, spec §7 — stable token stored in the `accounts` table), **Connect**,
   and per-account **Activate**/**Disconnect**;
 - **Events** (`/events`) — browsing of all collected events: type filter,
-  title/artist search, date bounds, sort order, pagination;
+  title/artist search, date bounds, sort order, pagination, filtered NDJSON
+  export, and a per-row payload inspector (native dialog);
 - **Runs** (`/runs`) — the collector run log (`poller_runs`), status and
   errors;
 - **Gaps** (`/gaps`) — declared holes in the history (`gaps`);
-- **Playback** (`/playback`) — playback sessions, when `PLAYBACK_ENABLED=1`.
+- **Stats** (`/stats`) — volumes (events, raw evidence, gaps) and the last
+  20 runs;
+- **Playback** (`/playback`) — playback sessions; always in the navigation,
+  and the page itself explains how to enable the collector when it is off.
+
+Around the pages, the app shell carries the rest of the operator surface:
+
+- a **sidebar** with the account view-scope selector (looking is not
+  collecting — a hint appears whenever the viewed account differs from the
+  collected one), a health chip (freshness of `played`, dot always paired with
+  a word), and a **now-playing widget** (title, progress bar, device, volume)
+  while the playback collector observes a listen;
+- a **settings dialog** (theme override, backup action, keyboard shortcut
+  list, server configuration read-out, sign out);
+- a **command palette** on <kbd>⌘K</kbd> — sections and actions, searchable;
+  plus global shortcuts: <kbd>1</kbd>…<kbd>7</kbd> jump to a section,
+  <kbd>/</kbd> focuses the events search, <kbd>T</kbd> cycles the theme,
+  <kbd>R</kbd> refreshes, <kbd>?</kbd> shows the shortcut list, and
+  <kbd>Esc</kbd> closes any overlay;
+- on phones the sidebar folds into a **bottom tab bar** with a More sheet
+  (remaining sections, run actions, settings, account selector) — every
+  operator action stays reachable on a 360 px screen (PRODUCT.md).
 
 `AUTH_MODE=token` (default): sign in once at `/login` with `ADMIN_TOKEN`; a
 signed JWT cookie (`JWT_SECRET`) carries the session for 30 days. Behind an

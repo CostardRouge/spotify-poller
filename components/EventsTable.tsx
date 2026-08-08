@@ -22,6 +22,12 @@ function prettyPayload(payload: string): string {
   }
 }
 
+function formatDuration(s: number | null): string {
+  if (s == null) return "—";
+  const m = Math.floor(s / 60);
+  return `${m}:${String(s % 60).padStart(2, "0")}`;
+}
+
 /**
  * The browsing table plus the payload inspector the old debug UI had as
  * expandable rows — here a native <dialog> (PRODUCT.md: native dialogs, Esc
@@ -46,6 +52,7 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
               <th className="px-3 py-2">Type</th>
               <th className="px-3 py-2">Title</th>
               <th className="px-3 py-2">Subtitle</th>
+              <th className="px-3 py-2">Duration</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
@@ -56,6 +63,7 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
                 <td className="px-3 py-2">{ev.type}</td>
                 <td className="px-3 py-2 text-[color:var(--text)]">{ev.title}</td>
                 <td className="px-3 py-2 text-[color:var(--muted)]">{ev.subtitle}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{formatDuration(ev.duration_s)}</td>
                 <td className="px-3 py-2 text-right">
                   <button
                     type="button"
@@ -69,7 +77,7 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[color:var(--muted)]">
+                <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--muted)]">
                   No events match this filter.
                 </td>
               </tr>

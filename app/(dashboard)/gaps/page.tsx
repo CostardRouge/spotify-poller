@@ -5,10 +5,14 @@ import { formatTimestamp } from "@/lib/format";
 
 type Gap = { id: number; collector: string; from_utc: string; to_utc: string; detected_at: string; note: string };
 
-export default async function GapsPage({ searchParams }: { searchParams: Promise<{ offset?: string }> }) {
+export default async function GapsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ offset?: string; account?: string }>;
+}) {
   const sp = await searchParams;
   const env = getEnv();
-  const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
+  const scope = sp.account || getActiveAccountId(env) || GLOBAL_SCOPE;
   const limit = 50;
   const offset = Math.max(0, Number(sp.offset) || 0);
   const result = listGaps(env, scope, limit, offset);

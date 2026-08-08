@@ -18,9 +18,14 @@ type Run = {
 
 const TONE: Record<Run["status"], "ok" | "warn" | "danger"> = { ok: "ok", partial: "warn", error: "danger" };
 
-export default function StatsPage() {
+export default async function StatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ account?: string }>;
+}) {
+  const sp = await searchParams;
   const env = getEnv();
-  const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
+  const scope = sp.account || getActiveAccountId(env) || GLOBAL_SCOPE;
   const stats = statsSnapshot(env, scope);
   const runs = stats.last_20_runs as Run[];
   const gapCount = (stats.gaps as unknown[]).length;
