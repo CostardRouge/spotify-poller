@@ -59,7 +59,10 @@ export function redirectUri(env: Env): string {
  * (appBaseUrl convention from the Spotify Calendar).
  */
 export function appBaseUrl(env: Env): string {
-  return redirectUri(env).replace(/\/api\/spotify\/callback\/?$/, "");
+  // Both callback shapes strip: the current /api/spotify/callback and the
+  // pre-Next.js /auth/callback, which is still served as an alias so an
+  // already-registered Spotify Redirect URI keeps working.
+  return redirectUri(env).replace(/\/(api\/spotify|auth)\/callback\/?$/, "");
 }
 
 /** Spotify authorization URL for the UI connection flow. */

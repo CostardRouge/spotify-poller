@@ -64,6 +64,16 @@ await shoot(page, "accounts");
 await page.goto(`${BASE}/runs`, { waitUntil: "networkidle" });
 await shoot(page, "runs");
 
+// 6. Stats.
+await page.goto(`${BASE}/stats`, { waitUntil: "networkidle" });
+await shoot(page, "stats");
+
+// 7. Payload modal — the event inspector, open on the first row.
+await page.goto(`${BASE}/events`, { waitUntil: "networkidle" });
+await page.getByRole("button", { name: "Payload" }).first().click();
+await page.waitForSelector("dialog[open]");
+await shoot(page, "events-payload");
+
 await page.close();
 await browser.close();
 log(`done -> ${OUT}`);

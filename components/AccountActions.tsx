@@ -3,6 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const linkClass =
+  "rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]";
+
 export default function AccountActions({ id, isActive }: { id: string; isActive: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -29,17 +32,20 @@ export default function AccountActions({ id, isActive }: { id: string; isActive:
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap gap-2">
       {!isActive && (
-        <button
-          type="button"
-          disabled={busy}
-          onClick={activate}
-          className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--text)] hover:bg-[color:var(--accent-wash)] disabled:opacity-50"
-        >
+        <button type="button" disabled={busy} onClick={activate} className={`${linkClass} disabled:opacity-50`}>
           Activate
         </button>
       )}
+      {/* Reconnect = the same authorize flow; show_dialog re-shows the consent
+          screen so a scope added later actually gets granted (scope drift). */}
+      <a href="/api/spotify/login" className={linkClass}>
+        Reconnect
+      </a>
+      <a href={`/events?account=${encodeURIComponent(id)}`} className={linkClass}>
+        View events
+      </a>
       <button
         type="button"
         disabled={busy}

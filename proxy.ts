@@ -12,7 +12,9 @@ import { isAuthorized } from "./lib/auth/session";
  * public, minimal, see app/api/health/route.ts), Next internals and static
  * assets.
  */
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health", "/api/spotify/callback"];
+// /auth/callback is the legacy alias of /api/spotify/callback — same handler,
+// kept public for Spotify's redirect (protected by the state cookie instead).
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health", "/api/spotify/callback", "/auth/callback"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

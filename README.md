@@ -158,6 +158,7 @@ dashboard *displays* them; it changes nothing in the database.
 | `GET /api/status` | session | last success, counters, accounts, rate limit, scheduler, display timezone |
 | `GET /api/spotify/login` | session | starts the Spotify OAuth connection flow |
 | `GET /api/spotify/callback` | state cookie | Spotify return, stores the refresh token |
+| `GET /auth/login`, `GET /auth/callback` | same | pre-Next.js aliases of the two above — an already-registered Redirect URI keeps working |
 | `POST /api/run?collector=played\|liked\|playback` | session | manual trigger (idempotent) |
 | `GET /api/stats` | session | volumes, gaps, last 20 runs |
 | `GET /api/events` | session | pagination + `type`, `q`, `from`, `to`, `order` filters |

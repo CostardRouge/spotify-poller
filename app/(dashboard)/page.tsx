@@ -6,6 +6,7 @@ import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { relativeFromNow } from "@/lib/format";
 import StatusPill from "@/components/StatusPill";
 import RunButtons from "@/components/RunButtons";
+import BackupButton from "@/components/BackupButton";
 
 const STALE_PLAYED_MS = 45 * 60 * 1000; // 30 min cadence + margin
 const STALE_LIKED_MS = 26 * 60 * 60 * 1000; // daily cadence + margin
@@ -18,7 +19,12 @@ function freshnessTone(lastSuccess: string | null, staleAfterMs: number): "ok" |
   return "danger";
 }
 
-export default function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ connected?: string; auth_error?: string }>;
+}) {
+  const { connected, auth_error } = await searchParams;
   const env = getEnv();
   const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
   const health = healthSnapshot(env, scope);
@@ -36,6 +42,22 @@ export default function DashboardPage() {
       <p className="mt-1 text-sm text-[color:var(--muted)]">
         Is collection still alive, and did I lose anything? — the custody report, at a glance.
       </p>
+
+      {connected && (
+        <div className="mt-6 rounded-md border border-[color:var(--ok)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
+          Account <span className="font-medium">{connected}</span> connected — collection targets it from the next run.
+        </div>
+      )}
+
+      {auth_error && (
+        <div className="mt-6 rounded-md border border-[color:var(--danger)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
+          Spotify connection failed: <code className="text-xs">{auth_error}</code>. Try again from{" "}
+          <a href="/accounts" className="font-medium text-[color:var(--accent)] underline">
+            Accounts
+          </a>
+          .
+        </div>
+      )}
 
       {!auth.connected && (
         <div className="mt-6 rounded-md border border-[color:var(--danger)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
@@ -100,6 +122,20 @@ export default function DashboardPage() {
         <h2 className="text-sm font-medium text-[color:var(--text)]">Manual run</h2>
         <div className="mt-2">
           <RunButtons playbackEnabled={env.PLAYBACK_ENABLED} />
+        </div>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-sm font-medium text-[color:var(--text)]">Maintenance</h2>
+        <div className="mt-2 flex flex-wrap items-start gap-2">
+          <BackupButton />
+          <a
+            href="/api/export"
+            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]"
+            title="NDJSON download of every event — carries no secret"
+          >
+            Export NDJSON
+          </a>
         </div>
       </div>
 
