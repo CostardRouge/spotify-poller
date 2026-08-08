@@ -69,6 +69,12 @@ const PATHS: Record<string, React.ReactNode> = {
   play: <path d="M7 4.5v15l13-7.5z" />,
   check: <path d="m4 12.5 5.2 5.2L20 6.5" />,
   x: <path d="m6 6 12 12M18 6 6 18" />,
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5.5M12 7.6h.01" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

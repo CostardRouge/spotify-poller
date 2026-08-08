@@ -691,3 +691,12 @@ export function eventCountsByAccount(env: Env): Record<string, number> {
   }[];
   return Object.fromEntries(rows.map((r) => [r.account_id, r.n]));
 }
+
+/** Gap counts per account — feeds the sidebar/tabbar badges. */
+export function gapCountsByAccount(env: Env): Record<string, number> {
+  const rows = env.DB.prepare(`SELECT account_id, COUNT(*) AS n FROM gaps GROUP BY account_id`).all() as {
+    account_id: string;
+    n: number;
+  }[];
+  return Object.fromEntries(rows.map((r) => [r.account_id, r.n]));
+}

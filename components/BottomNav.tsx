@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useRef, useState } from "react";
 import AccountSelect, { AccountOption } from "./AccountSelect";
 import Icon, { IconName } from "./Icon";
 
@@ -25,17 +25,35 @@ const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
  * md, this bar takes over — three primary sections plus a More sheet with the
  * rest, the collector run actions, the view-scope selector and Settings.
  */
-export default function BottomNav({
+export default function BottomNav(props: {
+  accounts: AccountOption[];
+  activeAccountId: string | null;
+  gapsByAccount: Record<string, number>;
+}) {
+  // useSearchParams (for the viewed account's gaps badge) needs Suspense.
+  return (
+    <Suspense>
+      <BottomNavInner {...props} />
+    </Suspense>
+  );
+}
+
+function BottomNavInner({
   accounts,
   activeAccountId,
+  gapsByAccount,
 }: {
   accounts: AccountOption[];
   activeAccountId: string | null;
+  gapsByAccount: Record<string, number>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [runResult, setRunResult] = useState<string | null>(null);
+  const viewing = searchParams.get("account") || activeAccountId || "";
+  const gapCount = gapsByAccount[viewing] ?? 0;
 
   async function run(collector: string) {
     setRunResult(`running ${collector}…`);
@@ -69,10 +87,18 @@ export default function BottomNav({
             setRunResult(null);
             dialogRef.current?.showModal();
           }}
-          className={itemClass(MORE_LINKS.some((l) => l.href === pathname))}
+          className={"relative " + itemClass(MORE_LINKS.some((l) => l.href === pathname))}
         >
           <Icon name="more" className="h-4 w-4" />
           More
+          {gapCount > 0 && (
+            <span
+              aria-label={`${gapCount} declared gap(s)`}
+              className="absolute right-1/4 top-0 min-w-4 -translate-y-1 rounded-full bg-[color:var(--danger)] px-1 text-center text-[10px] font-bold leading-4 text-[color:var(--on-accent)]"
+            >
+              {gapCount > 9 ? "9+" : gapCount}
+            </span>
+          )}
         </button>
       </nav>
 

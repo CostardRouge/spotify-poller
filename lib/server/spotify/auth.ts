@@ -320,6 +320,9 @@ export type AccountWithScope = PublicAccount & {
   scopes_missing: string[];
 };
 
+/** The shape authStatus serves — shared with the UI components that render it. */
+export type AuthStatusView = ReturnType<typeof authStatus>;
+
 /** Non-throwing variant for status endpoints, which must answer even when broken. */
 export function authStatus(env: Env): {
   connected: boolean;

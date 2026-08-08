@@ -2,6 +2,7 @@ import { getEnv } from "@/lib/server/runtime";
 import { getActiveAccountId, listPlaybackSessions } from "@/lib/server/db";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp } from "@/lib/format";
+import Icon from "@/components/Icon";
 
 type Session = {
   id: string;
@@ -25,12 +26,16 @@ export default async function PlaybackPage({
 
   if (!env.PLAYBACK_ENABLED) {
     return (
-      <div>
-        <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Playback</h1>
-        <p className="mt-2 text-sm text-[color:var(--muted)]">
-          Off by default. Set <code>PLAYBACK_ENABLED=1</code> to poll <code>/me/player</code> and record device,
-          volume and skip/finish detail on top of the `played` collector.
-        </p>
+      <div className="panel">
+        <div className="empty">
+          <Icon name="playback" className="h-6 w-6" />
+          <h3>Playback collection is off</h3>
+          <p>
+            Set <code className="font-[family-name:var(--mono)]">PLAYBACK_ENABLED=1</code> (with the in-process
+            scheduler) to poll <code className="font-[family-name:var(--mono)]">/me/player</code> and record device,
+            volume and skip/finish detail on top of the `played` collector.
+          </p>
+        </div>
       </div>
     );
   }
@@ -43,10 +48,7 @@ export default async function PlaybackPage({
 
   return (
     <div>
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Playback</h1>
-      <p className="mt-1 text-sm text-[color:var(--muted)]">{result.total.toLocaleString()} session(s) recorded.</p>
-
-      <div className="mt-4 overflow-x-auto rounded-lg border border-[color:var(--line)]">
+      <div className="overflow-x-auto rounded-lg border border-[color:var(--line)]">
         <table className="w-full text-left text-sm">
           <thead className="bg-[color:var(--panel-2)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
             <tr>
@@ -77,8 +79,12 @@ export default async function PlaybackPage({
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-3 py-6 text-center text-[color:var(--muted)]">
-                  No playback sessions yet.
+                <td colSpan={5}>
+                  <div className="empty">
+                    <Icon name="playback" className="h-6 w-6" />
+                    <h3>No playback sessions yet</h3>
+                    <p>Sessions appear here while the ticker observes something playing.</p>
+                  </div>
                 </td>
               </tr>
             )}
@@ -93,6 +99,11 @@ export default async function PlaybackPage({
         <a href={`?offset=${offset + limit}`} className="btn sm" aria-disabled={offset + limit >= result.total}>
           Next →
         </a>
+        <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
+          {result.total === 0
+            ? "0 of 0"
+            : `${offset + 1}–${Math.min(offset + limit, result.total)} of ${result.total.toLocaleString()}`}
+        </span>
       </div>
     </div>
   );

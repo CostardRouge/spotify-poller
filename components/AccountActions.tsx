@@ -34,7 +34,7 @@ export default function AccountActions({ id, isActive }: { id: string; isActive:
       {!isActive && (
         <button type="button" disabled={busy} onClick={activate} className="btn sm">
           <Icon name="check" className="h-3.5 w-3.5" />
-          Activate
+          Collect this one
         </button>
       )}
       {/* Reconnect = the same authorize flow; show_dialog re-shows the consent

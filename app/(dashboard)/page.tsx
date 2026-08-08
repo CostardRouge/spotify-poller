@@ -1,190 +1,235 @@
 import Link from "next/link";
 import { getEnv } from "@/lib/server/runtime";
-import { eventCountsByAccount, getActiveAccountId, healthSnapshot, listRuns } from "@/lib/server/db";
-import { authStatus } from "@/lib/server/spotify/auth";
-import { getRateLimit } from "@/lib/server/spotify/api";
+import { getActiveAccountId, healthSnapshot, statsSnapshot } from "@/lib/server/db";
+import { schedulerEnabled, schedulerOptionsFromProcess } from "@/lib/server/scheduler";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp, relativeFromNow } from "@/lib/format";
+import Row, { RowTone } from "@/components/Row";
+import RunNowButton from "@/components/RunNowButton";
 import StatusPill from "@/components/StatusPill";
-import RunButtons from "@/components/RunButtons";
-import BackupButton from "@/components/BackupButton";
-import Icon from "@/components/Icon";
 
 type RecentRun = {
-  id: number;
   collector: string;
+  trigger_kind: string;
   started_at: string;
   status: "ok" | "partial" | "error";
+  items_fetched: number;
   items_inserted: number;
-  error: string | null;
 };
 
 const RUN_TONE: Record<RecentRun["status"], "ok" | "warn" | "danger"> = { ok: "ok", partial: "warn", error: "danger" };
 
-const STALE_PLAYED_MS = 45 * 60 * 1000; // 30 min cadence + margin
-const STALE_LIKED_MS = 26 * 60 * 60 * 1000; // daily cadence + margin
-
-function freshnessTone(lastSuccess: string | null, staleAfterMs: number): "ok" | "warn" | "danger" {
-  if (!lastSuccess) return "danger";
-  const age = Date.now() - Date.parse(lastSuccess);
-  if (age <= staleAfterMs) return "ok";
-  if (age <= staleAfterMs * 3) return "warn";
-  return "danger";
+/** Same freshness bands as the old UI: ok within the expected window, warn to 4×, bad past that. */
+function freshness(iso: string | null, expectedMs: number): RowTone {
+  if (!iso) return "none";
+  const age = Date.now() - Date.parse(iso);
+  if (age <= expectedMs) return "ok";
+  if (age <= expectedMs * 4) return "warn";
+  return "bad";
 }
 
-export default async function DashboardPage({
+export default async function OverviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ connected?: string; auth_error?: string }>;
+  searchParams: Promise<{ connected?: string; auth_error?: string; account?: string }>;
 }) {
-  const { connected, auth_error } = await searchParams;
+  const { connected, auth_error, account } = await searchParams;
   const env = getEnv();
-  const scope = getActiveAccountId(env) ?? GLOBAL_SCOPE;
-  const recentRuns = listRuns(env, scope, 5, 0).items as RecentRun[];
+  const scope = account || getActiveAccountId(env) || GLOBAL_SCOPE;
   const health = healthSnapshot(env, scope);
-  const auth = authStatus(env);
-  const rateLimit = getRateLimit(env);
-  const counts = eventCountsByAccount(env);
-  const totalEvents = Object.values(counts).reduce((a, b) => a + b, 0);
+  const stats = statsSnapshot(env, scope);
+  const sched = schedulerEnabled() ? schedulerOptionsFromProcess() : null;
 
-  const playedTone = freshnessTone(health.collector_played_last_success, STALE_PLAYED_MS);
-  const likedTone = freshnessTone(health.collector_liked_last_success, STALE_LIKED_MS);
+  const expPlayed = (sched ? sched.playedEveryMinutes * 3 : 90) * 60_000;
+  const expLiked = (sched ? sched.likedEveryHours * 1.5 : 36) * 3_600_000;
+
+  const byType = Object.entries(health.events_by_type)
+    .map(([k, v]) => `${k} ${v.toLocaleString()}`)
+    .join(" · ");
+  const gapCount = (stats.gaps as unknown[]).length;
+  const recentRuns = (stats.last_20_runs as RecentRun[]).slice(0, 6);
+
+  const tz = env.TIMEZONE;
+  const collectorRow = (id: string, iso: string | null, expMs: number, note: string) => (
+    <Row
+      tone={freshness(iso, expMs)}
+      label={id}
+      value={iso ? relativeFromNow(iso) : "Never succeeded"}
+      sub={iso ? formatTimestamp(iso, tz) : note}
+      action={<RunNowButton collector={id} />}
+    />
+  );
 
   return (
-    <div className="max-w-4xl">
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Overview</h1>
-      <p className="mt-1 text-sm text-[color:var(--muted)]">
-        Is collection still alive, and did I lose anything? — the custody report, at a glance.
-      </p>
-
+    <div className="grid max-w-5xl gap-4">
       {connected && (
-        <div className="mt-6 rounded-md border border-[color:var(--ok)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
-          Account <span className="font-medium">{connected}</span> connected — collection targets it from the next run.
+        <div role="status" className="alert">
+          <p>
+            Account <strong>{connected}</strong> connected — collection targets it from the next run.
+          </p>
         </div>
       )}
-
       {auth_error && (
-        <div className="mt-6 rounded-md border border-[color:var(--danger)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
-          Spotify connection failed: <code className="text-xs">{auth_error}</code>. Try again from{" "}
-          <a href="/accounts" className="font-medium text-[color:var(--accent)] underline">
-            Accounts
-          </a>
-          .
-        </div>
-      )}
-
-      {!auth.connected && (
-        <div className="mt-6 rounded-md border border-[color:var(--danger)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
-          No Spotify account connected yet.{" "}
-          <a href="/api/spotify/login" className="font-medium text-[color:var(--accent)] underline">
-            Connect Spotify
-          </a>{" "}
-          to start collecting.
-        </div>
-      )}
-
-      {auth.scope_state === "missing" && (
-        <div className="mt-6 rounded-md border border-[color:var(--warn)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
-          The connected account is missing scope(s): {auth.scopes_missing.join(", ")}.{" "}
-          <a href="/api/spotify/login" className="font-medium text-[color:var(--accent)] underline">
-            Reconnect
-          </a>{" "}
-          to grant them.
-        </div>
-      )}
-
-      {rateLimit.limited && (
-        <div className="mt-6 rounded-md border border-[color:var(--warn)]/40 bg-[color:var(--panel)] p-4 text-sm text-[color:var(--text)]">
-          Rate-limited by Spotify — collection resumes after {rateLimit.until}.
-        </div>
-      )}
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2">
-        <div className="rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-[color:var(--text)]">played</h2>
-            <StatusPill tone={playedTone}>{relativeFromNow(health.collector_played_last_success)}</StatusPill>
-          </div>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">
-            recently-played, every 30 min — the critical collector: Spotify only keeps the last 50 tracks.
-          </p>
-        </div>
-        <div className="rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-[color:var(--text)]">liked</h2>
-            <StatusPill tone={likedTone}>{relativeFromNow(health.collector_liked_last_success)}</StatusPill>
-          </div>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">liked tracks, daily, plus the initial backfill.</p>
-        </div>
-      </div>
-
-      {health.playback.enabled && (
-        <div className="mt-4 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-[color:var(--text)]">playback</h2>
-            <StatusPill tone={freshnessTone(health.playback.last_success, 5 * 60 * 1000)}>
-              {relativeFromNow(health.playback.last_success)}
-            </StatusPill>
-          </div>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">
-            {health.playback.now_playing ? `now playing: ${health.playback.now_playing.title ?? "unknown"}` : "idle"}
+        <div role="alert" className="alert bad">
+          <p>
+            Spotify connection failed: <code className="font-[family-name:var(--mono)]">{auth_error}</code>. Try
+            again from the Accounts page.
           </p>
         </div>
       )}
 
-      <div className="mt-8">
-        <h2 className="text-sm font-medium text-[color:var(--text)]">Manual run</h2>
-        <div className="mt-2">
-          <RunButtons playbackEnabled={env.PLAYBACK_ENABLED} />
+      <section className="panel">
+        <header>
+          <h2>Collection</h2>
+          <span className="hint">
+            {sched
+              ? `in-process scheduler · played every ${sched.playedEveryMinutes} min · liked every ${sched.likedEveryHours} h`
+              : "driven by systemd timers"}
+          </span>
+        </header>
+        <div className="rows">
+          {collectorRow("played", health.collector_played_last_success, expPlayed, "Spotify only keeps the last 50 tracks.")}
+          {collectorRow("liked", health.collector_liked_last_success, expLiked, "Liked tracks and the initial backfill.")}
+          {health.playback.enabled ? (
+            collectorRow("playback", health.playback.last_success, 15 * 60_000, "Sampled every few seconds.")
+          ) : (
+            <Row
+              tone="none"
+              label="playback"
+              value="Disabled"
+              sub={
+                <>
+                  Opt-in: set <code className="font-[family-name:var(--mono)]">PLAYBACK_ENABLED=1</code> with the
+                  in-process scheduler.
+                </>
+              }
+            />
+          )}
         </div>
-      </div>
+      </section>
 
-      <div className="mt-8">
-        <h2 className="text-sm font-medium text-[color:var(--text)]">Maintenance</h2>
-        <div className="mt-2 flex flex-wrap items-start gap-2">
-          <BackupButton />
-          <a href="/api/export" className="btn" title="NDJSON download of every event — carries no secret">
-            <Icon name="download" className="h-4 w-4" />
-            Export NDJSON
-          </a>
+      <section className="panel">
+        <header>
+          <h2>Stored data</h2>
+          <span className="hint">account {scope || "—"}</span>
+        </header>
+        <div className="rows">
+          <Row tone={null} label="Events" value={stats.event_rows.toLocaleString()} sub={byType || "no events yet"} />
+          <Row
+            tone={null}
+            label="Raw API rows"
+            value={stats.raw_rows.toLocaleString()}
+            sub="Untouched Spotify responses, kept for replay."
+          />
+          <Row
+            tone={gapCount === 0 ? "ok" : "warn"}
+            label="Declared gaps"
+            value={gapCount.toLocaleString()}
+            sub={gapCount === 0 ? "No window is known to be missing." : "Windows the poller knows it did not cover."}
+            action={
+              gapCount > 0 ? (
+                <Link href="/gaps" className="btn sm">
+                  Review
+                </Link>
+              ) : undefined
+            }
+          />
         </div>
-      </div>
+      </section>
 
-      <div className="mt-8 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-medium text-[color:var(--text)]">Recent runs</h2>
-          <Link href="/runs" className="text-xs text-[color:var(--accent)] underline">
+      <section className="panel">
+        <header>
+          <h2>Recent runs</h2>
+          <Link href="/runs" className="hint underline">
             all runs
           </Link>
+        </header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
+              <tr>
+                <th className="px-3 py-2">Started</th>
+                <th className="px-3 py-2">Collector</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Fetched</th>
+                <th className="px-3 py-2">New</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentRuns.map((r, i) => (
+                <tr key={`${r.started_at}-${i}`} className="border-t border-[color:var(--line)]">
+                  <td className="whitespace-nowrap px-3 py-2">
+                    {formatTimestamp(r.started_at, tz)}
+                    <span className="block text-xs text-[color:var(--ink-2)]">{relativeFromNow(r.started_at)}</span>
+                  </td>
+                  <td className="px-3 py-2 font-[family-name:var(--mono)]">
+                    {r.collector} <span className="text-[color:var(--ink-2)]">{r.trigger_kind}</span>
+                  </td>
+                  <td className="px-3 py-2">
+                    <StatusPill tone={RUN_TONE[r.status]}>{r.status}</StatusPill>
+                  </td>
+                  <td className="px-3 py-2">{r.items_fetched}</td>
+                  <td className="px-3 py-2">{r.items_inserted}</td>
+                </tr>
+              ))}
+              {recentRuns.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-3 py-6 text-center text-[color:var(--ink-2)]">
+                    No runs logged yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {recentRuns.map((r) => (
-            <li key={r.id} className="flex items-center gap-3 text-sm">
-              <StatusPill tone={RUN_TONE[r.status]}>{r.status}</StatusPill>
-              <span className="text-[color:var(--text)]">{r.collector}</span>
-              <span className="text-xs text-[color:var(--muted)]">{formatTimestamp(r.started_at, env.TIMEZONE)}</span>
-              <span className="ml-auto truncate text-xs text-[color:var(--muted)]" title={r.error ?? ""}>
-                {r.error ? r.error.slice(0, 60) : `${r.items_inserted} new`}
-              </span>
-            </li>
-          ))}
-          {recentRuns.length === 0 && <li className="text-sm text-[color:var(--muted)]">No runs logged yet.</li>}
-        </ul>
-      </div>
+      </section>
 
-      <div className="mt-4 rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
-        <h2 className="text-sm font-medium text-[color:var(--text)]">Collected</h2>
-        <p className="mt-1 text-2xl font-[family-name:var(--serif)] text-[color:var(--text)]">
-          {totalEvents.toLocaleString()} <span className="text-sm text-[color:var(--muted)]">events</span>
-        </p>
-        <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[color:var(--muted)]">
-          {Object.entries(health.events_by_type).map(([type, n]) => (
-            <li key={type}>
-              {type}: {n.toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <section className="panel">
+        <header>
+          <h2>Server</h2>
+        </header>
+        <div className="rows">
+          <Row
+            tone={sched ? "ok" : null}
+            label="Scheduler"
+            value={sched ? "In-process" : "External (systemd)"}
+            sub={sched ? `backup every ${sched.backupEveryHours} h` : "collection driven by systemd timers"}
+          />
+          <Row
+            tone={env.BACKUP_ENABLED ? "ok" : "warn"}
+            label="Backups"
+            value={env.BACKUP_ENABLED ? "Enabled" : "Disabled"}
+            sub={
+              env.BACKUP_ENABLED
+                ? `${env.BACKUP_DIR} · keep ${env.BACKUP_KEEP}`
+                : "Set BACKUP_ENABLED=1 to snapshot the database."
+            }
+          />
+          <Row
+            tone={env.WATCHDOG_URL ? "ok" : "warn"}
+            label="Watchdog"
+            value={env.WATCHDOG_URL ? "Configured" : "Not configured"}
+            sub={
+              env.WATCHDOG_URL
+                ? "Alerts on silence, the only thing that catches a dead poller."
+                : "Without WATCHDOG_URL nothing alerts you when the poller goes quiet."
+            }
+          />
+          <Row
+            tone={env.NTFY_URL ? "ok" : null}
+            label="ntfy"
+            value={env.NTFY_URL ? "Configured" : "Not configured"}
+            sub="Push channel for actionable events. It cannot detect silence."
+          />
+          <Row
+            tone={null}
+            label="Auth mode"
+            value={env.AUTH_MODE}
+            sub={env.AUTH_MODE === "proxy" ? "A reverse proxy authenticates requests." : "JWT session unlocked by ADMIN_TOKEN."}
+          />
+          <Row tone={null} label="Timezone" value={tz} sub="Display only; every timestamp is stored in UTC." />
+        </div>
+      </section>
     </div>
   );
 }

@@ -241,6 +241,50 @@ dialog::backdrop {
 .keys > div { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8125rem; }
 .keys .k { margin-left: auto; display: flex; gap: 0.25rem; }
 
+.alert {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 1rem; border-radius: 9px;
+  border: 1px solid var(--line); background: var(--surface);
+  font-size: 0.8125rem;
+}
+.alert .icon { color: var(--ink-2); }
+.alert p { flex: 1 1 20rem; min-width: 0; margin: 0; text-wrap: pretty; }
+.alert.warn { background: var(--warn-soft); border-color: color-mix(in oklab, var(--warn) 45%, var(--line)); }
+.alert.warn .icon { color: var(--warn); }
+.alert.bad { background: var(--danger-soft); border-color: color-mix(in oklab, var(--danger) 45%, var(--line)); }
+.alert.bad .icon { color: var(--danger); }
+
+/* status list — the Overview primitive. A row is: state, label, value, detail. */
+.rows { display: grid; }
+.row {
+  display: grid; grid-template-columns: 1rem 9rem minmax(0, 1fr) auto;
+  align-items: center; gap: 0.75rem;
+  padding: 0.6rem 1rem; border-top: 1px solid var(--line);
+}
+.rows > .row:first-child { border-top: 0; }
+.row > .r-state { display: grid; place-items: center; }
+.row > .r-label { font-size: 0.8125rem; font-weight: 550; }
+.row > .r-value { font-size: 0.8125rem; color: var(--ink); min-width: 0; }
+.row > .r-value .sub { display: block; font-size: 0.6875rem; color: var(--ink-2); }
+.row > .r-act { display: flex; gap: 0.5rem; justify-content: flex-end; }
+
+.panel {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 14px; overflow: clip;
+}
+.panel > header {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 1rem; border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.panel > header h2 { font-size: 0.8125rem; font-weight: 650; }
+.panel > header .hint { margin-left: auto; font-size: 0.6875rem; color: var(--ink-2); }
+
+.empty { display: grid; justify-items: center; gap: 0.45rem; padding: 2rem 1rem; text-align: center; }
+.empty svg { width: 1.5rem; height: 1.5rem; color: var(--ink-3); }
+.empty h3 { font-size: 0.8125rem; margin: 0; }
+.empty p { font-size: 0.8125rem; color: var(--ink-2); max-width: 46ch; margin: 0; text-wrap: pretty; }
+
 .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex: none; background: var(--ink-3); }
 .dot.ok { background: var(--ok); }
 .dot.warn { background: var(--warn); }

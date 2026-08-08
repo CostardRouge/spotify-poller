@@ -68,12 +68,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
 
   return (
     <div>
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Events</h1>
-      <p className="mt-1 text-sm text-[color:var(--muted)]">
-        {result.total.toLocaleString()} event(s) for account <code className="text-xs">{scope || "(global)"}</code>
-      </p>
-
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
         <form method="get" className="flex flex-wrap gap-2">
           {str(sp.account) && <input type="hidden" name="account" value={str(sp.account)} />}
           <select name="type" defaultValue={str(sp.type)} aria-label="Event type" className="field">
@@ -117,7 +112,12 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
       </div>
 
       <div className="mt-4">
-        <EventsTable items={items} timezone={env.TIMEZONE} />
+        <EventsTable
+          items={items}
+          timezone={env.TIMEZONE}
+          filtered={Boolean(filter.type || filter.q || filter.from || filter.to)}
+          clearHref={str(sp.account) ? `/events?account=${encodeURIComponent(str(sp.account))}` : "/events"}
+        />
       </div>
 
       <div className="mt-4 flex items-center gap-3 text-sm">

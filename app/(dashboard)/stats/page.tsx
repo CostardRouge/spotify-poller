@@ -32,11 +32,6 @@ export default async function StatsPage({
 
   return (
     <div>
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Stats</h1>
-      <p className="mt-1 text-sm text-[color:var(--muted)]">
-        Volumes and the last 20 runs for account <code className="text-xs">{scope || "(global)"}</code>.
-      </p>
-
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-4">
           <h2 className="text-sm font-medium text-[color:var(--text)]">Events</h2>

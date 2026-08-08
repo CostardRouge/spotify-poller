@@ -33,7 +33,17 @@ function formatDuration(s: number | null): string {
  * expandable rows — here a native <dialog> (PRODUCT.md: native dialogs, Esc
  * closes every overlay, keyboard-complete via the per-row button).
  */
-export default function EventsTable({ items, timezone }: { items: EventRowData[]; timezone: string }) {
+export default function EventsTable({
+  items,
+  timezone,
+  clearHref,
+  filtered,
+}: {
+  items: EventRowData[];
+  timezone: string;
+  clearHref?: string;
+  filtered?: boolean;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [selected, setSelected] = useState<EventRowData | null>(null);
 
@@ -73,8 +83,23 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-6 text-center text-[color:var(--muted)]">
-                  No events match this filter.
+                <td colSpan={6}>
+                  <div className="empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentcolor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                      <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+                    </svg>
+                    <h3>{filtered ? "No events match this filter" : "Nothing collected yet"}</h3>
+                    <p>
+                      {filtered
+                        ? "Try widening the dates or clearing the search."
+                        : "Events appear here after the first successful collector run."}
+                    </p>
+                    {filtered && clearHref && (
+                      <a href={clearHref} className="btn sm">
+                        Clear filters
+                      </a>
+                    )}
+                  </div>
                 </td>
               </tr>
             )}

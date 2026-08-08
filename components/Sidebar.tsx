@@ -9,34 +9,37 @@ import ThemeToggle from "./ThemeToggle";
 import Icon, { IconName } from "./Icon";
 
 /** Same sections, order and icons as the old sidebar nav (public/index.html on main). */
-export const NAV: { href: string; label: string; icon: IconName; count?: "events" }[] = [
+export const NAV: { href: string; label: string; icon: IconName; count?: "events" | "gaps" }[] = [
   { href: "/", label: "Overview", icon: "overview" },
   { href: "/events", label: "Events", icon: "events", count: "events" },
   { href: "/playback", label: "Playback", icon: "playback" },
   { href: "/runs", label: "Runs", icon: "runs" },
-  { href: "/gaps", label: "Gaps", icon: "gaps" },
+  { href: "/gaps", label: "Gaps", icon: "gaps", count: "gaps" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
 ];
 
 function NavList({
-  accounts,
   activeAccountId,
   eventsByAccount,
+  gapsByAccount,
 }: {
-  accounts: AccountOption[];
   activeAccountId: string | null;
   eventsByAccount: Record<string, number>;
+  gapsByAccount: Record<string, number>;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const viewing = searchParams.get("account") || activeAccountId || "";
-  const eventCount = eventsByAccount[viewing];
-  void accounts;
+  const counts: Record<string, number | undefined> = {
+    events: eventsByAccount[viewing],
+    gaps: gapsByAccount[viewing],
+  };
 
   return (
     <nav className="mt-6 flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Sections">
       {NAV.map((item) => {
         const active = pathname === item.href;
+        const count = item.count ? counts[item.count] : undefined;
         return (
           <Link
             key={item.href}
@@ -51,9 +54,14 @@ function NavList({
           >
             <Icon name={item.icon} className={"h-4 w-4 " + (active ? "text-[color:var(--accent-text)]" : "")} />
             {item.label}
-            {item.count === "events" && eventCount ? (
-              <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--ink-3)]">
-                {eventCount.toLocaleString()}
+            {count ? (
+              <span
+                className={
+                  "ml-auto font-[family-name:var(--mono)] text-xs " +
+                  (item.count === "gaps" ? "text-[color:var(--warn)]" : "text-[color:var(--ink-3)]")
+                }
+              >
+                {count.toLocaleString()}
               </span>
             ) : null}
           </Link>
@@ -67,10 +75,12 @@ export default function Sidebar({
   accounts,
   activeAccountId,
   eventsByAccount,
+  gapsByAccount,
 }: {
   accounts: AccountOption[];
   activeAccountId: string | null;
   eventsByAccount: Record<string, number>;
+  gapsByAccount: Record<string, number>;
 }) {
   return (
     <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-[color:var(--line)] bg-[color:var(--surface)] px-4 py-5 md:flex">
@@ -86,7 +96,7 @@ export default function Sidebar({
       </div>
 
       <Suspense>
-        <NavList accounts={accounts} activeAccountId={activeAccountId} eventsByAccount={eventsByAccount} />
+        <NavList activeAccountId={activeAccountId} eventsByAccount={eventsByAccount} gapsByAccount={gapsByAccount} />
       </Suspense>
 
       <div className="flex flex-col gap-3 pt-4">

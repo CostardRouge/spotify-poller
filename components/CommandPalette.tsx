@@ -130,6 +130,13 @@ export default function CommandPalette() {
   }
 
   useEffect(() => {
+    const onOpen = () => open();
+    window.addEventListener("sp:open-palette", onOpen);
+    return () => window.removeEventListener("sp:open-palette", onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
