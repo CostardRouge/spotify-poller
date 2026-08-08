@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { applyTheme, getTheme, ThemeChoice } from "@/lib/theme";
+import Icon, { IconName } from "./Icon";
 
-const OPTIONS: { value: ThemeChoice; label: string }[] = [
-  { value: "system", label: "System" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+const OPTIONS: { value: ThemeChoice; label: string; icon: IconName }[] = [
+  { value: "auto", label: "Auto", icon: "auto" },
+  { value: "light", label: "Light", icon: "sun" },
+  { value: "dark", label: "Dark", icon: "moon" },
 ];
 
+/** The Auto/Light/Dark segmented control from the old sidebar and settings dialog. */
 export default function ThemeToggle() {
-  const [choice, setChoice] = useState<ThemeChoice>("system");
+  const [choice, setChoice] = useState<ThemeChoice>("auto");
 
   useEffect(() => {
     setChoice(getTheme());
@@ -20,15 +22,10 @@ export default function ThemeToggle() {
     return () => window.removeEventListener("sp:theme-changed", onChange);
   }, []);
 
-  function apply(next: ThemeChoice) {
-    setChoice(next);
-    applyTheme(next);
-  }
-
   return (
     <div
       role="group"
-      aria-label="Theme"
+      aria-label="Colour theme"
       className="flex overflow-hidden rounded-md border border-[color:var(--line)] text-xs"
     >
       {OPTIONS.map((opt) => (
@@ -36,14 +33,18 @@ export default function ThemeToggle() {
           key={opt.value}
           type="button"
           aria-pressed={choice === opt.value}
-          onClick={() => apply(opt.value)}
+          onClick={() => {
+            setChoice(opt.value);
+            applyTheme(opt.value);
+          }}
           className={
-            "px-2.5 py-1.5 transition-colors " +
+            "flex flex-1 items-center justify-center gap-1.5 px-2 py-1.5 transition-colors " +
             (choice === opt.value
-              ? "bg-[color:var(--accent)] text-[color:var(--on-accent)]"
-              : "bg-[color:var(--panel)] text-[color:var(--muted)] hover:bg-[color:var(--panel-2)]")
+              ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]"
+              : "bg-[color:var(--surface)] text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)]")
           }
         >
+          <Icon name={opt.icon} className="h-3.5 w-3.5" />
           {opt.label}
         </button>
       ))}

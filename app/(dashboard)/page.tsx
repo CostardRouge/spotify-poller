@@ -51,7 +51,7 @@ export default async function DashboardPage({
 
   return (
     <div className="max-w-4xl">
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Dashboard</h1>
+      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Overview</h1>
       <p className="mt-1 text-sm text-[color:var(--muted)]">
         Is collection still alive, and did I lose anything? — the custody report, at a glance.
       </p>

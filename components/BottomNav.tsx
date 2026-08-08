@@ -4,19 +4,21 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import AccountSelect, { AccountOption } from "./AccountSelect";
+import Icon, { IconName } from "./Icon";
 
-const PRIMARY = [
-  { href: "/", label: "Dashboard" },
-  { href: "/events", label: "Events" },
-  { href: "/runs", label: "Runs" },
-] as const;
+// Same four slots as the old mobile tabbar: Overview, Events, Playback, More.
+const PRIMARY: { href: string; label: string; icon: IconName }[] = [
+  { href: "/", label: "Overview", icon: "overview" },
+  { href: "/events", label: "Events", icon: "events" },
+  { href: "/playback", label: "Playback", icon: "playback" },
+];
 
-const MORE_LINKS = [
-  { href: "/gaps", label: "Gaps" },
-  { href: "/stats", label: "Stats" },
-  { href: "/accounts", label: "Accounts" },
-  { href: "/playback", label: "Playback" },
-] as const;
+const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
+  { href: "/runs", label: "Runs", icon: "runs" },
+  { href: "/gaps", label: "Gaps", icon: "gaps" },
+  { href: "/stats", label: "Stats", icon: "stats" },
+  { href: "/accounts", label: "Accounts", icon: "accounts" },
+];
 
 /**
  * Phone navigation (PRODUCT.md: phone-complete): the sidebar disappears below
@@ -46,17 +48,18 @@ export default function BottomNav({
   }
 
   const itemClass = (active: boolean) =>
-    "flex-1 rounded-md px-2 py-2 text-center text-xs " +
-    (active ? "bg-[color:var(--accent-wash)] font-medium text-[color:var(--text)]" : "text-[color:var(--muted)]");
+    "flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-center text-[11px] " +
+    (active ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]" : "text-[color:var(--ink-2)]");
 
   return (
     <>
       <nav
         aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--panel)] p-2 md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--surface)] p-2 md:hidden"
       >
         {PRIMARY.map((item) => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className={itemClass(pathname === item.href)}>
+            <Icon name={item.icon} className="h-4 w-4" />
             {item.label}
           </Link>
         ))}
@@ -68,6 +71,7 @@ export default function BottomNav({
           }}
           className={itemClass(MORE_LINKS.some((l) => l.href === pathname))}
         >
+          <Icon name="more" className="h-4 w-4" />
           More
         </button>
       </nav>
@@ -98,8 +102,9 @@ export default function BottomNav({
                 key={item.href}
                 href={item.href}
                 onClick={() => dialogRef.current?.close()}
-                className="rounded-md px-3 py-2 text-sm text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--text)]"
+                className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]"
               >
+                <Icon name={item.icon} className="h-4 w-4" />
                 {item.label}
               </Link>
             ))}

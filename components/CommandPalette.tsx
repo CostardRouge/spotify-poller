@@ -17,7 +17,7 @@ interface Command {
  * stand down while an input, textarea or dialog has focus.
  */
 const SECTIONS = [
-  { label: "Dashboard", href: "/" },
+  { label: "Overview", href: "/" },
   { label: "Events", href: "/events" },
   { label: "Runs", href: "/runs" },
   { label: "Gaps", href: "/gaps" },

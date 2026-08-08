@@ -1,8 +1,8 @@
 const TONES = {
-  ok: "bg-[color:var(--accent-wash)] text-[color:var(--ok)]",
-  warn: "bg-[color:var(--accent-wash)] text-[color:var(--warn)]",
-  danger: "bg-[color:var(--accent-wash)] text-[color:var(--danger)]",
-  neutral: "bg-[color:var(--panel-2)] text-[color:var(--muted)]",
+  ok: "bg-[color:var(--ok-soft)] text-[color:var(--ok)]",
+  warn: "bg-[color:var(--warn-soft)] text-[color:var(--warn)]",
+  danger: "bg-[color:var(--danger-soft)] text-[color:var(--danger)]",
+  neutral: "bg-[color:var(--surface-2)] text-[color:var(--ink-2)]",
 } as const;
 
 /** Status is never color alone — every pill carries the word too (PRODUCT.md). */

@@ -1,5 +1,5 @@
 import { getEnv } from "@/lib/server/runtime";
-import { getActiveAccountId, listAccounts } from "@/lib/server/db";
+import { eventCountsByAccount, getActiveAccountId, listAccounts } from "@/lib/server/db";
 import { schedulerEnabled } from "@/lib/server/scheduler";
 import manifest from "@/manifest.json";
 import Sidebar from "@/components/Sidebar";
@@ -15,10 +15,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const env = getEnv();
   const accounts = listAccounts(env).map((a) => ({ id: a.id, display_name: a.display_name }));
   const activeAccountId = getActiveAccountId(env);
+  const eventsByAccount = eventCountsByAccount(env);
 
   return (
     <div className="flex min-h-screen bg-[color:var(--bg)]">
-      <Sidebar accounts={accounts} activeAccountId={activeAccountId} />
+      <Sidebar accounts={accounts} activeAccountId={activeAccountId} eventsByAccount={eventsByAccount} />
       <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-24 sm:px-8 sm:py-8 md:pb-8">{children}</main>
       <BottomNav accounts={accounts} activeAccountId={activeAccountId} />
       <CommandPalette />

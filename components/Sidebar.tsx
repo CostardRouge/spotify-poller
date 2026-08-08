@@ -1,70 +1,103 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import AccountSelect, { AccountOption } from "./AccountSelect";
 import SidebarStatus from "./SidebarStatus";
+import ThemeToggle from "./ThemeToggle";
+import Icon, { IconName } from "./Icon";
 
-export const NAV = [
-  { href: "/", label: "Dashboard" },
-  { href: "/events", label: "Events" },
-  { href: "/runs", label: "Runs" },
-  { href: "/gaps", label: "Gaps" },
-  { href: "/stats", label: "Stats" },
-  { href: "/accounts", label: "Accounts" },
-  // Always listed, enabled or not — the page explains how to turn it on, which
-  // beats a feature that is invisible until you already know it exists.
-  { href: "/playback", label: "Playback" },
-] as const;
+/** Same sections, order and icons as the old sidebar nav (public/index.html on main). */
+export const NAV: { href: string; label: string; icon: IconName; count?: "events" }[] = [
+  { href: "/", label: "Overview", icon: "overview" },
+  { href: "/events", label: "Events", icon: "events", count: "events" },
+  { href: "/playback", label: "Playback", icon: "playback" },
+  { href: "/runs", label: "Runs", icon: "runs" },
+  { href: "/gaps", label: "Gaps", icon: "gaps" },
+  { href: "/accounts", label: "Accounts", icon: "accounts" },
+];
+
+function NavList({
+  accounts,
+  activeAccountId,
+  eventsByAccount,
+}: {
+  accounts: AccountOption[];
+  activeAccountId: string | null;
+  eventsByAccount: Record<string, number>;
+}) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const viewing = searchParams.get("account") || activeAccountId || "";
+  const eventCount = eventsByAccount[viewing];
+  void accounts;
+
+  return (
+    <nav className="mt-6 flex flex-1 flex-col gap-0.5 overflow-y-auto" aria-label="Sections">
+      {NAV.map((item) => {
+        const active = pathname === item.href;
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            aria-current={active ? "page" : undefined}
+            className={
+              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors " +
+              (active
+                ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]"
+                : "text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]")
+            }
+          >
+            <Icon name={item.icon} className={"h-4 w-4 " + (active ? "text-[color:var(--accent-text)]" : "")} />
+            {item.label}
+            {item.count === "events" && eventCount ? (
+              <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--ink-3)]">
+                {eventCount.toLocaleString()}
+              </span>
+            ) : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
 
 export default function Sidebar({
   accounts,
   activeAccountId,
+  eventsByAccount,
 }: {
   accounts: AccountOption[];
   activeAccountId: string | null;
+  eventsByAccount: Record<string, number>;
 }) {
-  const pathname = usePathname();
-
   return (
-    <aside className="hidden h-screen w-56 shrink-0 flex-col border-r border-[color:var(--line)] bg-[color:var(--panel)] px-4 py-5 md:flex">
-      <div>
-        <p className="font-[family-name:var(--serif)] text-base text-[color:var(--text)]">spotify-poller</p>
-        <p className="mt-0.5 text-xs text-[color:var(--muted)]">custody report</p>
+    <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-[color:var(--line)] bg-[color:var(--surface)] px-4 py-5 md:flex">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--on-accent)]">
+          <Icon name="overview" className="h-4.5 w-4.5" />
+        </span>
+        <span className="text-base font-semibold text-[color:var(--ink)]">spotify-poller</span>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-5">
         <AccountSelect accounts={accounts} activeId={activeAccountId} />
       </div>
 
-      <nav className="mt-6 flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Primary">
-        {NAV.map((item) => {
-          const active = pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={
-                "rounded-md px-3 py-2 text-sm transition-colors " +
-                (active
-                  ? "bg-[color:var(--accent-wash)] text-[color:var(--text)] font-medium"
-                  : "text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--text)]")
-              }
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <Suspense>
+        <NavList accounts={accounts} activeAccountId={activeAccountId} eventsByAccount={eventsByAccount} />
+      </Suspense>
 
-      <div className="flex flex-col gap-4 border-t border-[color:var(--line-soft)] pt-4">
+      <div className="flex flex-col gap-3 pt-4">
         <SidebarStatus />
+        <ThemeToggle />
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("sp:open-settings"))}
-          className="text-left text-xs text-[color:var(--muted)] hover:text-[color:var(--text)]"
+          className="flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]"
         >
+          <Icon name="settings" className="h-4 w-4" />
           Settings
         </button>
       </div>
