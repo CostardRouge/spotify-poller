@@ -162,8 +162,11 @@ h1, h2, h3 {
   color: var(--ink);
 }
 
+/* One rule covers every modal — settings, shortcuts, palette, payload, More. */
 dialog::backdrop {
   background: oklch(0 0 0 / 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* ==============================================================
