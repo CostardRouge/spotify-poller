@@ -2,9 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const linkClass =
-  "rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]";
+import Icon from "./Icon";
 
 export default function AccountActions({ id, isActive }: { id: string; isActive: boolean }) {
   const router = useRouter();
@@ -34,24 +32,23 @@ export default function AccountActions({ id, isActive }: { id: string; isActive:
   return (
     <div className="flex flex-wrap gap-2">
       {!isActive && (
-        <button type="button" disabled={busy} onClick={activate} className={`${linkClass} disabled:opacity-50`}>
+        <button type="button" disabled={busy} onClick={activate} className="btn sm">
+          <Icon name="check" className="h-3.5 w-3.5" />
           Activate
         </button>
       )}
       {/* Reconnect = the same authorize flow; show_dialog re-shows the consent
           screen so a scope added later actually gets granted (scope drift). */}
-      <a href="/api/spotify/login" className={linkClass}>
+      <a href="/api/spotify/login" className="btn sm">
+        <Icon name="link" className="h-3.5 w-3.5" />
         Reconnect
       </a>
-      <a href={`/events?account=${encodeURIComponent(id)}`} className={linkClass}>
+      <a href={`/events?account=${encodeURIComponent(id)}`} className="btn sm">
+        <Icon name="events" className="h-3.5 w-3.5" />
         View events
       </a>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={disconnect}
-        className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--danger)] hover:bg-[color:var(--accent-wash)] disabled:opacity-50"
-      >
+      <button type="button" disabled={busy} onClick={disconnect} className="btn sm danger">
+        <Icon name="x" className="h-3.5 w-3.5" />
         Disconnect
       </button>
     </div>

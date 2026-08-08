@@ -3,6 +3,7 @@ import { getActiveAccountId, listEvents } from "@/lib/server/db";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp } from "@/lib/format";
 import EventsTable, { EventRowData } from "@/components/EventsTable";
+import Icon from "@/components/Icon";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -75,58 +76,42 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         <form method="get" className="flex flex-wrap gap-2">
           {str(sp.account) && <input type="hidden" name="account" value={str(sp.account)} />}
+          <select name="type" defaultValue={str(sp.type)} aria-label="Event type" className="field">
+            <option value="">All types</option>
+            <option value="listen">Listens</option>
+            <option value="like">Likes</option>
+          </select>
           <input
             id="event-search"
             name="q"
             type="search"
             defaultValue={str(sp.q)}
-            placeholder="search title / artist"
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
+            placeholder="Search title or artist"
+            aria-label="Search title or artist"
+            className="field min-w-48"
           />
-          <select
-            name="type"
-            defaultValue={str(sp.type)}
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
-          >
-            <option value="">any type</option>
-            <option value="listen">listen</option>
-            <option value="like">like</option>
+          <input type="date" name="from" defaultValue={str(sp.from)} aria-label="From date" className="field" />
+          <input type="date" name="to" defaultValue={str(sp.to)} aria-label="To date" className="field" />
+          <select name="order" defaultValue={order} aria-label="Sort order" className="field">
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
           </select>
-          <input
-            type="date"
-            name="from"
-            defaultValue={str(sp.from)}
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
-          />
-          <input
-            type="date"
-            name="to"
-            defaultValue={str(sp.to)}
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
-          />
-          <select
-            name="order"
-            defaultValue={order}
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-[color:var(--text)]"
-          >
-            <option value="desc">newest first</option>
-            <option value="asc">oldest first</option>
-          </select>
-          <button type="submit" className="rounded-md bg-[color:var(--accent)] px-3 py-1.5 text-[color:var(--on-accent)]">
-            Filter
+          <button type="submit" className="btn primary">
+            Apply filters
           </button>
         </form>
         <a
           href={str(sp.account) ? `/events?account=${encodeURIComponent(str(sp.account))}` : "/events"}
-          className="rounded-md border border-[color:var(--line)] px-3 py-1.5 text-[color:var(--muted)] hover:bg-[color:var(--panel-2)] hover:text-[color:var(--text)]"
+          className="btn ghost"
         >
           Clear
         </a>
         <a
           href={`/api/export${exportParams.size ? `?${exportParams}` : ""}`}
-          className="rounded-md border border-[color:var(--line)] px-3 py-1.5 text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]"
-          title="NDJSON download of the events matching the current filter — carries no secret"
+          className="btn ml-auto"
+          title="Download the filtered events as NDJSON. Contains no secret."
         >
+          <Icon name="download" className="h-4 w-4" />
           Export NDJSON
         </a>
       </div>
@@ -139,24 +124,18 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
         <a
           href={hasPrev ? `?${new URLSearchParams({ ...sp2str(sp), offset: String(Math.max(0, offset - limit)) })}` : "#"}
           aria-disabled={!hasPrev}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (hasPrev ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
+          className="btn sm"
         >
-          Previous
+          ← Previous
         </a>
         <a
           href={hasNext ? `?${new URLSearchParams({ ...sp2str(sp), offset: String(offset + limit) })}` : "#"}
           aria-disabled={!hasNext}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (hasNext ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
+          className="btn sm"
         >
-          Next
+          Next →
         </a>
-        <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--muted)]">
+        <span className="ml-auto font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
           {result.total === 0
             ? "0 of 0"
             : `${offset + 1}–${Math.min(offset + limit, result.total)} of ${result.total.toLocaleString()}`}

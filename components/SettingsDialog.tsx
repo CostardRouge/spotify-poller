@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import ThemeToggle from "./ThemeToggle";
 import BackupButton from "./BackupButton";
+import Icon from "./Icon";
 
 export interface ServerInfo {
   authMode: string;
@@ -18,22 +19,15 @@ export interface ServerInfo {
   version: string;
 }
 
-const SHORTCUTS: [string, string][] = [
-  ["Command palette", "⌘K"],
-  ["Jump to section", "1…7"],
-  ["Search events", "/"],
-  ["Cycle theme", "T"],
-  ["Refresh current view", "R"],
-  ["Shortcuts (this list)", "?"],
-  ["Close any overlay", "Esc"],
-];
-
 function InfoRow({ tone, label, value, sub }: { tone: "ok" | "warn" | null; label: string; value: string; sub: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-t border-[color:var(--line-soft)] px-3 py-2 first:border-t-0">
+    <div className="flex items-start justify-between gap-4 border-t border-[color:var(--line)] px-3 py-2 first:border-t-0">
       <div>
-        <p className="text-sm text-[color:var(--text)]">{label}</p>
-        <p className="mt-0.5 text-xs text-[color:var(--muted)]">{sub}</p>
+        <p className="flex items-center gap-2 text-sm text-[color:var(--ink)]">
+          {tone && <span aria-hidden className={`dot ${tone === "ok" ? "ok" : "warn"}`} />}
+          {label}
+        </p>
+        <p className="mt-0.5 text-xs text-[color:var(--ink-2)]">{sub}</p>
       </div>
       <span
         className={
@@ -42,7 +36,7 @@ function InfoRow({ tone, label, value, sub }: { tone: "ok" | "warn" | null; labe
             ? "text-[color:var(--ok)]"
             : tone === "warn"
               ? "text-[color:var(--warn)]"
-              : "text-[color:var(--text)]")
+              : "text-[color:var(--ink)]")
         }
       >
         {value}
@@ -61,20 +55,11 @@ function InfoRow({ tone, label, value, sub }: { tone: "ok" | "warn" | null; labe
 export default function SettingsDialog({ info }: { info: ServerInfo }) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
     const open = () => dialogRef.current?.showModal();
-    const openKeys = () => {
-      setShowShortcuts(true);
-      dialogRef.current?.showModal();
-    };
     window.addEventListener("sp:open-settings", open);
-    window.addEventListener("sp:open-shortcuts", openKeys);
-    return () => {
-      window.removeEventListener("sp:open-settings", open);
-      window.removeEventListener("sp:open-shortcuts", openKeys);
-    };
+    return () => window.removeEventListener("sp:open-settings", open);
   }, []);
 
   async function lock() {
@@ -87,63 +72,62 @@ export default function SettingsDialog({ info }: { info: ServerInfo }) {
   return (
     <dialog
       ref={dialogRef}
-      onClose={() => setShowShortcuts(false)}
       onClick={(e) => {
         if (e.target === dialogRef.current) dialogRef.current?.close();
       }}
-      className="m-auto w-full max-w-lg rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-0 text-[color:var(--text)]"
+      className="m-auto w-full max-w-lg rounded-lg border border-[color:var(--line)] bg-[color:var(--surface)] p-0 text-[color:var(--ink)]"
+      aria-labelledby="settings-title"
     >
       <div className="p-5">
         <div className="flex items-center justify-between">
-          <h2 className="font-[family-name:var(--serif)] text-lg">Settings</h2>
+          <h2 id="settings-title" className="text-lg">Settings</h2>
           <button
             type="button"
             onClick={() => dialogRef.current?.close()}
-            className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--muted)] hover:bg-[color:var(--panel-2)]"
+            className="btn ghost icon-only"
+            aria-label="Close"
           >
-            Close (Esc)
+            <Icon name="x" className="h-4 w-4" />
           </button>
         </div>
 
         <div className="mt-5">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--muted)]">Theme</h3>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--ink-2)]">Theme</h3>
           <div className="mt-2">
             <ThemeToggle />
           </div>
         </div>
 
         <div className="mt-5">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--muted)]">Maintenance</h3>
+          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--ink-2)]">Maintenance</h3>
           <div className="mt-2 flex flex-wrap items-start gap-2">
             <BackupButton />
+            <a href="/api/export" className="btn" title="NDJSON download of every event — carries no secret">
+              <Icon name="download" className="h-4 w-4" />
+              Export NDJSON
+            </a>
             <button
               type="button"
-              onClick={() => setShowShortcuts((v) => !v)}
-              className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]"
-              aria-expanded={showShortcuts}
+              onClick={() => {
+                dialogRef.current?.close();
+                window.dispatchEvent(new Event("sp:open-shortcuts"));
+              }}
+              className="btn"
             >
+              <Icon name="keyboard" className="h-4 w-4" />
               Keyboard shortcuts
             </button>
           </div>
-          <p className="mt-2 text-xs text-[color:var(--muted)]">
-            A backup writes a full <code>.db</code> snapshot into <code>{info.backupDir}</code> on the host. It holds
-            the Spotify refresh token in clear, so it is never downloadable from here.
+          <p className="mt-2 text-xs text-[color:var(--ink-2)]">
+            A backup writes a full <code className="font-[family-name:var(--mono)]">.db</code> snapshot into{" "}
+            <code className="font-[family-name:var(--mono)]">{info.backupDir}</code> on the host. It holds the Spotify
+            refresh token in clear, so it is never downloadable from here.
           </p>
-          {showShortcuts && (
-            <dl className="mt-3 grid grid-cols-[1fr_auto] gap-y-1.5 rounded-md border border-[color:var(--line-soft)] bg-[color:var(--panel-2)] p-3 text-sm">
-              {SHORTCUTS.map(([what, key]) => (
-                <div key={what} className="contents">
-                  <dt className="text-[color:var(--muted)]">{what}</dt>
-                  <dd className="font-[family-name:var(--mono)] text-xs text-[color:var(--text)]">{key}</dd>
-                </div>
-              ))}
-            </dl>
-          )}
         </div>
 
         <div className="mt-5">
-          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--muted)]">Server</h3>
-          <div className="mt-2 rounded-md border border-[color:var(--line)]">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-[color:var(--ink-2)]">Server</h3>
+          <div className="mt-2 rounded-lg border border-[color:var(--line)]">
             <InfoRow
               tone={info.scheduleEnabled ? "ok" : null}
               label="Scheduler"
@@ -197,19 +181,12 @@ export default function SettingsDialog({ info }: { info: ServerInfo }) {
           </div>
         </div>
 
-        <div className="mt-5 flex items-center justify-between border-t border-[color:var(--line-soft)] pt-4">
-          <button
-            type="button"
-            onClick={lock}
-            className="rounded-md border border-[color:var(--line)] px-3 py-1.5 text-sm text-[color:var(--danger)] hover:bg-[color:var(--accent-wash)]"
-          >
+        <div className="mt-5 flex items-center justify-between border-t border-[color:var(--line)] pt-4">
+          <button type="button" onClick={lock} className="btn danger">
+            <Icon name="power" className="h-4 w-4" />
             Sign out &amp; lock
           </button>
-          <button
-            type="button"
-            onClick={() => dialogRef.current?.close()}
-            className="rounded-md bg-[color:var(--accent)] px-3 py-1.5 text-sm text-[color:var(--on-accent)]"
-          >
+          <button type="button" onClick={() => dialogRef.current?.close()} className="btn">
             Done
           </button>
         </div>

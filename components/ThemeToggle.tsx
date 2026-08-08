@@ -23,11 +23,7 @@ export default function ThemeToggle() {
   }, []);
 
   return (
-    <div
-      role="group"
-      aria-label="Colour theme"
-      className="flex overflow-hidden rounded-md border border-[color:var(--line)] text-xs"
-    >
+    <div role="group" aria-label="Colour theme" className="seg w-full">
       {OPTIONS.map((opt) => (
         <button
           key={opt.value}
@@ -37,12 +33,6 @@ export default function ThemeToggle() {
             setChoice(opt.value);
             applyTheme(opt.value);
           }}
-          className={
-            "flex flex-1 items-center justify-center gap-1.5 px-2 py-1.5 transition-colors " +
-            (choice === opt.value
-              ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]"
-              : "bg-[color:var(--surface)] text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)]")
-          }
         >
           <Icon name={opt.icon} className="h-3.5 w-3.5" />
           {opt.label}

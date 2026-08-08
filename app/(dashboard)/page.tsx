@@ -8,6 +8,7 @@ import { formatTimestamp, relativeFromNow } from "@/lib/format";
 import StatusPill from "@/components/StatusPill";
 import RunButtons from "@/components/RunButtons";
 import BackupButton from "@/components/BackupButton";
+import Icon from "@/components/Icon";
 
 type RecentRun = {
   id: number;
@@ -142,11 +143,8 @@ export default async function DashboardPage({
         <h2 className="text-sm font-medium text-[color:var(--text)]">Maintenance</h2>
         <div className="mt-2 flex flex-wrap items-start gap-2">
           <BackupButton />
-          <a
-            href="/api/export"
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm text-[color:var(--text)] hover:bg-[color:var(--accent-wash)]"
-            title="NDJSON download of every event — carries no secret"
-          >
+          <a href="/api/export" className="btn" title="NDJSON download of every event — carries no secret">
+            <Icon name="download" className="h-4 w-4" />
             Export NDJSON
           </a>
         </div>

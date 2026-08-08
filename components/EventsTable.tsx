@@ -65,11 +65,7 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
                 <td className="px-3 py-2 text-[color:var(--muted)]">{ev.subtitle}</td>
                 <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{formatDuration(ev.duration_s)}</td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => open(ev)}
-                    className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--muted)] hover:bg-[color:var(--accent-wash)] hover:text-[color:var(--text)]"
-                  >
+                  <button type="button" onClick={() => open(ev)} className="btn sm">
                     Payload
                   </button>
                 </td>
@@ -104,9 +100,12 @@ export default function EventsTable({ items, timezone }: { items: EventRowData[]
               <button
                 type="button"
                 onClick={() => dialogRef.current?.close()}
-                className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--muted)] hover:bg-[color:var(--panel-2)]"
+                className="btn ghost icon-only"
+                aria-label="Close"
               >
-                Close (Esc)
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentcolor" strokeWidth="2" strokeLinecap="round" className="h-4 w-4" aria-hidden>
+                  <path d="m6 6 12 12M18 6 6 18" />
+                </svg>
               </button>
             </div>
 

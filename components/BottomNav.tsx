@@ -86,13 +86,14 @@ export default function BottomNav({
       >
         <div className="p-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-[family-name:var(--serif)] text-lg">More</h2>
+            <h2 className="text-lg">More</h2>
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
-              className="rounded-md border border-[color:var(--line)] px-2.5 py-1 text-xs text-[color:var(--muted)]"
+              className="btn ghost icon-only"
+              aria-label="Close"
             >
-              Close
+              <Icon name="x" className="h-4 w-4" />
             </button>
           </div>
 
@@ -115,15 +116,17 @@ export default function BottomNav({
               <button
                 type="button"
                 onClick={() => run("played")}
-                className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm"
+                className="btn"
               >
+                <Icon name="play" className="h-4 w-4" />
                 Run played
               </button>
               <button
                 type="button"
                 onClick={() => run("liked")}
-                className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm"
+                className="btn"
               >
+                <Icon name="play" className="h-4 w-4" />
                 Run liked
               </button>
               <button
@@ -132,8 +135,9 @@ export default function BottomNav({
                   dialogRef.current?.close();
                   window.dispatchEvent(new Event("sp:open-settings"));
                 }}
-                className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm"
+                className="btn"
               >
+                <Icon name="settings" className="h-4 w-4" />
                 Settings
               </button>
             </div>

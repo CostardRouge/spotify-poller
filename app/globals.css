@@ -165,3 +165,93 @@ h1, h2, h3 {
 dialog::backdrop {
   background: oklch(0 0 0 / 0.45);
 }
+
+/* ==============================================================
+   Control styles carried over verbatim from the old UI
+   (public/index.html on main): buttons, fields, segmented control,
+   chips, keycaps, status dots.
+   ============================================================== */
+
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.4rem 0.7rem; min-height: 2rem;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: 9px;
+  font-size: 0.8125rem; font-weight: 500; line-height: 1.2;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--ink-3); }
+.btn:active { background: var(--surface-sunk); }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
+.btn.ghost:hover { background: var(--surface-2); color: var(--ink); }
+.btn.danger { color: var(--danger); border-color: var(--line-strong); }
+.btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+.btn.sm { padding: 0.22rem 0.5rem; min-height: 1.65rem; font-size: 0.6875rem; }
+.btn.icon-only { padding: 0.4rem; }
+
+.field {
+  padding: 0.4rem 0.6rem; min-height: 2rem;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: 9px;
+  font-size: 0.8125rem;
+  transition: border-color 120ms ease;
+}
+.field:hover { border-color: var(--ink-3); }
+
+.seg {
+  display: inline-flex; padding: 2px; gap: 2px;
+  background: var(--surface-sunk); border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.seg button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem;
+  flex: 1; padding: 0.25rem 0.5rem;
+  background: transparent; border: 0; border-radius: 6px;
+  color: var(--ink-2); font-size: 0.6875rem; font-weight: 500; cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] {
+  background: var(--surface); color: var(--ink); box-shadow: var(--shadow-1);
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.2rem 0.55rem; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface);
+  font-size: 0.6875rem; font-weight: 500; white-space: nowrap;
+}
+.chip.ok { border-color: color-mix(in oklab, var(--ok) 40%, var(--line)); background: var(--ok-soft); color: var(--ink); }
+.chip.warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); background: var(--warn-soft); color: var(--ink); }
+.chip.bad { border-color: color-mix(in oklab, var(--danger) 40%, var(--line)); background: var(--danger-soft); color: var(--ink); }
+.chip.info { border-color: color-mix(in oklab, var(--info) 40%, var(--line)); background: var(--info-soft); color: var(--ink); }
+
+.kbd {
+  display: inline-block; padding: 0.05rem 0.3rem; min-width: 1.25rem; text-align: center;
+  background: var(--surface-sunk); border: 1px solid var(--line);
+  border-bottom-width: 2px; border-radius: 5px;
+  font: 500 0.6875rem/1.5 var(--mono); color: var(--ink-2);
+}
+
+.keys { display: grid; gap: 0.4rem; }
+.keys > div { display: flex; align-items: center; gap: 0.75rem; font-size: 0.8125rem; }
+.keys .k { margin-left: auto; display: flex; gap: 0.25rem; }
+
+.dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex: none; background: var(--ink-3); }
+.dot.ok { background: var(--ok); }
+.dot.warn { background: var(--warn); }
+.dot.bad { background: var(--danger); }
+.dot.live { position: relative; background: var(--ok); }
+.dot.live::after {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  border: 1px solid var(--ok); opacity: 0.55;
+  animation: ping 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes ping {
+  0% { transform: scale(0.6); opacity: 0.55; }
+  80%, 100% { transform: scale(1.6); opacity: 0; }
+}

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Icon from "./Icon";
 
 const COLLECTORS = ["played", "liked"] as const;
 
@@ -33,18 +34,13 @@ export default function RunButtons({ playbackEnabled }: { playbackEnabled: boole
     <div>
       <div className="flex flex-wrap gap-2">
         {collectors.map((c) => (
-          <button
-            key={c}
-            type="button"
-            disabled={running !== null}
-            onClick={() => run(c)}
-            className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm text-[color:var(--text)] transition-opacity hover:bg-[color:var(--accent-wash)] disabled:opacity-50"
-          >
+          <button key={c} type="button" disabled={running !== null} onClick={() => run(c)} className="btn">
+            <Icon name="play" className="h-4 w-4" />
             {running === c ? `Running ${c}…` : `Run ${c}`}
           </button>
         ))}
       </div>
-      {result && <p className="mt-2 text-sm text-[color:var(--muted)]">{result}</p>}
+      {result && <p className="mt-2 text-sm text-[color:var(--ink-2)]">{result}</p>}
     </div>
   );
 }

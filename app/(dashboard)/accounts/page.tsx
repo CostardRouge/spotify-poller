@@ -3,6 +3,7 @@ import { eventCountsByAccount } from "@/lib/server/db";
 import { authStatus } from "@/lib/server/spotify/auth";
 import StatusPill from "@/components/StatusPill";
 import AccountActions from "@/components/AccountActions";
+import Icon from "@/components/Icon";
 
 export default function AccountsPage() {
   const env = getEnv();
@@ -12,12 +13,10 @@ export default function AccountsPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Accounts</h1>
-        <a
-          href="/api/spotify/login"
-          className="rounded-md bg-[color:var(--accent)] px-3 py-1.5 text-sm text-[color:var(--on-accent)]"
-        >
-          Connect Spotify
+        <h1 className="text-2xl text-[color:var(--ink)]">Accounts</h1>
+        <a href="/api/spotify/login" className="btn primary">
+          <Icon name="link" className="h-4 w-4" />
+          Connect a Spotify account
         </a>
       </div>
       <p className="mt-1 text-sm text-[color:var(--muted)]">

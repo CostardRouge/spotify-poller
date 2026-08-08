@@ -65,23 +65,11 @@ export default async function GapsPage({
       </div>
 
       <div className="mt-4 flex items-center gap-3 text-sm">
-        <a
-          href={`?offset=${Math.max(0, offset - limit)}`}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (offset > 0 ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
-        >
-          Previous
+        <a href={`?offset=${Math.max(0, offset - limit)}`} className="btn sm" aria-disabled={offset === 0}>
+          ← Previous
         </a>
-        <a
-          href={`?offset=${offset + limit}`}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (offset + limit < result.total ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
-        >
-          Next
+        <a href={`?offset=${offset + limit}`} className="btn sm" aria-disabled={offset + limit >= result.total}>
+          Next →
         </a>
       </div>
     </div>

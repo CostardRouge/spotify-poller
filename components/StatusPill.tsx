@@ -1,14 +1,32 @@
-const TONES = {
-  ok: "bg-[color:var(--ok-soft)] text-[color:var(--ok)]",
-  warn: "bg-[color:var(--warn-soft)] text-[color:var(--warn)]",
-  danger: "bg-[color:var(--danger-soft)] text-[color:var(--danger)]",
-  neutral: "bg-[color:var(--surface-2)] text-[color:var(--ink-2)]",
+const TONE_CLASS = {
+  ok: "chip ok",
+  warn: "chip warn",
+  danger: "chip bad",
+  neutral: "chip",
 } as const;
 
-/** Status is never color alone — every pill carries the word too (PRODUCT.md). */
-export default function StatusPill({ tone, children }: { tone: keyof typeof TONES; children: React.ReactNode }) {
+const DOT_CLASS = {
+  ok: "dot ok",
+  warn: "dot warn",
+  danger: "dot bad",
+  neutral: "dot",
+} as const;
+
+/**
+ * The old UI's status chip: pill shape, tone-tinted border and wash, ink text,
+ * and a leading dot. Status is never color alone — the chip always carries the
+ * word (PRODUCT.md).
+ */
+export default function StatusPill({
+  tone,
+  children,
+}: {
+  tone: keyof typeof TONE_CLASS;
+  children: React.ReactNode;
+}) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TONES[tone]}`}>
+    <span className={TONE_CLASS[tone]}>
+      <span aria-hidden className={DOT_CLASS[tone]} />
       {children}
     </span>
   );

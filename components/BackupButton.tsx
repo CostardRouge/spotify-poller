@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Icon from "./Icon";
 
 export default function BackupButton() {
   const [busy, setBusy] = useState(false);
@@ -24,15 +25,11 @@ export default function BackupButton() {
 
   return (
     <div>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={backup}
-        className="rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-1.5 text-sm text-[color:var(--text)] transition-opacity hover:bg-[color:var(--accent-wash)] disabled:opacity-50"
-      >
-        {busy ? "Writing snapshot…" : "Backup now"}
+      <button type="button" disabled={busy} onClick={backup} className="btn">
+        <Icon name="archive" className="h-4 w-4" />
+        {busy ? "Writing snapshot…" : "Write backup now"}
       </button>
-      {result && <p className="mt-2 text-sm text-[color:var(--muted)]">{result}</p>}
+      {result && <p className="mt-2 text-sm text-[color:var(--ink-2)]">{result}</p>}
     </div>
   );
 }

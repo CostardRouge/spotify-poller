@@ -3,6 +3,7 @@ import { getActiveAccountId, listRuns } from "@/lib/server/db";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp } from "@/lib/format";
 import StatusPill from "@/components/StatusPill";
+import RunButtons from "@/components/RunButtons";
 
 type Run = {
   id: number;
@@ -33,8 +34,12 @@ export default async function RunsPage({
 
   return (
     <div>
-      <h1 className="font-[family-name:var(--serif)] text-2xl text-[color:var(--text)]">Runs</h1>
-      <p className="mt-1 text-sm text-[color:var(--muted)]">{result.total.toLocaleString()} logged run(s).</p>
+      <h1 className="text-2xl text-[color:var(--ink)]">Runs</h1>
+      <p className="mt-1 text-sm text-[color:var(--ink-2)]">{result.total.toLocaleString()} logged run(s).</p>
+
+      <div className="mt-4">
+        <RunButtons playbackEnabled={false} />
+      </div>
 
       <div className="mt-4 overflow-x-auto rounded-lg border border-[color:var(--line)]">
         <table className="w-full text-left text-sm">
@@ -79,23 +84,11 @@ export default async function RunsPage({
       </div>
 
       <div className="mt-4 flex items-center gap-3 text-sm">
-        <a
-          href={`?offset=${Math.max(0, offset - limit)}`}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (offset > 0 ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
-        >
-          Previous
+        <a href={`?offset=${Math.max(0, offset - limit)}`} className="btn sm" aria-disabled={offset === 0}>
+          ← Previous
         </a>
-        <a
-          href={`?offset=${offset + limit}`}
-          className={
-            "rounded-md border border-[color:var(--line)] px-3 py-1.5 " +
-            (offset + limit < result.total ? "text-[color:var(--text)]" : "pointer-events-none text-[color:var(--faint)]")
-          }
-        >
-          Next
+        <a href={`?offset=${offset + limit}`} className="btn sm" aria-disabled={offset + limit >= result.total}>
+          Next →
         </a>
       </div>
     </div>
