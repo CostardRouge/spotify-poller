@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>spotify-poller — showcase</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<meta name="description" content="Custody report for a personal Spotify listening history — Next.js, Tailwind, SQLite." />
+<style>
+  :root {
+    --bg: oklch(0.985 0.003 160); --panel: oklch(1 0 0); --panel-2: oklch(0.966 0.004 160);
+    --line: oklch(0.905 0.006 160); --text: oklch(0.22 0.012 160); --muted: oklch(0.44 0.012 160);
+    --accent: oklch(0.46 0.130 150); --on-accent: oklch(1 0 0);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: oklch(0.168 0.008 162); --panel: oklch(0.208 0.009 162); --panel-2: oklch(0.245 0.010 162);
+      --line: oklch(0.300 0.012 162); --text: oklch(0.960 0.005 162); --muted: oklch(0.760 0.011 162);
+      --accent: oklch(0.760 0.170 150); --on-accent: oklch(0.180 0.040 150);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header { max-width: 880px; margin: 0 auto; padding: 64px 24px 24px; }
+  h1 { font-weight: 600; font-size: 2rem; margin: 0 0 8px; }
+  p.lede { color: var(--muted); font-size: 1.05rem; max-width: 60ch; }
+  .links { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
+  .links a {
+    display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none;
+    font-size: 0.9rem; border: 1px solid var(--line);
+  }
+  .links a.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .links a:not(.primary) { color: var(--text); background: var(--panel); }
+  main { max-width: 880px; margin: 0 auto; padding: 24px; }
+  .shots { display: grid; gap: 24px; }
+  figure { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+  figure img { display: block; width: 100%; height: auto; }
+  figcaption { padding: 10px 14px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); }
+  footer { max-width: 880px; margin: 0 auto; padding: 24px; color: var(--muted); font-size: 0.85rem; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+  <header>
+    <h1>spotify-poller</h1>
+    <p class="lede">
+      A custody report over a self-hosted SQLite copy of a personal Spotify listening history.
+      Next.js, Tailwind, JWT sessions, Docker — proves collection is running, surfaces gaps
+      instead of hiding them, and lets the operator browse and export what was collected.
+    </p>
+    <div class="links">
+      <a class="primary" href="https://github.com/CostardRouge/spotify-poller">Source on GitHub</a>
+      <a href="https://github.com/CostardRouge/spotify-poller#readme">README</a>
+    </div>
+  </header>
+  <main>
+    <div class="shots">
+      <figure><img src="screenshots/login.png" alt="Sign-in screen" loading="lazy" /><figcaption>Sign in — a single shared admin token, JWT session.</figcaption></figure>
+      <figure><img src="screenshots/dashboard.png" alt="Dashboard" loading="lazy" /><figcaption>Dashboard — collector freshness at a glance, manual run buttons.</figcaption></figure>
+      <figure><img src="screenshots/events.png" alt="Events browser" loading="lazy" /><figcaption>Events — filterable, paginated browsing of every collected listen and like.</figcaption></figure>
+      <figure><img src="screenshots/events-payload.png" alt="Event payload inspector" loading="lazy" /><figcaption>Payload inspector — the raw JSON behind any event, one click away.</figcaption></figure>
+      <figure><img src="screenshots/stats.png" alt="Stats" loading="lazy" /><figcaption>Stats — volumes, raw-evidence counts and the last 20 runs.</figcaption></figure>
+      <figure><img src="screenshots/accounts.png" alt="Accounts panel" loading="lazy" /><figcaption>Accounts — connect, reconnect and disconnect Spotify accounts without losing data.</figcaption></figure>
+      <figure><img src="screenshots/runs.png" alt="Run log" loading="lazy" /><figcaption>Runs — the full collector run log, status and errors included.</figcaption></figure>
+    </div>
+  </main>
+  <footer>
+    Screenshots generated from seeded fixture data in CI — no real Spotify account involved.
+    <a href="https://github.com/CostardRouge/spotify-poller">costardrouge/spotify-poller</a>
+  </footer>
+</body>
+</html>

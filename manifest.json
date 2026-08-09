@@ -1,0 +1,9 @@
+{
+  "author": "CostardRouge",
+  "title": "spotify-poller",
+  "description": "Continuously and unattended, collects the listening history (and likes) of a personal Spotify account into a local SQLite database — a custody report that proves collection is running and surfaces gaps instead of hiding them.",
+  "version": "2.0.0",
+  "idea": "Spotify only exposes the last 50 played tracks through its API, so any listening window not collected in time is lost for good. A self-hosted poller with an honest, phone-complete dashboard turns that into a non-event: freshness is always one glance away, and a real gap is declared rather than silently absorbed.",
+  "prompt": "apply COMMON PROJECT SPECS: Next.js + Tailwind + API routes + layouts, README, GitHub Actions + GitHub Pages showcase, Docker Compose + healthcheck, Makefile (init/start/restart/reset/down/stop), nested module code style, paper-like sidebar app shell with theme toggle, JWT auth, showcase screenshots, public repository manifest.",
+  "date": "2026-08-07"
+}

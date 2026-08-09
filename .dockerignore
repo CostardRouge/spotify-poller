@@ -1,9 +1,11 @@
 node_modules
-dist
+.next
 data
 .env
+.env.local
 .git
 .github
 docs
 systemd
+site
 *.md

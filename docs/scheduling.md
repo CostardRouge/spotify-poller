@@ -2,12 +2,12 @@
 
 ## Decision
 
-**Scheduling loop internal to the long-running container** (`src/scheduler.ts`,
+**Scheduling loop internal to the long-running container** (`lib/server/scheduler.ts`,
 enabled by `SCHEDULE_ENABLED=1`): the HTTP server also carries the `played`
 (30 min) and `liked` (daily) cadences. This is the default mode of both Docker Compose stacks
 in this repo.
 
-`run-once.ts` is kept as-is: it remains the entry point for the systemd timers
+`scripts/run-once.ts` is kept as-is: it remains the entry point for the systemd timers
 on bare metal, and allows manual triggering inside the container
 (`make run-played` / `make run-liked`).
 

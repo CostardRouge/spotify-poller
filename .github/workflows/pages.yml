@@ -1,0 +1,95 @@
+name: Showcase (GitHub Pages)
+
+# Builds the app, seeds fixture data (no real Spotify credentials involved),
+# captures real screenshots of the running UI with Playwright, assembles the
+# showcase landing page and deploys it to GitHub Pages.
+#
+# One-time setup: repo Settings -> Pages -> Source: "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  SPOTIFY_CLIENT_ID: demo
+  SPOTIFY_CLIENT_SECRET: demo
+  ADMIN_TOKEN: showcase-demo-token
+  JWT_SECRET: showcase-demo-jwt-secret-not-for-real-use
+  DB_PATH: /tmp/showcase.db
+  API_HOST: 127.0.0.1
+  API_PORT: 3000
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Build app
+        run: npm run build
+
+      - name: Migrate and seed fixture data
+        run: |
+          npm run migrate
+          npm run seed:demo
+
+      - name: Start app
+        run: |
+          nohup npm start > /tmp/next.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fs http://127.0.0.1:3000/api/health && break
+            sleep 1
+          done
+          curl -fs http://127.0.0.1:3000/api/health
+
+      - name: Capture screenshots
+        run: node scripts/showcase-screenshots.mjs site/screenshots
+        env:
+          BASE_URL: http://127.0.0.1:3000
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp showcase/index.html site/
+          cp public/favicon.svg site/
+
+      - name: Show server log (debug aid)
+        if: always()
+        run: tail -50 /tmp/next.log || true
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
