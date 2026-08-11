@@ -24,6 +24,7 @@ const SECTIONS = [
   { label: "Stats", href: "/stats" },
   { label: "Accounts", href: "/accounts" },
   { label: "Playback", href: "/playback" },
+  { label: "Database", href: "/database" },
 ];
 
 export default function CommandPalette() {

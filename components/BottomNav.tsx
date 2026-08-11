@@ -18,6 +18,7 @@ const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
   { href: "/gaps", label: "Gaps", icon: "gaps" },
   { href: "/stats", label: "Stats", icon: "stats" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
+  { href: "/database", label: "Database", icon: "database" },
 ];
 
 /**
