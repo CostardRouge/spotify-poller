@@ -77,6 +77,20 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     }
   };
 
+  // Every `due` check below reads SQLite SYNCHRONOUSLY from inside a timer
+  // callback. An exception there (a locked database, a disk error) would escape
+  // the timer entirely — it is not inside any try — and take the scheduler with
+  // it: no more ticks, silently, until the process is restarted. So a failed
+  // check is answered "not due" and the next tick asks again.
+  const dueOrFalse = (name: string, check: () => boolean): boolean => {
+    try {
+      return check();
+    } catch (e) {
+      console.error(`[scheduler] ${name}: cadence check failed, skipping this tick`, e);
+      return false;
+    }
+  };
+
   const likedDue = (): boolean => {
     // The cadence follows the ACTIVE account's cursor: switching account must
     // not make 'liked' think it already ran today on the newcomer's behalf.
@@ -96,7 +110,7 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
 
   let backingUp = false;
   const backupTick = async (): Promise<void> => {
-    if (backingUp || !backupDue()) return;
+    if (backingUp || !dueOrFalse("backup", backupDue)) return;
     backingUp = true;
     try {
       const r = await runBackup(env);
@@ -125,10 +139,10 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
   setInterval(() => void tick("played"), opts.playedEveryMinutes * 60_000);
 
   setTimeout(() => {
-    if (likedDue()) void tick("liked");
+    if (dueOrFalse("liked", likedDue)) void tick("liked");
   }, 60_000);
   setInterval(() => {
-    if (likedDue()) void tick("liked");
+    if (dueOrFalse("liked", likedDue)) void tick("liked");
   }, 3_600_000);
 
   if (env.BACKUP_ENABLED) {
@@ -195,8 +209,16 @@ export function startPlaybackTicker(env: Env, opts: PlaybackOptions): void {
   // reconnecting from the UI revives the ticker without a container restart.
   let pausedUntil = 0;
 
+  // logRun writes to SQLite synchronously, and this is called from the error
+  // path AND from the `finally` below — the two places where an exception is
+  // most expensive. A failure to LOG a window must never cost us the window
+  // itself, let alone the ticker: the counters are reset either way.
   const closeWindow = (status: RunStatus, error: string | null): void => {
-    logRun(env, windowAccountId, "playback", "cron", windowStartedAt, status, ticks, written, error);
+    try {
+      logRun(env, windowAccountId, "playback", "cron", windowStartedAt, status, ticks, written, error);
+    } catch (e) {
+      console.error("[playback] could not log the run window:", e);
+    }
     ticks = 0;
     written = 0;
     windowErrors = 0;
@@ -250,15 +272,24 @@ export function startPlaybackTicker(env: Env, opts: PlaybackOptions): void {
         delayS = 60;
       }
     } finally {
-      if (Date.now() - lastSummaryAt >= SUMMARY_EVERY_MS && ticks > 0) {
-        closeWindow(
-          windowErrors > 0 ? "partial" : "ok",
-          windowErrors > 0 ? `${windowErrors} transient error(s)` : null
-        );
-        const purged = purgePlaybackSamples(env, opts.retentionDays);
-        if (purged > 0) {
-          console.log(`[playback] purged ${purged} samples older than ${opts.retentionDays} d`);
+      // Whatever happens above, the LAST thing this block does is re-arm — the
+      // ticker is self-rescheduling, so a throw escaping here (the hourly
+      // summary and the purge are both synchronous SQLite writes) would stop
+      // playback collection for good, with nothing left to restart it short of
+      // a container restart. Hence the try around the housekeeping.
+      try {
+        if (Date.now() - lastSummaryAt >= SUMMARY_EVERY_MS && ticks > 0) {
+          closeWindow(
+            windowErrors > 0 ? "partial" : "ok",
+            windowErrors > 0 ? `${windowErrors} transient error(s)` : null
+          );
+          const purged = purgePlaybackSamples(env, opts.retentionDays);
+          if (purged > 0) {
+            console.log(`[playback] purged ${purged} samples older than ${opts.retentionDays} d`);
+          }
         }
+      } catch (e) {
+        console.error("[playback] hourly housekeeping failed:", e);
       }
       setTimeout(() => void loop(), delayS * 1000);
     }
