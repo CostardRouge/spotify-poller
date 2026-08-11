@@ -18,12 +18,27 @@ export async function GET(req: NextRequest) {
   const stamp = new Date().toISOString().slice(0, 10);
 
   const encoder = new TextEncoder();
+  // `pull`, NOT `start`: a loop inside `start` runs to completion before the
+  // stream is ever read, so the generator's laziness bought nothing — the whole
+  // history was encoded into the stream's queue (which applies no backpressure
+  // of its own) while the event loop was held. On a few hundred thousand events
+  // that is hundreds of MB of RSS and seconds of unresponsiveness: long enough
+  // for the container HEALTHCHECK to time out three times over and for whatever
+  // sits in front to take the origin out of rotation.
+  //
+  // With `pull` the batch is only read when the consumer has drained the last
+  // one, so memory stays at one batch and a slow client simply slows the query
+  // down instead of buffering the difference in the server.
+  const batches = iterateEventsNdjson(env, accountId, filter);
   const stream = new ReadableStream({
-    start(controller) {
-      for (const line of iterateEventsNdjson(env, accountId, filter)) {
-        controller.enqueue(encoder.encode(line));
-      }
-      controller.close();
+    pull(controller) {
+      const { value, done } = batches.next();
+      if (done) controller.close();
+      else controller.enqueue(encoder.encode(value));
+    },
+    cancel() {
+      // Client hung up (closed tab, proxy timeout): stop querying immediately.
+      batches.return(undefined);
     },
   });
 

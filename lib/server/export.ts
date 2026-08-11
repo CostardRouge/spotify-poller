@@ -7,8 +7,9 @@
  * turning into a credential leak. The full binary dump stays a local-only
  * artefact — see backup.ts.
  *
- * Streamed via a generator: an export must not build months of history into a
- * single string in memory.
+ * Streamed in bounded batches: an export must not build months of history into
+ * a single string in memory. See iterateEventsNdjson for why it is batches and
+ * not one long cursor.
  */
 import { createInterface } from "node:readline";
 import { EVENT_COLUMNS, buildEventWhere, EventFilter } from "./db";
@@ -33,12 +34,51 @@ export interface ExportedEvent {
   ingested_at: string;
 }
 
-/** Lazily yields one NDJSON line per event, oldest first by default. */
+/**
+ * Lazily yields NDJSON, oldest first by default — one string per batch of
+ * EXPORT_BATCH events.
+ *
+ * KEYSET pagination rather than `stmt.iterate()`, for a reason that is not
+ * cosmetic: better-sqlite3 marks the connection busy for as long as a cursor is
+ * open, and every WRITE on it then throws "This database connection is busy
+ * executing a query". The connection here is the process-wide singleton
+ * (runtime.ts), so a lazily-consumed cursor would make the collectors, the run
+ * log and every admin POST fail for the whole duration of an export. Each batch
+ * below is a complete, closed query — between two of them the connection is
+ * free and the event loop gets a turn.
+ *
+ * `(ts_utc, id)` and not `ts_utc` alone: the tiebreaker is what makes the
+ * cursor total, so events sharing a timestamp are neither skipped nor emitted
+ * twice. `id` is unique per account (events' primary key is (account_id, id)).
+ */
+const EXPORT_BATCH = 500;
+
 export function* iterateEventsNdjson(env: Env, accountId: string, f: EventFilter): Generator<string> {
   const { sql, params, order } = buildEventWhere(accountId, f);
-  const stmt = env.DB.prepare(`SELECT ${EVENT_COLUMNS} FROM events ${sql} ORDER BY ts_utc ${order}`);
-  for (const row of stmt.iterate(...params) as Iterable<ExportedEvent>) {
-    yield JSON.stringify(row) + "\n";
+  const cmp = order === "ASC" ? ">" : "<";
+  const head = env.DB.prepare(
+    `SELECT ${EVENT_COLUMNS} FROM events ${sql} ORDER BY ts_utc ${order}, id ${order} LIMIT ?`
+  );
+  const after = env.DB.prepare(
+    `SELECT ${EVENT_COLUMNS} FROM events ${sql} AND (ts_utc, id) ${cmp} (?, ?)
+     ORDER BY ts_utc ${order}, id ${order} LIMIT ?`
+  );
+
+  let cursor: { ts: string; id: string } | null = null;
+  for (;;) {
+    const rows = (
+      cursor === null
+        ? head.all(...params, EXPORT_BATCH)
+        : after.all(...params, cursor.ts, cursor.id, EXPORT_BATCH)
+    ) as ExportedEvent[];
+    if (rows.length === 0) return;
+
+    yield rows.map((r) => JSON.stringify(r) + "\n").join("");
+
+    // A short batch means the table is exhausted — one query saved per export.
+    if (rows.length < EXPORT_BATCH) return;
+    const last = rows[rows.length - 1];
+    cursor = { ts: last.ts_utc, id: last.id };
   }
 }
 
