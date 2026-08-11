@@ -14,6 +14,28 @@ export function relativeFromNow(iso: string | null | undefined): string {
   return `${d}d ago`;
 }
 
+/**
+ * Byte sizes for human eyes: "1.4 GB", "356.9 MB", "512 B".
+ *
+ * Base 1024 with the SI-looking labels — the convention every disk tool on the
+ * host (du, df, docker) already uses, so the numbers on the Database page can
+ * be compared against them without a mental conversion.
+ */
+export function formatBytes(bytes: number | null | undefined, digits = 1): string {
+  if (bytes === null || bytes === undefined || !Number.isFinite(bytes)) return "—";
+  const sign = bytes < 0 ? "-" : "";
+  let n = Math.abs(bytes);
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let u = 0;
+  while (n >= 1024 && u < units.length - 1) {
+    n /= 1024;
+    u++;
+  }
+  // Whole bytes never need a decimal point — and a computed average (bytes per
+  // row) must not leak "682.6666666666666 B" into the page.
+  return `${sign}${u === 0 ? Math.round(n) : n.toFixed(digits)} ${units[u]}`;
+}
+
 export function formatTimestamp(iso: string | null | undefined, timezone: string): string {
   if (!iso) return "—";
   try {

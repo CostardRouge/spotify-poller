@@ -16,6 +16,7 @@ export const NAV: { href: string; label: string; icon: IconName; count?: "events
   { href: "/runs", label: "Runs", icon: "runs" },
   { href: "/gaps", label: "Gaps", icon: "gaps", count: "gaps" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
+  { href: "/database", label: "Database", icon: "database" },
 ];
 
 function NavList({

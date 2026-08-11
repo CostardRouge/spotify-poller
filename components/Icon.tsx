@@ -100,6 +100,15 @@ const PATHS: Record<string, React.ReactNode> = {
       <path d="M7.5 6.3a7.5 7.5 0 1 0 9 0" />
     </>
   ),
+  // Same 24×24 stroke style as the set above: the usual stacked-platters
+  // cylinder, drawn as one ellipse and the two sides that fall away from it.
+  database: (
+    <>
+      <ellipse cx="12" cy="5.5" rx="7.5" ry="3" />
+      <path d="M4.5 5.5v13c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3v-13" />
+      <path d="M4.5 12c0 1.66 3.36 3 7.5 3s7.5-1.34 7.5-3" />
+    </>
+  ),
 };
 
 export type IconName = keyof typeof PATHS;
