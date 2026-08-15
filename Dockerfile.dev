@@ -14,4 +14,6 @@ ENV NODE_ENV=development
 ENV API_HOST=0.0.0.0
 ENV DB_PATH=/data/life-events.db
 
-CMD ["sh", "-c", "node_modules/.bin/tsx scripts/migrate.ts && node_modules/.bin/next dev -H 0.0.0.0 -p 3000"]
+# `exec` so the dev server — not sh — is PID 1 and receives docker stop's
+# SIGTERM directly (sh does not forward signals; see the Dockerfile CMD).
+CMD ["sh", "-c", "node_modules/.bin/tsx scripts/migrate.ts && exec node_modules/.bin/next dev -H 0.0.0.0 -p 3000"]
