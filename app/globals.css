@@ -169,6 +169,26 @@ dialog::backdrop {
   -webkit-backdrop-filter: blur(6px);
 }
 
+/* Settings gets its own backdrop: a slow, foggy flurry of accent-tinted
+   light drifting behind the glass instead of a flat scrim. */
+#settings-dialog::backdrop {
+  background:
+    radial-gradient(55% 50% at 15% 15%, color-mix(in oklab, var(--accent) 38%, transparent) 0%, transparent 70%),
+    radial-gradient(50% 45% at 85% 25%, color-mix(in oklab, var(--info) 32%, transparent) 0%, transparent 70%),
+    radial-gradient(55% 50% at 50% 90%, color-mix(in oklab, var(--ok) 28%, transparent) 0%, transparent 70%),
+    oklch(0 0 0 / 0.45);
+  background-size: 200% 200%, 200% 200%, 200% 200%, 100% 100%;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  animation: settings-fog 24s ease-in-out infinite alternate;
+}
+
+@keyframes settings-fog {
+  0%   { background-position: 0% 10%, 100% 0%, 40% 100%, 0 0; }
+  50%  { background-position: 25% 35%, 65% 40%, 65% 75%, 0 0; }
+  100% { background-position: 5% 55%, 90% 15%, 45% 90%, 0 0; }
+}
+
 /* ==============================================================
    Control styles carried over verbatim from the old UI
    (public/index.html on main): buttons, fields, segmented control,
