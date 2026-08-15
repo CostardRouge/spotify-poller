@@ -72,6 +72,7 @@ export default function SettingsDialog({ info }: { info: ServerInfo }) {
   return (
     <dialog
       ref={dialogRef}
+      id="settings-dialog"
       onClick={(e) => {
         if (e.target === dialogRef.current) dialogRef.current?.close();
       }}
