@@ -9,6 +9,7 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   const { getEnv } = await import("./lib/server/runtime");
+  const { installProcessGuards, reportBoot } = await import("./lib/server/lifecycle");
   const {
     playbackEnabled,
     playbackOptionsFromProcess,
@@ -19,6 +20,10 @@ export async function register() {
   } = await import("./lib/server/scheduler");
 
   const env = getEnv();
+  // Before anything else can fail: from here on, a death leaves a trace and a
+  // restart is announced with the previous run's cause (lifecycle.ts).
+  installProcessGuards(env);
+  reportBoot(env);
   warnAboutExposure(env);
 
   if (schedulerEnabled()) {

@@ -23,7 +23,7 @@
 import { getGlobalState, setGlobalState } from "./db";
 import { Env, nowIso } from "./types";
 
-export type NotifyKind = "auth" | "run-error" | "backup" | "gap";
+export type NotifyKind = "auth" | "run-error" | "backup" | "gap" | "process";
 
 /** ntfy priorities: 1 min, 3 default, 5 max. */
 export type NotifyPriority = "min" | "low" | "default" | "high" | "urgent";

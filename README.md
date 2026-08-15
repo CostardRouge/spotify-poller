@@ -115,6 +115,25 @@ Non-negotiable points, wired into `docker-compose.prod.yml`:
   server boots. Decision and alternatives: `docs/scheduling.md`;
 - Docker healthcheck on `/api/health`, complementing the external watchdog.
 
+### If the UI answers 502 (then 404 on refresh, then recovers)
+
+That sequence is the signature of the container leaving the reverse proxy's
+rotation: 502 while the router still points at a dead/stalled origin, 404 once
+the proxy drops an unhealthy container entirely (Traefik's docker provider
+does), recovery once a probe succeeds again. Two distinct causes, two places
+to look:
+
+1. **The process died.** The next start announces itself on ntfy and in
+   `docker logs` with the previous run's cause — a clean stop (deploy,
+   `docker stop`), a crash (with the exception), or an *unclean exit*, which
+   is a SIGKILL: kernel OOM-killer, power loss. For OOM verdicts, the evidence
+   is on the **host**: `dmesg -T | grep -i 'killed process'`. Restart history:
+   `docker inspect --format '{{.RestartCount}} {{.State.StartedAt}}' spotify-poller`.
+2. **The process stalled** long enough to fail the healthcheck's full retry
+   budget without dying (the `/api/export` case, fixed in PR #8). The probe now
+   tolerates 10 s stalls and only evicts after ~2.5 min of consecutive
+   failures, because for a single-instance origin eviction *is* the outage.
+
 ### Makefile targets
 
 `make help` lists everything — same conventions as the Spotify Calendar
@@ -295,6 +314,13 @@ Two channels, deliberately separate (`lib/server/notify.ts`):
   `NTFY_THROTTLE_HOURS` (default 6) — a revoked token would otherwise notify
   every 30 minutes — and an all-clear follows the recovery.
 
+The server also announces every start (`lib/server/lifecycle.ts`), labelled
+with how the *previous* run ended: a clean stop (docker stop, redeploy) at
+`min` priority, a crash with the exception's own message, or an **unclean
+exit** — no signal seen, no crash recorded — which means OOM-kill, SIGKILL or
+power loss, reported with the last known timestamp and memory footprint. A
+restart you didn't order stops being a mystery.
+
 ## Backup and export
 
 `make backups-dir` once, then `BACKUP_ENABLED=1` for a daily snapshot.
@@ -316,7 +342,10 @@ Full rationale, restore procedures and off-site advice: `docs/backup.md`.
 - `429`: never retried within the same run; the `Retry-After` cooldown is
   **persisted** (`poller_state`) and subsequent runs abstain while it lasts —
   querying during a ban extends it;
-- every attempt writes its `raw_spotify` row before any parsing (I3);
+- every attempt writes its `raw_spotify` row before any parsing (I3). That
+  archive is kept forever by default; on a long-running install it is the main
+  thing making the database grow — set `RAW_RETENTION_DAYS` to age it out
+  (hourly purge, bounded batches; `events` is never touched);
 - isolated `401`: one token refresh, then a single retry;
 - refresh-token failure: `AuthError`, loud, immediate watchdog alert.
 
