@@ -46,6 +46,13 @@ ENV DB_PATH=/data/life-events.db
 # Snapshots go to /backups — a HOST bind mount in docker-compose.prod.yml, so a
 # lost data volume does not take the backups with it.
 ENV BACKUP_DIR=/backups
+# Bound the V8 heap well below anything the host would miss. Steady-state RSS
+# is ~110 MB and the heaviest legitimate operation (the NDJSON export) peaks
+# ~150 MB, so 512 MB is generous headroom — while an actual leak now dies FAST,
+# with a V8 "heap out of memory" message in `docker logs`, instead of growing
+# for hours until the kernel OOM-killer SIGKILLs the container at some random
+# later moment, unlogged from inside and indistinguishable from a crash.
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 # Run as an unprivileged user.
 RUN addgroup --system --gid 1001 nodejs \
@@ -70,7 +77,16 @@ EXPOSE 3000
 
 # Container-level healthcheck hits /api/health. Complements — never replaces —
 # the external watchdog (healthchecks.io), the only guard against a dead host.
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+#
+# Tuned for a SINGLE-instance origin: a reverse proxy that honours container
+# health (Traefik's docker provider does) pulls an unhealthy container out of
+# rotation, and with no second instance to fail over to, that eviction turns
+# "slow for a minute" into a hard 502/404 outage. So the probe tolerates a 10 s
+# stall and needs ~2.5 min of CONSECUTIVE failures (5 × 30 s) before declaring
+# death — while a genuinely dead process still fails instantly (connection
+# refused) and a start-up (migrations included) gets 60 s of grace, during
+# which one successful probe flips the container healthy immediately.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # Migrations are idempotent (scripts/migrate.ts) — safe to run at every boot.

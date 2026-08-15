@@ -68,6 +68,13 @@ export interface Env {
    * because it decides which scopes a connected account is REQUIRED to hold.
    */
   PLAYBACK_ENABLED: boolean;
+  /**
+   * Days the raw_spotify archive is kept before the hourly purge (scheduler).
+   * 0 (default) keeps everything forever — retention must be an explicit
+   * decision, never a silent default that deletes evidence. Only the raw
+   * response bodies age out; `events` is never touched.
+   */
+  RAW_RETENTION_DAYS: number;
 }
 
 /** A connected Spotify account. `id` is the Spotify user id — stable, never reused. */
@@ -211,5 +218,6 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     BACKUP_ENABLED: process.env.BACKUP_ENABLED === "1",
     TIMEZONE: timezone,
     PLAYBACK_ENABLED: process.env.PLAYBACK_ENABLED === "1",
+    RAW_RETENTION_DAYS: intFromEnv("RAW_RETENTION_DAYS", 0),
   };
 }

@@ -34,13 +34,17 @@ services:
       # as .env, and include them in the host's off-site backups.
       - ./backups:/backups
     restart: unless-stopped
+    # Kept identical to the Dockerfile HEALTHCHECK (compose overrides it): a
+    # single-instance origin must not be evicted from the reverse proxy over a
+    # brief stall — eviction IS the 502/404 outage. 10 s per probe, ~2.5 min of
+    # consecutive failures before unhealthy; real deaths still fail instantly.
     healthcheck:
       test:
         ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
       interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     logging:
       driver: json-file
       options:

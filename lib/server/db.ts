@@ -26,6 +26,28 @@ export function insertRaw(
   ).run(accountId, collector, nowIso(), httpStatus, requestUrl, payload);
 }
 
+/**
+ * Age purge of the raw archive — opt-in via RAW_RETENTION_DAYS (scheduler.ts).
+ *
+ * raw_spotify keeps every response body verbatim (I3) and nothing else ever
+ * deletes from it, which makes it the table that grows without bound (the
+ * follow-up flagged in PR #8). The `events` rows derived from those payloads —
+ * the actual history — are never touched by this.
+ *
+ * Bounded per call, like the export's keyset batches and for the same reason:
+ * this runs synchronously inside a timer of the process that serves the UI.
+ * The subquery walks idx_raw_fetched_at (0007), never the payload-heavy table.
+ * At ~50 rows/day of new arrivals, 5000/hour also drains a years-deep backlog
+ * within a day of first enabling retention.
+ */
+export function purgeRawRows(env: Env, retentionDays: number, maxRows = 5000): number {
+  const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
+  return env.DB.prepare(
+    `DELETE FROM raw_spotify WHERE id IN
+       (SELECT id FROM raw_spotify WHERE fetched_at < ? ORDER BY fetched_at LIMIT ?)`
+  ).run(cutoff, maxRows).changes;
+}
+
 // ---------- events (invariant I2) ----------
 
 export interface EventRow {

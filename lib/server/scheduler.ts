@@ -7,9 +7,10 @@ import {
   getState,
   logRun,
   purgePlaybackSamples,
+  purgeRawRows,
   setGlobalState,
 } from "./db";
-import { notify, notifyOnce, notifyRecovered } from "./notify";
+import { notifyOnce, notifyRecovered } from "./notify";
 import { runCollector } from "./run-core";
 import { getRateLimit } from "./spotify/api";
 import { AuthError, Env, GLOBAL_SCOPE, RunStatus, TransientError, nowIso } from "./types";
@@ -150,10 +151,31 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     setInterval(() => void backupTick(), 3_600_000);
   }
 
+  // Retention on the raw request archive (opt-in, RAW_RETENTION_DAYS). Bounded
+  // batches so a first enablement over a years-deep archive drains it across
+  // hours instead of holding the event loop once for the whole backlog — the
+  // /api/export lesson. Same timer-path rule as everything above: a throw here
+  // must log and carry on, never take the interval down with it.
+  if (env.RAW_RETENTION_DAYS > 0) {
+    const rawPurgeTick = (): void => {
+      try {
+        const purged = purgeRawRows(env, env.RAW_RETENTION_DAYS);
+        if (purged > 0) {
+          console.log(`[scheduler] raw_spotify: purged ${purged} rows older than ${env.RAW_RETENTION_DAYS} d`);
+        }
+      } catch (e) {
+        console.error("[scheduler] raw_spotify purge failed:", e);
+      }
+    };
+    setTimeout(rawPurgeTick, 180_000);
+    setInterval(rawPurgeTick, 3_600_000);
+  }
+
   console.log(
     `[scheduler] active — played every ${opts.playedEveryMinutes} min, ` +
       `liked every ${opts.likedEveryHours} h (hourly check)` +
-      (env.BACKUP_ENABLED ? `, backup every ${opts.backupEveryHours} h -> ${env.BACKUP_DIR}` : "")
+      (env.BACKUP_ENABLED ? `, backup every ${opts.backupEveryHours} h -> ${env.BACKUP_DIR}` : "") +
+      (env.RAW_RETENTION_DAYS > 0 ? `, raw archive kept ${env.RAW_RETENTION_DAYS} d` : "")
   );
 }
 
@@ -301,14 +323,4 @@ export function startPlaybackTicker(env: Env, opts: PlaybackOptions): void {
       `${opts.idlePollSeconds} s after ${opts.idleAfter} idle polls, ` +
       `samples kept ${opts.retentionDays} d`
   );
-}
-
-/** One-off notification when the process starts, useful after an unplanned reboot. */
-export async function announceStartup(env: Env, note: string): Promise<void> {
-  await notify(env, {
-    title: "Spotify poller — started",
-    message: note,
-    priority: "min",
-    tags: ["arrow_forward"],
-  });
 }
