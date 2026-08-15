@@ -90,4 +90,14 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
 # Migrations are idempotent (scripts/migrate.ts) — safe to run at every boot.
-CMD ["sh", "-c", "node_modules/.bin/tsx scripts/migrate.ts && node_modules/.bin/next start -H $API_HOST -p $API_PORT"]
+#
+# The `exec` is load-bearing. Without it, sh stays PID 1 for the container's
+# whole life, and `docker stop`'s SIGTERM stops AT sh — sh does not forward
+# signals to its children — so the server never hears it, the 10 s grace
+# period expires, and the entire container is SIGKILLed. Every ordered stop
+# (docker stop, a redeploy, a Watchtower update) then ends in a hard kill:
+# no graceful shutdown, and indistinguishable from an OOM-kill to the
+# lifecycle boot report. With `exec`, sh replaces itself with the server once
+# migrations finish; the server is PID 1, receives SIGTERM directly, writes
+# its stop marker and exits promptly instead of eating the full grace period.
+CMD ["sh", "-c", "node_modules/.bin/tsx scripts/migrate.ts && exec node_modules/.bin/next start -H $API_HOST -p $API_PORT"]
