@@ -133,6 +133,13 @@ to look:
    budget without dying (the `/api/export` case, fixed in PR #8). The probe now
    tolerates 10 s stalls and only evicts after ~2.5 min of consecutive
    failures, because for a single-instance origin eviction *is* the outage.
+3. **The process was aborted from below JavaScript.** A native assertion (an
+   `Assertion failed: … ----- Native stack trace -----` block in `docker logs`,
+   just above the next boot's startup lines) means Node itself or a native
+   addon died — no JS handler can catch it, so the boot report files it under
+   *unclean exit*. This is what a bad Node × better-sqlite3 combination looks
+   like, which is why the Dockerfile pins Node to an exact version: node
+   24.19.0 shipped exactly such a regression (nodejs/node#63642).
 
 ### Makefile targets
 

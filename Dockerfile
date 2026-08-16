@@ -11,15 +11,26 @@
 # reason — they must survive `npm prune --omit=dev`.
 # ---------------------------------------------------------------------------
 
+# Node is PINNED to an exact version, deliberately. The floating node:24-alpine
+# tag silently moved to 24.19.0 (2026-08-03), whose new node::ObjectWrap
+# cleanup hooks (nodejs/node#63642) make NAN-style native addons — better-
+# sqlite3 among them, v12 included — abort the process at random with
+#   Assertion failed: (env) != nullptr  (RemoveEnvironmentCleanupHook)
+# Every CI rebuild after that date shipped the regression, and in production it
+# looked like the server "randomly crashing": a native abort minutes-to-hours
+# in, then a restart loop. A base image is a dependency like any other — it
+# gets a version, and bumping it is a reviewed change, not a side effect of
+# rebuilding. Before bumping past 24.18.0, check that nodejs/node#63642 is
+# fixed in the target release.
 # 1) Install dependencies -----------------------------------------------------
-FROM node:24-alpine AS deps
+FROM node:24.18.0-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
 COPY package.json package-lock.json* ./
 RUN npm ci || npm install
 
 # 2) Build --------------------------------------------------------------------
-FROM node:24-alpine AS builder
+FROM node:24.18.0-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -28,14 +39,14 @@ RUN npm run build
 # 3) Production dependencies only ---------------------------------------------
 # Prune the already-compiled node_modules instead of reinstalling: one native
 # better-sqlite3 build for the whole image, no toolchain needed here.
-FROM node:24-alpine AS prod-deps
+FROM node:24.18.0-alpine AS prod-deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
 COPY --from=deps /app/node_modules ./node_modules
 RUN npm prune --omit=dev
 
 # 4) Runtime ------------------------------------------------------------------
-FROM node:24-alpine AS runner
+FROM node:24.18.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV API_HOST=0.0.0.0
