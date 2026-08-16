@@ -1,6 +1,8 @@
 # Local development image: source is bind-mounted by docker-compose, so we
 # only need dependencies (and the native toolchain for better-sqlite3) here.
-FROM node:24-alpine
+# Pinned for the same reason as the production Dockerfile: node 24.19.0's
+# ObjectWrap cleanup hooks (nodejs/node#63642) crash better-sqlite3.
+FROM node:24.18.0-alpine
 
 WORKDIR /app
 RUN apk add --no-cache python3 make g++
