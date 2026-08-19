@@ -49,7 +49,7 @@ await shoot(page, "login");
 await page.getByLabel("Admin token").fill(ADMIN_TOKEN);
 await page.getByRole("button", { name: /sign in/i }).click();
 await page.waitForURL(`${BASE}/`, { timeout: 10_000 });
-await page.waitForSelector("text=Manual run", { timeout: 10_000 });
+await page.waitForSelector("text=Run now", { timeout: 10_000 });
 await shoot(page, "dashboard");
 
 // 3. Events browser.
