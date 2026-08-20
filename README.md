@@ -47,7 +47,7 @@ over-trust:
   `tsx` — no separate build step, same commands work in Docker, bare metal and
   CI.
 
-## The two collectors
+## The collectors
 
 Named after what they collect — the same id is used in the URL, the CLI, the
 Makefile, the UI buttons and every database row:
@@ -56,6 +56,19 @@ Makefile, the UI buttons and every database row:
 |---|---|---|---|
 | `played` | `GET /v1/me/player/recently-played` | every 30 min | the critical one: Spotify only keeps the **last 50** tracks, and this is the only collector that pings the watchdog |
 | `liked` | `GET /v1/me/tracks` | daily (hourly while the backfill is running) | liked tracks, plus the paginated initial backfill |
+| `artists` | `GET /v1/artists` | daily (hourly while a backlog remains) | **enrichment, not history**: genres of the artists already collected, so the Listening page can answer "what kind of music, and when" |
+
+`playback` is a fourth, opt-in collector with its own section further down.
+
+`artists` is the odd one out and is meant to be: it writes no `events` row, it
+guards nothing, it never pings the watchdog, and a failed run costs nothing but
+a stale genre breakdown. It exists because Spotify attaches genres to the
+**artist** object and never to a play, so the collected history alone can never
+say what kind of music was playing. It needs no extra OAuth scope (`/v1/artists`
+is public catalogue data), and it fetches at most 1000 artists per run so it
+never eats the app-wide rate limit the history collectors depend on. Results
+land in the `artists` table (migration `0008`), the one table deliberately not
+partitioned by account — the reason is written at the top of the migration.
 
 ```bash
 curl -X POST "http://127.0.0.1:3000/api/run?collector=played" -b "sp_session=<cookie>"
@@ -208,7 +221,7 @@ dashboard *displays* them; it changes nothing in the database.
 | `GET /api/spotify/login` | session | starts the Spotify OAuth connection flow |
 | `GET /api/spotify/callback` | state cookie | Spotify return, stores the refresh token |
 | `GET /auth/login`, `GET /auth/callback` | same | pre-Next.js aliases of the two above — an already-registered Redirect URI keeps working |
-| `POST /api/run?collector=played\|liked\|playback` | session | manual trigger (idempotent) |
+| `POST /api/run?collector=played\|liked\|playback\|artists` | session | manual trigger (idempotent) |
 | `GET /api/stats` | session | volumes, gaps, last 20 runs |
 | `GET /api/events` | session | pagination + `type`, `q`, `from`, `to`, `order` filters |
 | `GET /api/playback` | session | playback sessions, pagination + `from`, `to` |

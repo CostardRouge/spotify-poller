@@ -12,6 +12,10 @@ Spotify's API only ever returns the **last 50 plays**. Anything not collected in
 
 **Consequence for downstream readers**: `events.id` alone is no longer globally unique.
 
+## `artists` is the one table outside the account partitioning (2026-08-20)
+
+**Decision**: migration `0008` adds `artists (id, name, genres, popularity, followers, fetched_at)` with **no** `account_id`. **Why**: the partitioning rule protects *collected history* — two people's plays must never mix. This is not history: it is public reference data about a Spotify object, identical for every account, keyed by a globally unique id. Partitioning it would refetch the same artist once per connected account for nothing, and reveals nothing about anyone's listening. **How to apply**: `disconnectAccount` must not delete from it (those rows belong to no one), and a genre query joins `artists` on the ids inside `events.payload.artist_ids` — the account scope still comes from `events`, which is where it belongs. An empty `genres` array is a real answer from Spotify and must stay distinguishable from "not fetched yet", which is the **absence** of the row.
+
 ## The `''` global scope (2026-08-20)
 
 Account id `''` (`GLOBAL_SCOPE` in `lib/server/types.ts`) is reserved for app-wide state. The load-bearing one is `ratelimit.limited_until`: Spotify rate-limits per **app** (`client_id`), not per user, so scoping the cooldown per account would let an account switch keep querying during a ban — which only extends it (`lib/server/spotify/api.ts`). Also global: `accounts.active_id`, `notify.*` throttles, `backup.*`, `process.*` lifecycle markers.

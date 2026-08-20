@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Icon from "./Icon";
 
-const COLLECTORS = ["played", "liked"] as const;
+const COLLECTORS = ["played", "liked", "artists"] as const;
 
 export default function RunButtons({ playbackEnabled }: { playbackEnabled: boolean }) {
   const router = useRouter();

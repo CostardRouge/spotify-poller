@@ -84,6 +84,10 @@ run-played: ## Run the 'played' collector (recently played) once in the dev cont
 run-liked: ## Run the 'liked' collector (liked tracks) once in the dev container
 	$(DC) exec poller $(TSX) scripts/run-once.ts liked
 
+.PHONY: run-artists
+run-artists: ## Fetch artist genres for the collected history once (dev container)
+	$(DC) exec poller $(TSX) scripts/run-once.ts artists
+
 .PHONY: backup
 backup: ## Write a full .db snapshot into BACKUP_DIR (dev container)
 	$(DC) exec poller $(TSX) scripts/backup.ts
@@ -145,6 +149,10 @@ prod-run-played: ## Run the 'played' collector once inside the Home Lab containe
 .PHONY: prod-run-liked
 prod-run-liked: ## Run the 'liked' collector once inside the Home Lab container
 	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts liked
+
+.PHONY: prod-run-artists
+prod-run-artists: ## Fetch artist genres for the collected history (Home Lab container)
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts artists
 
 # The snapshot lands on ./backups, bind-mounted from the host — deliberately
 # OUTSIDE the spotify-poller-data volume. A backup stored next to the database
