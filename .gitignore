@@ -2,12 +2,25 @@ node_modules/
 .next/
 next-env.d.ts
 data/
-.env
-.env.test
 site/
+
+# Environment: every variant is a secret. Only the template is committed.
+.env
+.env.*
+!.env.example
 
 # Backups hold the Spotify refresh token in clear — never commit them.
 backups/
 *.ndjson
+
+# Build / tooling output.
 tsconfig.tsbuildinfo
 /dist
+/out
+/build
+/coverage
+
+# Editor and OS state — local to a machine, never part of the project.
+.idea/
+.vscode/
+.DS_Store
