@@ -5,7 +5,7 @@ import Icon from "./Icon";
 
 const SHORTCUTS: { what: string; keys: string[] }[] = [
   { what: "Command palette", keys: ["⌘", "K"] },
-  { what: "Jump to section", keys: ["1", "…", "7"] },
+  { what: "Jump to section", keys: ["1", "…", "8"] },
   { what: "Search events", keys: ["/"] },
   { what: "Cycle theme", keys: ["T"] },
   { what: "Refresh current view", keys: ["R"] },

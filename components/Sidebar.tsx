@@ -12,9 +12,11 @@ import Icon, { IconName } from "./Icon";
 export const NAV: { href: string; label: string; icon: IconName; count?: "events" | "gaps" }[] = [
   { href: "/", label: "Overview", icon: "overview" },
   { href: "/events", label: "Events", icon: "events", count: "events" },
+  { href: "/listening", label: "Listening", icon: "listening" },
   { href: "/playback", label: "Playback", icon: "playback" },
   { href: "/runs", label: "Runs", icon: "runs" },
   { href: "/gaps", label: "Gaps", icon: "gaps", count: "gaps" },
+  { href: "/stats", label: "Stats", icon: "stats" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
   { href: "/database", label: "Database", icon: "database" },
 ];

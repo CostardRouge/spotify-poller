@@ -177,11 +177,22 @@ honest, quiet):
 - **Events** (`/events`) — browsing of all collected events: type filter,
   title/artist search, date bounds, sort order, pagination, filtered NDJSON
   export, and a per-row payload inspector (native dialog);
+- **Listening** (`/listening`) — what the collected history says about the
+  listening itself: hour of the day, day of the week, week × hour, month of the
+  year, day of the month, year, a month-by-month and day-by-day timeline, top
+  artists/tracks/albums, genres (overall and per part of the day), inferred
+  sessions, streaks, first-time artists, repetition, likes and their latency
+  from the first collected listen. **Every chart is a filter**: clicking a bar,
+  a heatmap cell, a calendar square or a ranked row adds that value to the query
+  string and every other chart redraws inside it, so the axes cross —
+  *Sunday nights*, *techno in the morning*, *this artist by month*. Plain links
+  and a GET form: no client JavaScript, bookmarkable, and the same numbers are
+  served as JSON by `/api/listening` for the same query string;
 - **Runs** (`/runs`) — the collector run log (`poller_runs`), status and
   errors;
 - **Gaps** (`/gaps`) — declared holes in the history (`gaps`);
-- **Stats** (`/stats`) — volumes (events, raw evidence, gaps) and the last
-  20 runs;
+- **Stats** (`/stats`) — collection volumes (events, raw evidence, gaps) and
+  the last 20 runs — custody, as opposed to the listening statistics above;
 - **Playback** (`/playback`) — playback sessions; always in the navigation,
   and the page itself explains how to enable the collector when it is off.
 
@@ -195,7 +206,7 @@ Around the pages, the app shell carries the rest of the operator surface:
 - a **settings dialog** (theme override, backup action, keyboard shortcut
   list, server configuration read-out, sign out);
 - a **command palette** on <kbd>⌘K</kbd> — sections and actions, searchable;
-  plus global shortcuts: <kbd>1</kbd>…<kbd>7</kbd> jump to a section,
+  plus global shortcuts: <kbd>1</kbd>…<kbd>8</kbd> jump to a section,
   <kbd>/</kbd> focuses the events search, <kbd>T</kbd> cycles the theme,
   <kbd>R</kbd> refreshes, <kbd>?</kbd> shows the shortcut list, and
   <kbd>Esc</kbd> closes any overlay;
@@ -223,6 +234,7 @@ dashboard *displays* them; it changes nothing in the database.
 | `GET /auth/login`, `GET /auth/callback` | same | pre-Next.js aliases of the two above — an already-registered Redirect URI keeps working |
 | `POST /api/run?collector=played\|liked\|playback\|artists` | session | manual trigger (idempotent) |
 | `GET /api/stats` | session | volumes, gaps, last 20 runs |
+| `GET /api/listening` | session | listening statistics — same filter vocabulary as the page: `type`, `from`, `to`, `q`, `artist`, `album`, `track`, `genre`, `context`, `hour`, `weekday`, `mday`, `month`, `year` |
 | `GET /api/events` | session | pagination + `type`, `q`, `from`, `to`, `order` filters |
 | `GET /api/playback` | session | playback sessions, pagination + `from`, `to` |
 | `GET /api/runs`, `GET /api/gaps` | session | paginated logs |

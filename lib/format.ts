@@ -36,6 +36,24 @@ export function formatBytes(bytes: number | null | undefined, digits = 1): strin
   return `${sign}${u === 0 ? Math.round(n) : n.toFixed(digits)} ${units[u]}`;
 }
 
+/**
+ * Durations that span minutes to months: "48 min", "6 h 12 min", "23 d 4 h".
+ *
+ * Days rather than months or years past a certain size — "2.3 months" invites a
+ * comparison the underlying number cannot support (it is a sum of full track
+ * lengths, not measured playtime), and days stay countable.
+ */
+export function formatDuration(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds <= 0) return "—";
+  const total = Math.round(seconds);
+  const days = Math.floor(total / 86_400);
+  const hours = Math.floor((total % 86_400) / 3_600);
+  const minutes = Math.floor((total % 3_600) / 60);
+  if (days > 0) return `${days.toLocaleString()} d ${hours} h`;
+  if (hours > 0) return `${hours} h ${minutes} min`;
+  return `${minutes} min`;
+}
+
 export function formatTimestamp(iso: string | null | undefined, timezone: string): string {
   if (!iso) return "—";
   try {

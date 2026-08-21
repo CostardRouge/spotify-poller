@@ -31,3 +31,19 @@ Every status dot is paired with a word (`PRODUCT.md`, `components/StatusPill.tsx
 ## Mobile is a different layout, not a narrower one (2026-08-20)
 
 On phones the sidebar folds into a bottom tab bar with a "More" sheet carrying the remaining sections, the run actions, settings and the account selector — so no operator action is desktop-only. `components/BottomNav.tsx`. This implements the *phone-complete* principle and is the thing to check when adding any action to the sidebar.
+
+## The Listening page: every chart is a link, and no client JavaScript (2026-08-21)
+
+**Decision**: `/listening` renders server-side and cross-filters through the **query string** — every bar, heatmap cell, calendar square and ranked row is an `<a>` whose href is "the current filter, with one thing changed" (`link()` in `app/(dashboard)/listening/page.tsx`), and the only form is a plain `method="get"`. **Why**: the interesting questions are intersections ("Sunday nights", "techno in the morning"), and a link-based filter gives them for free — bookmarkable, reload-proof, back-button-correct, no hydration, no chart library. **How to apply**: a new facet is a field on `ListeningFilter`, a branch in `filterToParams`, a chip in the page's `facets` list and a hidden input in the form (otherwise clicking Apply silently drops it). A 2-D control toggles as a **pair**: toggling each axis separately makes clicking a Sunday cell *unpin* Sunday when Sunday is already selected.
+
+## Volume is drawn in neutral ink, never in the accent (2026-08-21)
+
+**Decision**: bars, heatmap cells and calendar squares scale `color-mix(in oklab, var(--ink) N%, var(--surface-2))`; the accent marks only what is **selected**, and a selected item is additionally underlined. **Why**: `PRODUCT.md` reserves green for *healthy*, so a green heat ramp would be asserting something false about a busy Tuesday, and a Grafana-style ramp is a named anti-reference. The underline is what keeps the selection from being carried by colour alone. **How to apply**: same rule for any future density view.
+
+## Zero-based axes, with the numbers printed under short ones (2026-08-21)
+
+Weekday and month bars sit within a few percent of each other, so the shape says nothing. The fix is `showValues` on `BarChart` (the count under each tick), **not** a cropped axis — truncating the baseline to dramatise a 5% difference is exactly the dishonesty `PRODUCT.md` rules out.
+
+## Section shortcuts are appended, never renumbered (2026-08-21)
+
+`/listening` became jump key **8** rather than taking a lower number matching the sidebar order. The 1…7 mapping predates the Next.js UI and is muscle memory; the sidebar and the jump list have never matched, and reordering costs more than the consistency is worth (`components/CommandPalette.tsx`). Adding a section still means: sidebar `NAV`, `BottomNav` MORE_LINKS, palette `SECTIONS`, the jump array, `ShortcutsDialog`'s range and `Topbar`'s `TITLES`.
