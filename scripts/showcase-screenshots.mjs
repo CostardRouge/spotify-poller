@@ -56,19 +56,24 @@ await shoot(page, "dashboard");
 await page.goto(`${BASE}/events`, { waitUntil: "networkidle" });
 await shoot(page, "events");
 
-// 4. Accounts.
+// 4. Listening statistics — the fixture carries fourteen months of plays so
+//    this page has a shape to show (scripts/seed-demo.ts).
+await page.goto(`${BASE}/listening`, { waitUntil: "networkidle" });
+await shoot(page, "listening");
+
+// 5. Accounts.
 await page.goto(`${BASE}/accounts`, { waitUntil: "networkidle" });
 await shoot(page, "accounts");
 
-// 5. Runs.
+// 6. Runs.
 await page.goto(`${BASE}/runs`, { waitUntil: "networkidle" });
 await shoot(page, "runs");
 
-// 6. Stats.
+// 7. Stats.
 await page.goto(`${BASE}/stats`, { waitUntil: "networkidle" });
 await shoot(page, "stats");
 
-// 7. Payload modal — the event inspector, open on the first row.
+// 8. Payload modal — the event inspector, open on the first row.
 await page.goto(`${BASE}/events`, { waitUntil: "networkidle" });
 await page.getByRole("button", { name: "Payload" }).first().click();
 await page.waitForSelector("dialog[open]");

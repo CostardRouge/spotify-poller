@@ -38,6 +38,7 @@ export interface SchedulerOptions {
   playedEveryMinutes: number;
   likedEveryHours: number;
   backupEveryHours: number;
+  artistsEveryHours: number;
 }
 
 // SCHEDULE_A_MINUTES / SCHEDULE_B_HOURS stay readable as a fallback: a .env
@@ -49,6 +50,7 @@ export function schedulerOptionsFromProcess(): SchedulerOptions {
     ),
     likedEveryHours: Number(process.env.SCHEDULE_LIKED_HOURS ?? process.env.SCHEDULE_B_HOURS ?? "24"),
     backupEveryHours: Number(process.env.BACKUP_EVERY_HOURS ?? "24"),
+    artistsEveryHours: Number(process.env.SCHEDULE_ARTISTS_HOURS ?? "24"),
   };
 }
 
@@ -61,9 +63,13 @@ const KEY_BACKUP_AT = "backup.last_success_at";
 export function startScheduler(env: Env, opts: SchedulerOptions): void {
   // Anti-overlap lock: a run still in progress is never doubled up.
   // 'playback' is not here — it has its own self-rescheduling ticker below.
-  const running: Record<"played" | "liked", boolean> = { played: false, liked: false };
+  const running: Record<"played" | "liked" | "artists", boolean> = {
+    played: false,
+    liked: false,
+    artists: false,
+  };
 
-  const tick = async (collector: "played" | "liked"): Promise<void> => {
+  const tick = async (collector: "played" | "liked" | "artists"): Promise<void> => {
     if (running[collector]) return;
     running[collector] = true;
     try {
@@ -100,6 +106,19 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     if (getState(env, accountId, "liked.backfill_done") !== "1") return true;
     const last = getState(env, accountId, "liked.last_success_at");
     return !last || Date.now() - Date.parse(last) >= opts.likedEveryHours * 3_600_000;
+  };
+
+  /**
+   * Same persisted-cursor cadence as 'liked', and the same exception: while a
+   * backlog remains ('artists.backlog'), it runs at every hourly check to drain
+   * it in bounded batches instead of waiting a day per 1000 artists.
+   */
+  const artistsDue = (): boolean => {
+    const accountId = getActiveAccountId(env);
+    if (accountId === null) return false; // nothing connected: nothing to enrich
+    if (getState(env, accountId, "artists.backlog") === "1") return true;
+    const last = getState(env, accountId, "artists.last_success_at");
+    return !last || Date.now() - Date.parse(last) >= opts.artistsEveryHours * 3_600_000;
   };
 
   // Backup cadence is persisted like 'liked''s, so restarts do not make it
@@ -146,6 +165,18 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
     if (dueOrFalse("liked", likedDue)) void tick("liked");
   }, 3_600_000);
 
+  // Enrichment, deliberately last in the startup stagger: it is the only
+  // collector that guards nothing, so it yields the first minutes — and the
+  // first slice of the app-wide rate limit — to the ones that do. Starting
+  // after 'liked' also means a freshly backfilled library is enriched in the
+  // same boot rather than a day later.
+  setTimeout(() => {
+    if (dueOrFalse("artists", artistsDue)) void tick("artists");
+  }, 240_000);
+  setInterval(() => {
+    if (dueOrFalse("artists", artistsDue)) void tick("artists");
+  }, 3_600_000);
+
   if (env.BACKUP_ENABLED) {
     setTimeout(() => void backupTick(), 120_000);
     setInterval(() => void backupTick(), 3_600_000);
@@ -173,7 +204,8 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
 
   console.log(
     `[scheduler] active — played every ${opts.playedEveryMinutes} min, ` +
-      `liked every ${opts.likedEveryHours} h (hourly check)` +
+      `liked every ${opts.likedEveryHours} h (hourly check), ` +
+      `artists every ${opts.artistsEveryHours} h (hourly check)` +
       (env.BACKUP_ENABLED ? `, backup every ${opts.backupEveryHours} h -> ${env.BACKUP_DIR}` : "") +
       (env.RAW_RETENTION_DAYS > 0 ? `, raw archive kept ${env.RAW_RETENTION_DAYS} d` : "")
   );

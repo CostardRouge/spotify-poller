@@ -1,6 +1,7 @@
 import { appBaseUrl, resolveActiveAccount } from "./spotify/auth";
 import { collectRecentlyPlayed } from "./collectors/recently-played";
 import { collectLikedTracks } from "./collectors/liked-tracks";
+import { collectArtists } from "./collectors/artists";
 import { collectPlayback } from "./collectors/playback";
 import { finishRun, lastRunStatus, startRun, touchAccount } from "./db";
 import { heartbeat, heartbeatFail, notifyOnce, notifyRecovered } from "./notify";
@@ -51,6 +52,8 @@ export async function runCollector(
         result = await collectRecentlyPlayed(env, account);
       } else if (collector === "liked") {
         result = await collectLikedTracks(env, account);
+      } else if (collector === "artists") {
+        result = await collectArtists(env, account);
       } else {
         // 'playback' normally runs from the ticker, which bypasses this wrapper
         // to avoid one poller_runs row every 15 s. Coming through here means a

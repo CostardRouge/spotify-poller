@@ -12,13 +12,14 @@ interface Command {
 
 /**
  * ⌘K palette plus the global shortcuts the old debug UI (and PRODUCT.md)
- * promise: 1…7 jump to a section, / focuses the events search, T cycles the
+ * promise: 1…8 jump to a section, / focuses the events search, T cycles the
  * theme, R refreshes the current view, ? opens the shortcut list. All of them
  * stand down while an input, textarea or dialog has focus.
  */
 const SECTIONS = [
   { label: "Overview", href: "/" },
   { label: "Events", href: "/events" },
+  { label: "Listening", href: "/listening" },
   { label: "Runs", href: "/runs" },
   { label: "Gaps", href: "/gaps" },
   { label: "Stats", href: "/stats" },
@@ -152,8 +153,11 @@ export default function CommandPalette() {
       if (typing || e.altKey || e.metaKey || e.ctrlKey) return;
       if (document.querySelector("dialog[open]")) return;
 
-      const jump = ["/", "/events", "/runs", "/gaps", "/stats", "/accounts", "/playback"];
-      if (/^[1-7]$/.test(e.key)) {
+      // Appended, never reordered: 1…7 have been muscle memory since the old
+      // UI, and renumbering them to match the sidebar would cost more than the
+      // consistency is worth.
+      const jump = ["/", "/events", "/runs", "/gaps", "/stats", "/accounts", "/playback", "/listening"];
+      if (/^[1-8]$/.test(e.key)) {
         router.push(jump[Number(e.key) - 1]);
         return;
       }

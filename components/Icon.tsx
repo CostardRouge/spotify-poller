@@ -24,6 +24,14 @@ const PATHS: Record<string, React.ReactNode> = {
     </>
   ),
   stats: <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />,
+  // Listening: a clock, because that page is about WHEN — the same 24x24
+  // stroke style as the rest of the set.
+  listening: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5.2l3.4 2" />
+    </>
+  ),
   accounts: (
     <>
       <circle cx="12" cy="8" r="4" />

@@ -100,10 +100,12 @@ export type RunStatus = "ok" | "partial" | "error";
  *  - 'played'   → recently-played (every 30 min, the critical one)
  *  - 'liked'    → liked tracks (daily, plus the initial backfill)
  *  - 'playback' → current playback state (opt-in, PLAYBACK_ENABLED=1)
+ *  - 'artists'  → artist genres for the already-collected history (daily,
+ *                 enrichment only: it writes no events and guards no history)
  */
-export type CollectorId = "played" | "liked" | "playback";
+export type CollectorId = "played" | "liked" | "playback" | "artists";
 
-export const COLLECTOR_IDS: readonly CollectorId[] = ["played", "liked", "playback"];
+export const COLLECTOR_IDS: readonly CollectorId[] = ["played", "liked", "playback", "artists"];
 
 /** Legacy ids, still accepted so a systemd unit installed before the rename keeps working. */
 const COLLECTOR_ALIASES: Record<string, CollectorId> = {

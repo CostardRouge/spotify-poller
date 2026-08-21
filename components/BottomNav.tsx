@@ -16,6 +16,7 @@ const PRIMARY: { href: string; label: string; icon: IconName }[] = [
 const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
   { href: "/runs", label: "Runs", icon: "runs" },
   { href: "/gaps", label: "Gaps", icon: "gaps" },
+  { href: "/listening", label: "Listening", icon: "listening" },
   { href: "/stats", label: "Stats", icon: "stats" },
   { href: "/accounts", label: "Accounts", icon: "accounts" },
   { href: "/database", label: "Database", icon: "database" },

@@ -99,6 +99,85 @@ export function insertEvents(env: Env, accountId: string, rows: EventRow[]): num
   return inserted;
 }
 
+// ---------- artist reference cache (migration 0008) ----------
+
+/** One artist as Spotify describes it — `genres` is already parsed. */
+export interface ArtistRow {
+  id: string;
+  name: string | null;
+  genres: string[];
+  popularity: number | null;
+  followers: number | null;
+}
+
+/**
+ * Artist ids this account has actually heard that the cache does not know yet,
+ * most-played first — so the very first enrichment run already covers the
+ * artists that dominate the statistics, and an interrupted backfill leaves the
+ * useful half done.
+ *
+ * `json_each` over a path the row does not have yields no rows rather than an
+ * error, so the pre-`0005` events written without `artist_ids` are skipped
+ * silently instead of taking the query down.
+ *
+ * Cost is one pass over the account's events (~40 ms at 30k rows) with no index
+ * to help — artist ids live inside the JSON payload. That is why this is driven
+ * by a daily collector and never by a page render.
+ */
+export function artistIdsToEnrich(env: Env, accountId: string, limit: number): string[] {
+  const rows = env.DB.prepare(
+    `SELECT j.value AS id, COUNT(*) AS n
+     FROM events e, json_each(e.payload, '$.artist_ids') j
+     WHERE e.account_id = ?
+       AND j.value IS NOT NULL
+       AND j.value NOT IN (SELECT id FROM artists)
+     GROUP BY j.value
+     ORDER BY n DESC
+     LIMIT ?`
+  ).all(accountId, limit) as { id: string }[];
+  return rows.map((r) => r.id);
+}
+
+/**
+ * Writes the fetched artists. An UPSERT rather than INSERT OR IGNORE: genres and
+ * popularity change over time, so a refresh must actually refresh.
+ *
+ * Nothing here is account-scoped — see the header of `0008_artists.sql` for why
+ * this one table is deliberately outside the account partitioning.
+ */
+export function upsertArtists(env: Env, rows: ArtistRow[]): number {
+  if (rows.length === 0) return 0;
+  const stmt = env.DB.prepare(
+    `INSERT INTO artists (id, name, genres, popularity, followers, fetched_at)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name       = excluded.name,
+       genres     = excluded.genres,
+       popularity = excluded.popularity,
+       followers  = excluded.followers,
+       fetched_at = excluded.fetched_at`
+  );
+  const at = nowIso();
+  const tx = env.DB.transaction((items: ArtistRow[]) => {
+    for (const a of items) {
+      stmt.run(a.id, a.name, JSON.stringify(a.genres), a.popularity, a.followers, at);
+    }
+  });
+  tx(rows);
+  return rows.length;
+}
+
+/** Size and freshness of the cache — reported on the Listening page's method note. */
+export function artistCacheSnapshot(env: Env): { rows: number; with_genres: number; oldest_fetch: string | null } {
+  const r = env.DB.prepare(
+    `SELECT COUNT(*) AS rows,
+            SUM(CASE WHEN json_array_length(genres) > 0 THEN 1 ELSE 0 END) AS with_genres,
+            MIN(fetched_at) AS oldest_fetch
+     FROM artists`
+  ).get() as { rows: number; with_genres: number | null; oldest_fetch: string | null };
+  return { rows: r.rows, with_genres: r.with_genres ?? 0, oldest_fetch: r.oldest_fetch };
+}
+
 // ---------- state ----------
 
 export function getState(env: Env, accountId: string, key: string): string | null {

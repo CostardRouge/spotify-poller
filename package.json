@@ -15,6 +15,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "run:played": "tsx scripts/run-once.ts played",
     "run:liked": "tsx scripts/run-once.ts liked",
+    "run:artists": "tsx scripts/run-once.ts artists",
     "backup": "tsx scripts/backup.ts",
     "export": "tsx scripts/export.ts",
     "import": "tsx scripts/import.ts",

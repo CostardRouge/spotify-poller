@@ -13,6 +13,7 @@ const TITLES: Record<string, { title: string; sub: string }> = {
   "/gaps": { title: "Gaps", sub: "Windows the poller knows it did not cover" },
   "/accounts": { title: "Accounts", sub: "Connections, tokens and which one is collected" },
   "/stats": { title: "Stats", sub: "Volumes and the recent run history" },
+  "/listening": { title: "Listening", sub: "What the collected history says about the listening itself" },
   "/database": { title: "Database", sub: "What it weighs, what is filling it, and whether it is backed up" },
 };
 

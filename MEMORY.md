@@ -46,6 +46,8 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - `/api/health` is liveness-only because it was once public *and* informative; detail moved to the gated `/api/status` — `observability.md`.
 - Only the external watchdog can detect silence; ntfy and the Docker healthcheck structurally cannot — `observability.md`.
 - The OKLCH design tokens were carried over verbatim from the pre-Next.js UI; the migration was meant to change the framework, not the design — `frontend.md`.
+- A fourth collector, `artists`, exists only to enrich: it fetches artist genres, writes no `events` row and guards no history — `collectors.md`, and `artists` is the one table with no `account_id` — `data-model.md`.
+- The Listening page cross-filters through the query string — every chart is a link, no client JavaScript — and draws volume in neutral ink because green means *healthy* — `frontend.md`; the aggregation is one temp-table materialisation per request, synchronous end to end — `architecture.md`.
 
 ## Open items (dated; remove when done)
 

@@ -47,7 +47,7 @@ over-trust:
   `tsx` — no separate build step, same commands work in Docker, bare metal and
   CI.
 
-## The two collectors
+## The collectors
 
 Named after what they collect — the same id is used in the URL, the CLI, the
 Makefile, the UI buttons and every database row:
@@ -56,6 +56,19 @@ Makefile, the UI buttons and every database row:
 |---|---|---|---|
 | `played` | `GET /v1/me/player/recently-played` | every 30 min | the critical one: Spotify only keeps the **last 50** tracks, and this is the only collector that pings the watchdog |
 | `liked` | `GET /v1/me/tracks` | daily (hourly while the backfill is running) | liked tracks, plus the paginated initial backfill |
+| `artists` | `GET /v1/artists` | daily (hourly while a backlog remains) | **enrichment, not history**: genres of the artists already collected, so the Listening page can answer "what kind of music, and when" |
+
+`playback` is a fourth, opt-in collector with its own section further down.
+
+`artists` is the odd one out and is meant to be: it writes no `events` row, it
+guards nothing, it never pings the watchdog, and a failed run costs nothing but
+a stale genre breakdown. It exists because Spotify attaches genres to the
+**artist** object and never to a play, so the collected history alone can never
+say what kind of music was playing. It needs no extra OAuth scope (`/v1/artists`
+is public catalogue data), and it fetches at most 1000 artists per run so it
+never eats the app-wide rate limit the history collectors depend on. Results
+land in the `artists` table (migration `0008`), the one table deliberately not
+partitioned by account — the reason is written at the top of the migration.
 
 ```bash
 curl -X POST "http://127.0.0.1:3000/api/run?collector=played" -b "sp_session=<cookie>"
@@ -164,11 +177,22 @@ honest, quiet):
 - **Events** (`/events`) — browsing of all collected events: type filter,
   title/artist search, date bounds, sort order, pagination, filtered NDJSON
   export, and a per-row payload inspector (native dialog);
+- **Listening** (`/listening`) — what the collected history says about the
+  listening itself: hour of the day, day of the week, week × hour, month of the
+  year, day of the month, year, a month-by-month and day-by-day timeline, top
+  artists/tracks/albums, genres (overall and per part of the day), inferred
+  sessions, streaks, first-time artists, repetition, likes and their latency
+  from the first collected listen. **Every chart is a filter**: clicking a bar,
+  a heatmap cell, a calendar square or a ranked row adds that value to the query
+  string and every other chart redraws inside it, so the axes cross —
+  *Sunday nights*, *techno in the morning*, *this artist by month*. Plain links
+  and a GET form: no client JavaScript, bookmarkable, and the same numbers are
+  served as JSON by `/api/listening` for the same query string;
 - **Runs** (`/runs`) — the collector run log (`poller_runs`), status and
   errors;
 - **Gaps** (`/gaps`) — declared holes in the history (`gaps`);
-- **Stats** (`/stats`) — volumes (events, raw evidence, gaps) and the last
-  20 runs;
+- **Stats** (`/stats`) — collection volumes (events, raw evidence, gaps) and
+  the last 20 runs — custody, as opposed to the listening statistics above;
 - **Playback** (`/playback`) — playback sessions; always in the navigation,
   and the page itself explains how to enable the collector when it is off.
 
@@ -182,7 +206,7 @@ Around the pages, the app shell carries the rest of the operator surface:
 - a **settings dialog** (theme override, backup action, keyboard shortcut
   list, server configuration read-out, sign out);
 - a **command palette** on <kbd>⌘K</kbd> — sections and actions, searchable;
-  plus global shortcuts: <kbd>1</kbd>…<kbd>7</kbd> jump to a section,
+  plus global shortcuts: <kbd>1</kbd>…<kbd>8</kbd> jump to a section,
   <kbd>/</kbd> focuses the events search, <kbd>T</kbd> cycles the theme,
   <kbd>R</kbd> refreshes, <kbd>?</kbd> shows the shortcut list, and
   <kbd>Esc</kbd> closes any overlay;
@@ -208,8 +232,9 @@ dashboard *displays* them; it changes nothing in the database.
 | `GET /api/spotify/login` | session | starts the Spotify OAuth connection flow |
 | `GET /api/spotify/callback` | state cookie | Spotify return, stores the refresh token |
 | `GET /auth/login`, `GET /auth/callback` | same | pre-Next.js aliases of the two above — an already-registered Redirect URI keeps working |
-| `POST /api/run?collector=played\|liked\|playback` | session | manual trigger (idempotent) |
+| `POST /api/run?collector=played\|liked\|playback\|artists` | session | manual trigger (idempotent) |
 | `GET /api/stats` | session | volumes, gaps, last 20 runs |
+| `GET /api/listening` | session | listening statistics — same filter vocabulary as the page: `type`, `from`, `to`, `q`, `artist`, `album`, `track`, `genre`, `context`, `hour`, `weekday`, `mday`, `month`, `year` |
 | `GET /api/events` | session | pagination + `type`, `q`, `from`, `to`, `order` filters |
 | `GET /api/playback` | session | playback sessions, pagination + `from`, `to` |
 | `GET /api/runs`, `GET /api/gaps` | session | paginated logs |

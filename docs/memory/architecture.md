@@ -29,3 +29,11 @@ The single auth gate for pages and admin API routes is `proxy.ts` at the repo ro
 ## Path alias (2026-08-20)
 
 `tsconfig.json` maps `@/*` to the repo root. Prefer it over deep relative chains in `app/` and `components/`; `lib/server/` modules import each other relatively.
+
+## The listening aggregation is one temp table, and must stay synchronous (2026-08-21)
+
+**Decision**: `lib/server/listening.ts` extracts the filtered rows once into `temp.ls`, with the local-clock parts already computed, then runs ~20 aggregates against it and drops it in a `finally`. **Why**: the expensive step is the pass over the history plus the JSON payload parsing; doing it per aggregate would multiply it by twenty. **The constraint that comes with it**: the better-sqlite3 connection is a process-wide singleton (`runtime.ts`), so the temp table is shared state — the function is safe only because it never `await`s, and nothing else can run between its CREATE and its DROP. An `await` added anywhere inside would let two page loads overwrite each other's scope. Cost is O(history): ~650 ms over 30k events unfiltered, ~200 ms with a year's date range, which is why nothing calls it from the Overview.
+
+## Local clock in SQL comes from a CASE over DST segments (2026-08-21)
+
+**Decision**: `lib/server/localtime.ts` probes `Intl` once per day of the range, bisects each offset change to the minute, and hands SQL a `CASE` expression over those few boundaries; comparisons run on `substr(ts, 1, 19)`. **Why**: SQLite has no IANA database (`datetime(ts, 'localtime')` reads the *server* zone, UTC in a container), a `db.function()` UDF would cross into JS once per row on the connection that also serves collection, and a materialised local column would go stale the day `TIMEZONE` changes. **The `substr` matters**: `played_at` carries milliseconds and `added_at` does not, and `'…:00.123Z' < '…:00Z'` is true as a string — cutting both sides to whole seconds is what makes the boundary test mean what it reads.
