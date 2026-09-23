@@ -49,7 +49,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - A fourth collector, `artists`, exists only to enrich: it fetches artist genres, writes no `events` row and guards no history — `collectors.md`, and `artists` is the one table with no `account_id` — `data-model.md`.
 - The Listening page cross-filters through the query string — every chart is a link, no client JavaScript — and draws volume in neutral ink because green means *healthy* — `frontend.md`; the aggregation is one temp-table materialisation per request, synchronous end to end — `architecture.md`.
 
-- A session that changes code reports this project's state to its fiche, `projets/spotify-poller/README.md`, in the private `second-brain` repo: the register is that folder and `PROJETS.md` there is generated from it, never Claude's memory and never `git log` — CLAUDE.md rule 3.
+- A session that changes code reports this project's state to its fiche, `projets/spotify-poller/README.md`, in the private `second-brain` repo: the register is that folder and `PROJETS.md` there is generated from it, never Claude's memory and never `git log`. A cloud session that has no checkout of it attaches it itself (`add_repo`, 2026-09-23), because a week of sessions left the state only in chat; the fallback block goes into the PR description under `### Registre`, and no `second-brain` token is ever put in this repo. — CLAUDE.md rule 3.
 
 ## Open items (dated; remove when done)
 
