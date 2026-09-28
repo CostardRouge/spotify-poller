@@ -111,7 +111,7 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
   /**
    * Same persisted-cursor cadence as 'liked', and the same exception: while a
    * backlog remains ('artists.backlog'), it runs at every hourly check to drain
-   * it in bounded batches instead of waiting a day per 1000 artists.
+   * it in bounded batches instead of waiting a day per 100 artists.
    */
   const artistsDue = (): boolean => {
     const accountId = getActiveAccountId(env);
