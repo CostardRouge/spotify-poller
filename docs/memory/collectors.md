@@ -9,15 +9,17 @@ Read before touching `played` / `liked` / `playback`, Spotify API calls, rate li
 | `played` | `/v1/me/player/recently-played` | 30 min | authoritative history; the **only** one that pings the watchdog |
 | `liked` | `/v1/me/tracks` | daily (hourly while backfilling) | liked tracks + paginated initial backfill |
 | `playback` | `/v1/me/player` | 15 s playing / 60 s idle | opt-in, adds device/volume/context/completion |
-| `artists` | `/v1/artists` | daily (hourly while a backlog remains) | enrichment only: artist genres for the already-collected history |
+| `artists` | `/v1/artists/{id}` | daily (hourly while a backlog remains) | enrichment only: artist genres for the already-collected history |
 
 `played` is authoritative because it reads Spotify's 50-track buffer and therefore **back-fills across downtime**. `playback` only sees what happens while the process is up, so it complements `played` and can never replace it (`lib/server/collectors/playback.ts`).
 
 ## `artists` is an enrichment collector, and the distinction is load-bearing (2026-08-20)
 
-**Decision**: `lib/server/collectors/artists.ts` fetches `GET /v1/artists` for the artist ids already present in `events.payload.artist_ids` and caches them in `artists` (migration `0008`). It writes **no** `events` row, never pings the watchdog, and its failure is cosmetic. **Why it exists at all**: Spotify attaches genres to the **artist** object — a play carries track, album and artist ids, never a genre — so no amount of collected history can answer "what kind of music" without this second call. **How to apply**: keep it last in the startup stagger and bounded to 1000 artists per run (20 requests × 50 ids, Spotify's cap); the rate limit is per app, so an enrichment run that eats it costs `played` the window that actually matters. It needs no OAuth scope — `/v1/artists` is public catalogue data — so it never triggers the reconnection banner.
+**Decision**: `lib/server/collectors/artists.ts` fetches `GET /v1/artists/{id}` for the artist ids already present in `events.payload.artist_ids` and caches them in `artists` (migration `0008`). It writes **no** `events` row, never pings the watchdog, and its failure is cosmetic. **Why it exists at all**: Spotify attaches genres to the **artist** object — a play carries track, album and artist ids, never a genre — so no amount of collected history can answer "what kind of music" without this second call. **How to apply**: keep it last in the startup stagger and bounded (100 artists per run, 400 ms apart); the rate limit is per app, so an enrichment run that eats it costs `played` the window that actually matters. It needs no OAuth scope — `/v1/artists` is public catalogue data — so it never triggers the reconnection banner.
 
-**Ids Spotify answers `null` for get a cache row anyway**, with `name` NULL. Without that placeholder the id is forever "not fetched yet" and every run re-requests it: a backlog that cannot drain. Same reasoning as any negative cache — the absence of a row means "unknown", never "unknowable".
+**One request per artist since 2026-09-28, and not by choice**: Spotify removed the bulk `GET /v1/artists?ids=` for Development Mode apps in the February 2026 Web API change (existing apps migrated 2026-03-09), so every run of the 50-id version failed on its first request and the genre panel never filled. Genres cannot come from the plays themselves — a play's track, album and simplified artists carry none. Each artist is upserted as soon as it is answered, so a 429 mid-run keeps what was paid for. The per-artist code was only tested against a mocked Spotify; check the first real run's `poller_runs` row and the Listening page's coverage line.
+
+**Ids Spotify answers 404 (or `null`) for get a cache row anyway**, with `name` NULL. Without that placeholder the id is forever "not fetched yet" and every run re-requests it: a backlog that cannot drain. Same reasoning as any negative cache — the absence of a row means "unknown", never "unknowable".
 
 ## Collector ids are `played`/`liked`, and `A`/`B` still resolve (2026-08-20)
 

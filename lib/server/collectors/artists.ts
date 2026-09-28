@@ -1,5 +1,5 @@
 import { getAccessToken } from "../spotify/auth";
-import { ArtistRow, artistIdsToEnrich, setState, upsertArtists } from "../db";
+import { artistIdsToEnrich, setState, upsertArtists } from "../db";
 import { spotifyGet } from "../spotify/api";
 import { Account, CollectorResult, Env, TransientError, nowIso } from "../types";
 
@@ -16,20 +16,33 @@ import { Account, CollectorResult, Env, TransientError, nowIso } from "../types"
  * history, and it is not on the critical path: it never pings the watchdog, and
  * a run that fails costs nothing but a stale genre breakdown.
  *
- * `GET /v1/artists` is public catalogue data — it needs a valid token but no
- * user scope, so enabling this never forces a reconnection.
+ * `GET /v1/artists/{id}` is public catalogue data — it needs a valid token but
+ * no user scope, so enabling this never forces a reconnection.
+ *
+ * ONE REQUEST PER ARTIST, and that is not a choice: the bulk "Get Several
+ * Artists" endpoint (`GET /v1/artists?ids=`, 50 ids a call) was removed for
+ * Development Mode apps in Spotify's February 2026 Web API change (existing apps
+ * migrated on 2026-03-09). From then on every run of the old code failed on its
+ * first request and wrote nothing. The single-artist endpoint survives and
+ * still carries `genres`; `popularity` and `followers` were stripped by the same
+ * change, so those columns now stay NULL for anything fetched after it.
  */
 
-// Spotify's own cap on the ids parameter.
-const CHUNK = 50;
 /**
  * Per-run budget, in the spirit of the liked backfill: one run must not
  * monopolise the app-wide rate limit that 'played' — the collector that
- * actually guards the history — depends on. 20 × 50 = 1000 artists per run, so
- * a first-time library of a few thousand artists is covered within days, and
- * the steady state (a handful of new artists a day) in a single run.
+ * actually guards the history — depends on. 100 lookups paced at PACE_MS take
+ * about a minute; the scheduler reruns hourly while a backlog remains, so a
+ * first-time library of a few thousand artists drains in a day or two and the
+ * steady state (a handful of new artists a day) fits in a single run.
  */
-const MAX_REQUESTS_PER_RUN = 20;
+const MAX_REQUESTS_PER_RUN = 100;
+/**
+ * Pause between two lookups: ~75 requests per 30 s rolling window at most.
+ * Spotify does not publish the Development Mode limit; this is a conservative
+ * guess, and a 429 still ends the run with its cooldown persisted (api.ts).
+ */
+const PACE_MS = 400;
 
 interface SpotifyArtist {
   id?: string;
@@ -39,10 +52,14 @@ interface SpotifyArtist {
   followers?: { total?: number };
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export async function collectArtists(env: Env, account: Account): Promise<CollectorResult> {
   // One extra id beyond the budget: its presence is how we know a backlog
   // remains, without a second counting query over the whole history.
-  const budget = CHUNK * MAX_REQUESTS_PER_RUN;
+  const budget = MAX_REQUESTS_PER_RUN;
   const pending = artistIdsToEnrich(env, account.id, budget + 1);
   const more = pending.length > budget;
   const ids = pending.slice(0, budget);
@@ -56,12 +73,15 @@ export async function collectArtists(env: Env, account: Account): Promise<Collec
   let token = await getAccessToken(env, account);
   let written = 0;
 
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const batch = ids.slice(i, i + CHUNK);
-    const url = `https://api.spotify.com/v1/artists?ids=${batch.join(",")}`;
+  for (let i = 0; i < ids.length; i++) {
+    if (i > 0) await sleep(PACE_MS);
+    const id = ids[i];
+    const url = `https://api.spotify.com/v1/artists/${encodeURIComponent(id)}`;
 
     // spotifyGet handles network/5xx (bounded retry), 429 (persisted cooldown +
-    // throw) and writes raw_spotify on every attempt (I3).
+    // throw) and writes raw_spotify on every attempt (I3). Each artist is
+    // written as soon as it is answered, so a 429 halfway through keeps what
+    // the run already paid for.
     let r = await spotifyGet(env, account.id, "artists", url, token);
     if (r.status === 401) {
       token = await getAccessToken(env, account);
@@ -72,29 +92,30 @@ export async function collectArtists(env: Env, account: Account): Promise<Collec
       setState(env, account.id, "artists.backlog", "1");
       return { status: "partial", fetched: i, inserted: written, note: `spotify ${r.status}` };
     }
-    if (r.status < 200 || r.status >= 300) {
+
+    let a: SpotifyArtist | null = null;
+    if (r.status === 404 || r.status === 400) {
+      // A deleted or malformed id. It still gets a row (name NULL marks the
+      // case): without that placeholder the id stays "not fetched yet" forever
+      // and every future run re-requests it — a backlog that can never drain.
+      a = null;
+    } else if (r.status < 200 || r.status >= 300) {
+      // 403 included: the endpoint refused outright, and every remaining
+      // artist would get the same answer — stop instead of burning the window.
       throw new TransientError(`unexpected ${r.status}: ${r.bodyText.slice(0, 200)}`);
+    } else {
+      a = JSON.parse(r.bodyText) as SpotifyArtist;
     }
 
-    const returned = (JSON.parse(r.bodyText).artists ?? []) as (SpotifyArtist | null)[];
-    const byId = new Map<string, SpotifyArtist>();
-    for (const a of returned) if (a?.id) byId.set(a.id, a);
-
-    // Every id asked for gets a row, including the ones Spotify answered `null`
-    // for (a deleted or region-locked artist). Without that placeholder the id
-    // stays "not fetched yet" forever and every future run re-requests it —
-    // a backlog that can never drain. `name` NULL is what marks the case.
-    const rows: ArtistRow[] = batch.map((id) => {
-      const a = byId.get(id);
-      return {
+    written += upsertArtists(env, [
+      {
         id,
         name: a?.name ?? null,
-        genres: a?.genres ?? [],
+        genres: Array.isArray(a?.genres) ? a.genres : [],
         popularity: a?.popularity ?? null,
         followers: a?.followers?.total ?? null,
-      };
-    });
-    written += upsertArtists(env, rows);
+      },
+    ]);
   }
 
   setState(env, account.id, "artists.last_success_at", nowIso());
