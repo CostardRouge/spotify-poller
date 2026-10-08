@@ -35,9 +35,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Pinned to the same exact version as the Dockerfiles, on purpose: with a
+      # floating `24` this job resolved to 24.21.0 and aborted in the seed step
+      # (better-sqlite3, "Assertion failed: (env) != nullptr", nodejs/node#63642)
+      # on every run since at least 2026-10-02. Bump it together with the
+      # Dockerfiles, once that issue is fixed in the target release.
       - uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: 24.18.0
           cache: npm
 
       - name: Install dependencies
