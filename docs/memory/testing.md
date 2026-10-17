@@ -10,9 +10,9 @@ Stated plainly because it is the thing an agent is most likely to assume wrong: 
 
 Next 16 removed it, so ESLint is invoked directly (`npm run lint` → `eslint .`) with a flat config that spreads `eslint-config-next` (`eslint.config.mjs`). The `ignores` block there also covers `site/` and `showcase/`, which are output and hand-written static HTML respectively.
 
-## The only merge-gating CI is the image build (2026-08-20)
+## No CI job checks the code before a merge (2026-08-20, rev. 2026-10-17)
 
-`.github/workflows/docker-build.yml` runs on push to `main` and builds/pushes the GHCR image; `.github/workflows/pages.yml` builds the showcase. Both run **after** merge, not on pull requests — nothing blocks a merge, so a lint or type error reaches `main` and is only caught when the Docker build fails at `npm run build`. **Inferred from the two workflow files and the absence of any other; unconfirmed with the maintainer** whether that is deliberate.
+`.github/workflows/docker-build.yml` runs on push to `main` and builds/pushes the GHCR image; `.github/workflows/pages.yml` builds the showcase. Both run **after** merge, not on pull requests. On a pull request only bookkeeping runs: `registry.yml`'s `check` (the Registry block) and, since 2026-10-17, `release.yml`'s `check` (`node .github/release.mjs check`: `CHANGELOG.md` against `package.json`'s version) — nothing checks the code before a merge, so a lint or type error reaches `main` and is only caught when the Docker build fails at `npm run build`. **Inferred from the two workflow files and the absence of any other; unconfirmed with the maintainer** whether that is deliberate.
 
 ## The showcase runs the real app against fixture data (2026-08-20)
 
