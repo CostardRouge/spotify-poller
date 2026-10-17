@@ -178,7 +178,7 @@ export default function SettingsDialog({ info }: { info: ServerInfo }) {
               sub={info.authMode === "proxy" ? "A reverse proxy authenticates requests." : "JWT session unlocked by ADMIN_TOKEN."}
             />
             <InfoRow tone={null} label="Timezone" value={info.timezone} sub="Display only; every timestamp is stored in UTC." />
-            <InfoRow tone={null} label="Version" value={info.version} sub="manifest.json" />
+            <InfoRow tone={null} label="Version" value={info.version} sub="package.json — what each release brought is in CHANGELOG.md." />
           </div>
         </div>
 

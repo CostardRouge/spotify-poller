@@ -3,7 +3,7 @@ import { eventCountsByAccount, gapCountsByAccount, getActiveAccountId, listAccou
 import { schedulerEnabled } from "@/lib/server/scheduler";
 import { authStatus } from "@/lib/server/spotify/auth";
 import { getRateLimit } from "@/lib/server/spotify/api";
-import manifest from "@/manifest.json";
+import { VERSION } from "@/lib/version";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import CommandPalette from "@/components/CommandPalette";
@@ -52,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           backupKeep: env.BACKUP_KEEP,
           watchdogConfigured: !!env.WATCHDOG_URL,
           ntfyConfigured: !!env.NTFY_URL,
-          version: manifest.version,
+          version: VERSION,
         }}
       />
     </div>
