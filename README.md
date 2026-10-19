@@ -391,7 +391,7 @@ Full rationale, restore procedures and off-site advice: `docs/backup.md`.
 ### Prerequisites
 
 ```bash
-node --version   # Node 20.9+ (Next.js 16 minimum)
+node --version   # Node 22+ (`engines`); the container and CI run 24.18.0 (`.nvmrc`)
 sudo apt install -y build-essential python3   # better-sqlite3 compiles at install time
 ```
 
