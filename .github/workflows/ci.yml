@@ -1,0 +1,49 @@
+name: CI
+
+# The pull request gate (COMMON-PROJECT-SPEC, C15): exactly what CLAUDE.md calls
+# the gate, run on every pull request and on every push to main. Until
+# 2026-10-19 nothing checked the code before a merge — a lint or type error
+# reached main and was caught only when docker-build.yml failed at
+# `npm run build`, after the fact.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Cancel superseded runs on pull requests; never interrupt a run on main.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, build
+    # Named rather than ubuntu-latest, which moves to Ubuntu 26 from 2026-10-19.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      # .nvmrc holds the exact 24.18.0 the Dockerfiles pin, on purpose: a floating
+      # `24` resolves to a release that aborts better-sqlite3 at exit
+      # (nodejs/node#63642, CLAUDE.md "Other rules"), and this job loads it.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
