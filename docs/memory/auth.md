@@ -12,7 +12,7 @@ In proxy mode the reverse proxy authenticates (Cloudflare Access, Traefik…) an
 
 ## One gate for pages and API, in `proxy.ts` (2026-08-20)
 
-`proxy.ts` gates everything except a short, individually justified `PUBLIC_PATHS` list: `/login`, `/api/auth/login`, `/api/health` (what the Docker HEALTHCHECK hits), and the two Spotify callback paths. Unauthenticated API requests get `401` JSON; unauthenticated pages redirect to `/login?next=…`. **Why one gate**: a page and the route handlers it calls can never disagree about who is signed in. **How to apply**: adding a public path means editing that list and writing down why.
+`proxy.ts` gates everything except a short, individually justified `PUBLIC_PATHS` list: `/login`, `/api/auth/login`, `/api/health` (what the Docker HEALTHCHECK hits), and the two Spotify callback paths. Unauthenticated API requests get `401` JSON; unauthenticated pages redirect to `/login?next=…`. **Why one gate**: a page and the route handlers it calls can never disagree about who is signed in. **How to apply**: adding a public path means editing that list and writing down why. **The matcher leaves out the static assets a browser fetches with no session** (2026-10-19): `/icons/*` and `/manifest.webmanifest`, beside Next's own `_next/static` and `_next/image`. A manifest is fetched without the session cookie and a phone asks for the touch icon before anyone has signed in, so behind the gate both came back as a redirect to `/login` — an installed app with no icon, and a manifest Chrome refused. They reveal nothing but a drawing and a name the public repository already shows; nothing else leaves the gate this way.
 
 ## The Spotify callback is public but not unprotected (2026-08-20)
 

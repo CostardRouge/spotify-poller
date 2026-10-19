@@ -10,6 +10,11 @@ major number comes from.
 
 ## [Unreleased]
 
+### Added
+
+- Icons for a phone's home screen and a web app manifest: the dashboard installs as an app on iOS and Android, with its
+  own icon instead of a screenshot of the login page.
+
 ## [2.2.1] - 2026-10-17 — Andante
 
 The first numbered release: the poller as it runs in the Home Lab today.

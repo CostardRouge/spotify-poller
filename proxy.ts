@@ -9,8 +9,14 @@ import { isAuthorized } from "./lib/auth/session";
  *
  * Left open, deliberately: /login (the sign-in form itself), /api/auth/login
  * (what the form posts to), /api/health (what the Docker HEALTHCHECK hits —
- * public, minimal, see app/api/health/route.ts), Next internals and static
- * assets.
+ * public, minimal, see app/api/health/route.ts), Next internals, and the
+ * static assets a browser fetches with no session — the icon set and the web
+ * manifest (/icons/*, /manifest.webmanifest, through the matcher below). A
+ * manifest is fetched without the session cookie and a phone asks for the
+ * touch icon before anyone has signed in, so behind the gate they came back as
+ * a redirect to /login: an installed app with no icon, and a manifest Chrome
+ * refused. They reveal nothing but a drawing and a name the public repository
+ * already shows.
  */
 // /auth/callback is the legacy alias of /api/spotify/callback — same handler,
 // kept public for Spotify's redirect (protected by the state cookie instead).
@@ -34,5 +40,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest).*)"],
 };

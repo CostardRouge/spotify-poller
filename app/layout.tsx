@@ -12,7 +12,22 @@ export const metadata: Metadata = {
   },
   description,
   applicationName: title,
-  icons: { icon: "/favicon.svg" },
+  // The whole icon set, not a favicon (COMMON-PROJECT-SPEC, C11): iOS builds a
+  // home-screen icon from apple-touch-icon alone and ignores rel="icon"
+  // whatever its type; Android reads the manifest. public/icons/ holds the
+  // sources and the PNGs scripts/gen-icons.mjs rasterises from them.
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // The label under the icon on an iOS home screen; the manifest's short_name
+  // is its Android twin. Twelve characters or so before the launcher cuts it.
+  appleWebApp: { title: "Poller" },
 };
 
 export const viewport: Viewport = {
