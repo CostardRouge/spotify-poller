@@ -504,6 +504,10 @@ screenshots with Playwright (`scripts/showcase-screenshots.mjs`) and deploys
 `showcase/index.html` to GitHub Pages on every push to `main`. One-time repo
 setup: **Settings → Pages → Source: "GitHub Actions"**.
 
+## Licence
+
+[MIT](LICENSE). Reuse it, fork it, run it on your own box.
+
 ## Out of scope (unchanged, §14 of the spec)
 
 Correlation, photos, GPX, audio analysis, GDPR export import, `raw_spotify`

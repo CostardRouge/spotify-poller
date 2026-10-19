@@ -3,6 +3,7 @@
   "version": "2.2.1",
   "private": true,
   "description": "Continuously and unattended, collects the listening history (and likes) of a personal Spotify account into a local SQLite database.",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },
