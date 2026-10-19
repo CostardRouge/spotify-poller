@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   verify:
-    name: Lint, typecheck, build
+    name: Lint, typecheck, test, build
     # Named rather than ubuntu-latest, which moves to Ubuntu 26 from 2026-10-19.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -44,6 +44,12 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      # Node's own runner through tsx (tests/**/*.test.ts): pure server logic
+      # and one suite on an in-memory SQLite database — no network, no file
+      # outside a temp directory.
+      - name: Unit tests
+        run: npm test
 
       - name: Build
         run: npm run build

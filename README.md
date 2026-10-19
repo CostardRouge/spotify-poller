@@ -449,6 +449,13 @@ is caught up as soon as the machine comes back.
 
 ## Acceptance tests
 
+Unit tests first: `npm test` runs Node's own test runner through `tsx` over
+`tests/` — pure server logic (query parsing, the local-clock arithmetic, the
+backup rotation, the Listening filter) and the insert invariant on an
+in-memory SQLite database with the migrations applied. CI runs it with lint,
+typecheck and build on every pull request. The round-trips below check what
+those cannot: a real account, a real run, a real file.
+
 ```bash
 # Idempotence (I2): replay 'played' twice in a row (through the dashboard's
 # session cookie, or curl -b/-c against /api/auth/login)

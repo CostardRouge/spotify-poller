@@ -56,7 +56,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 
 ## Open items (dated; remove when done)
 
-- 2026-08-20 (rev. 2026-10-19) — **No automated test suite exists.** Since 2026-10-19 `ci.yml` gates `lint`, `typecheck` and `build` on every pull request (`testing.md`), but no runner exists, so a regression in the collectors' logic still passes the gate. Whether to add one is the maintainer's call.
+- 2026-10-19 — **The test suite is young, and CI gates it**: `npm test` (Node's runner through `tsx`) runs five files over pure `lib/server` logic and one in-memory SQLite suite, and `ci.yml` runs it with lint, typecheck and build on every pull request (`testing.md`). The collectors' HTTP paths, the scheduler, the auth gate and every page have no test: grow the suite with each bug fix, and add a coverage threshold (C15 recommends one) once there is a suite worth measuring.
 - 2026-08-20 — The seven empirical questions in `docs/findings.md` are all still unanswered (every **Result** field empty). Test 2 (offline listening — do timestamps reflect the listen or the sync?) constrains everything built on top of the data; test 1 (is `played_at` the start or the end?) is why playback sessions are kept out of `events`. Only the maintainer can run them: they need a real account and a real phone.
 - 2026-08-20 — `.idea/` was untracked in commit `1931dfc` of this branch, although the maintainer had committed it deliberately in `916662a`. The files are untouched on disk. If sharing IDE project structure across machines was the intent, revert that and drop `.idea/` from `.gitignore` — the maintainer's call, not an agent's.
 

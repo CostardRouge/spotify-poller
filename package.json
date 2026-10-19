@@ -12,6 +12,7 @@
     "start": "next start -H ${API_HOST:-127.0.0.1} -p ${API_PORT:-3000}",
     "lint": "eslint .",
     "typecheck": "node ./node_modules/typescript7/bin/tsc --noEmit",
+    "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "migrate": "tsx scripts/migrate.ts",
     "run:played": "tsx scripts/run-once.ts played",
     "run:liked": "tsx scripts/run-once.ts liked",
