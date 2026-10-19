@@ -502,7 +502,9 @@ batches).
 (`scripts/seed-demo.ts` — no real Spotify account involved), captures real
 screenshots with Playwright (`scripts/showcase-screenshots.mjs`) and deploys
 `showcase/index.html` to GitHub Pages on every push to `main`. One-time repo
-setup: **Settings → Pages → Source: "GitHub Actions"**.
+setup: **Settings → Pages → Source: "GitHub Actions"**. The page carries its
+own legal notice (publisher, host, and that it loads no tracker), a canonical
+address and link-preview tags pointing at the dashboard screenshot.
 
 ## Licence
 

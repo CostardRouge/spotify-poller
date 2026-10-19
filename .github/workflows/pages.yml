@@ -74,11 +74,13 @@ jobs:
         env:
           BASE_URL: http://127.0.0.1:3000
 
+      # The page's icons are the app's own set (public/icons, C11), copied
+      # whole so the showcase's head links resolve under /spotify-poller/.
       - name: Assemble site
         run: |
           mkdir -p site
           cp showcase/index.html site/
-          cp public/favicon.svg site/
+          cp -r public/icons site/icons
 
       - name: Show server log (debug aid)
         if: always()
