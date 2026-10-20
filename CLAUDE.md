@@ -4,8 +4,9 @@ Agents read this file at the start of every session. These rules override the ag
 
 ## Context
 
-- Self-hosted Spotify listening-history collector: **Next.js 16** (App Router) + **React 19** + **Tailwind CSS 4** on **better-sqlite3**, TypeScript strict, run under Node ≥ 20.9 and pinned to **24.18.0** in both Dockerfiles. Deploys as a single container — image built and pushed to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by the Home Lab stack (`docker-compose.prod.yml`); a GitHub Pages showcase is built by `.github/workflows/pages.yml`. Package manager: **npm** — the lockfile is `package-lock.json`.
-- Verification commands that actually exist: `npm run build` (`next build`), `npm run lint` (ESLint flat config, invoked directly — `next lint` was removed in Next 16), `npm run typecheck` (`tsc --noEmit`). **There is no automated test suite**: the acceptance checks are the curl round-trips in `README.md`, run by hand. Operational scripts run through `tsx` without a build step: `npm run migrate`, `run:played`, `run:liked`, `run:artists`, `backup`, `export`, `import`, `seed:demo`. `make help` lists the Docker equivalents. `node .github/release.mjs check` checks `CHANGELOG.md` against `package.json`'s version (CI runs it on every pull request, rule 4).
+- Self-hosted Spotify listening-history collector: **Next.js 16** (App Router) + **React 19** + **Tailwind CSS 4** on **better-sqlite3**, TypeScript strict. **TypeScript 7 runs the type check** (`npm run typecheck` calls `node_modules/typescript7/bin/tsc` by path) while `typescript` is aliased to the TypeScript 6 compatibility package, because typescript-eslint (through `eslint-config-next`) and `next build` still need the JavaScript compiler API that 7 dropped — drop the alias the day they read 7, never "fix" it meanwhile. Node: `engines` states the floor (≥ 22; Node 20 left support on 2026-04-30) and the code actually runs on **24.18.0**, pinned exactly in `.nvmrc` (what CI's `setup-node` reads), in both Dockerfiles and in the showcase workflow. The pin is held back on purpose (Other rules): a floating `24` resolves to a release that crashes better-sqlite3, which is why `.nvmrc` carries the exact version and not the major the portfolio standard suggests. Dependabot (`.github/dependabot.yml`) raises npm packages, actions and Docker images weekly, except the `node` image, which it is told to leave alone. Deploys as a single container — image built and pushed to GHCR by `.github/workflows/docker-build.yml` on every push to `main`, pulled by the Home Lab stack (`docker-compose.prod.yml`); a GitHub Pages showcase is built by `.github/workflows/pages.yml`. Package manager: **npm** — the lockfile is `package-lock.json`.
+- Verification commands that actually exist: `npm run lint` (ESLint flat config, invoked directly — `next lint` was removed in Next 16), `npm run typecheck` (TypeScript 7's `tsc --noEmit`, by path), `npm test` (Node's own runner through the `tsx` already installed, `tests/**/*.test.ts`: pure `lib/server` logic and one suite on an in-memory SQLite database — no network, no file outside a temp directory), `npm run build` (`next build`). **That is the gate, and `.github/workflows/ci.yml` runs it on every pull request and every push to `main`** (since 2026-10-19, on the Node of `.nvmrc`; `docker-build.yml` and `pages.yml` still run after the merge only). **The unit tests are young** — a handful of files over `lib/server` — so the acceptance checks remain the curl round-trips in `README.md`, run by hand, and a bug fix in `lib/server` ships with a test that fails without it. Operational scripts run through `tsx` without a build step: `npm run migrate`, `run:played`, `run:liked`, `run:artists`, `backup`, `export`, `import`, `seed:demo`. `make help` lists the Docker equivalents. `node .github/release.mjs check` checks `CHANGELOG.md` against `package.json`'s version (CI runs it on every pull request, rule 4).
+- **This repository is PUBLIC** (measured 2026-10-19). So rule 3's public-repo restriction applies: a Registry block carries only `Project:`, ticked boxes and one `Log:` line — never a `Last point:` nor an open box. `registry.yml` reads the visibility itself, so nothing here needs changing if the repo goes private.
 - Several agent sessions may run **in parallel** on this repo. Git history must stay readable: **one commit = one task**.
 - **Local sessions: never `git push`** — the developer tests locally and pushes himself. **Cloud / web sessions (ephemeral container): push the working branch and open a pull request**, it is the only way the code gets out. Never push to `main` either way.
 
@@ -22,7 +23,7 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
    - If one file holds changes from this task AND another, prefer `git add -p <file>` to stage only the relevant hunks. If inextricable, stage the whole file and say so in the commit body ("also contains …").
    - Never stage: `.env` and any secret file, `.idea/`, `.vscode/`, `.next/`, `data/`, `backups/`, `site/`, `tsconfig.tsbuildinfo`, `node_modules/`, `.DS_Store` — unless the task is explicitly about them. A `.db` snapshot or an `.ndjson` export carries the Spotify refresh token in clear and is as sensitive as `.env`; it never goes near the index. If one of these turns out to be *tracked*, say so: it must be untracked and gitignored, not carefully avoided at every commit.
    - Check with `git diff --cached --stat` before committing.
-3. **Commit with a readable message** (format below). Always use a HEREDOC to keep title + body:
+3. **Commit with a readable message** (format below). Always use a HEREDOC to keep title + body, and end it with the attribution trailer(s) your harness asks for:
 
    ```bash
    git commit -m "$(cat <<'EOF'
@@ -31,12 +32,12 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
    Why this change, what it does concretely, non-obvious decisions.
    One line per idea. Mention the files/areas touched if useful.
 
-   Co-Authored-By: <model name> <noreply@anthropic.com>
+   Co-Authored-By: …
    EOF
    )"
    ```
 
-4. Do not push (local sessions). End the reply with a recap: short hash + commit title + the list of files that were modified but deliberately left uncommitted, if any, so the user knows where every change comes from.
+4. **Push only from a cloud session** (see Context). End the reply with a recap: short hash + commit title + the list of files that were modified but deliberately left uncommitted, if any, so the user knows where every change comes from.
 5. If a git hook changes or refuses something: read the output, fix, recommit. Never `--no-verify`.
 
 ### Commit message format
@@ -48,7 +49,7 @@ As soon as a task requested by the user is finished (feature, fix, refactor, con
 
 ### When is a task "finished"?
 
-- The requested code is written and verified — `npm run lint` and `npm run typecheck` green, `npm run build` when the change touches the app, or a visual check in the browser if it is rendering. There is no test suite to lean on: verification is those three commands plus, for collector or database work, the round-trips in `README.md` (idempotence, export/import, account isolation).
+- The requested code is written and verified — `npm run lint`, `npm run typecheck` and `npm test` green, `npm run build` when the change touches the app (that is exactly what `ci.yml` gates), or a visual check in the browser if it is rendering. The test suite is small: verification is those four commands plus, for collector or database work, the round-trips in `README.md` (idempotence, export/import, account isolation) — and a test beside the fix when the logic is pure.
 - A plain question, an exploration or an explanation produces no commit (nothing to commit).
 
 ## Rule 2 — Project memory in `MEMORY.md` + `docs/memory/` (MANDATORY)
@@ -186,6 +187,6 @@ changed the port and the sign-in.
 
 ## Related files
 
-- `AGENTS.md`: points to this file for tools that do not read `CLAUDE.md`.
+- `AGENTS.md`: a symlink to this file, for tools that do not read `CLAUDE.md`.
 - `MEMORY.md` + `docs/memory/`: project long-term memory (rule 2).
 - `CHANGELOG.md`: what each release brought (rule 4); `.github/release.mjs` + `.github/workflows/release.yml` tag and publish it.

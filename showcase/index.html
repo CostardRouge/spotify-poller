@@ -4,8 +4,31 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>spotify-poller — showcase</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml" />
-<meta name="description" content="Custody report for a personal Spotify listening history — Next.js, Tailwind, SQLite." />
+<meta name="description" content="Custody report for a personal Spotify listening history — a self-hosted collector on Next.js, Tailwind and SQLite, shown on screenshots of its real interface over fixture data." />
+<link rel="canonical" href="https://costardrouge.github.io/spotify-poller/" />
+<!-- The icon set (COMMON-PROJECT-SPEC, C11), copied from public/icons by pages.yml; relative, the page lives under /spotify-poller/. -->
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+<link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8faf9" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b211d" />
+<!-- Link previews: the dashboard screenshot pages.yml captures (2880 × 1800, a 1440 × 900 viewport at 2×). -->
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="spotify-poller" />
+<meta property="og:title" content="spotify-poller — a custody report for a Spotify listening history" />
+<meta property="og:description" content="Self-hosted collector of a personal Spotify listening history: proves collection is running, surfaces gaps, lets the operator browse and export. Screenshots of the real interface over fixture data." />
+<meta property="og:url" content="https://costardrouge.github.io/spotify-poller/" />
+<meta property="og:image" content="https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png" />
+<meta property="og:image:width" content="2880" />
+<meta property="og:image:height" content="1800" />
+<meta property="og:image:alt" content="The dashboard: collector freshness at a glance, with the run buttons." />
+<meta property="og:locale" content="en_US" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="spotify-poller — a custody report for a Spotify listening history" />
+<meta name="twitter:description" content="Self-hosted collector of a personal Spotify listening history: proves collection is running, surfaces gaps, lets the operator browse and export." />
+<meta name="twitter:image" content="https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png" />
+<meta name="twitter:image:alt" content="The dashboard: collector freshness at a glance, with the run buttons." />
 <style>
   :root {
     --bg: oklch(0.985 0.003 160); --panel: oklch(1 0 0); --panel-2: oklch(0.966 0.004 160);
@@ -39,6 +62,11 @@
   figure { margin: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
   figure img { display: block; width: 100%; height: auto; }
   figcaption { padding: 10px 14px; font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); }
+  .legal { max-width: 880px; margin: 24px auto 0; padding: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
+  .legal h2 { color: var(--text); font-size: 1.15rem; font-weight: 600; margin: 0 0 12px; }
+  .legal h3 { color: var(--text); font-size: 0.95rem; font-weight: 600; margin: 20px 0 6px; }
+  .legal p { margin: 0 0 8px; max-width: 70ch; }
+  .legal a { color: var(--accent); }
   footer { max-width: 880px; margin: 0 auto; padding: 24px; color: var(--muted); font-size: 0.85rem; }
   footer a { color: var(--accent); }
 </style>
@@ -54,6 +82,7 @@
     <div class="links">
       <a class="primary" href="https://github.com/CostardRouge/spotify-poller">Source on GitHub</a>
       <a href="https://github.com/CostardRouge/spotify-poller#readme">README</a>
+      <a href="https://github.com/CostardRouge/spotify-poller/blob/main/CHANGELOG.md">Releases</a>
     </div>
   </header>
   <main>
@@ -68,9 +97,21 @@
       <figure><img src="screenshots/runs.png" alt="Run log" loading="lazy" /><figcaption>Runs — the full collector run log, status and errors included.</figcaption></figure>
     </div>
   </main>
+  <section class="legal" id="legal" aria-labelledby="legal-title">
+    <h2 id="legal-title">Legal notice</h2>
+    <h3>Publisher</h3>
+    <p>This page is published by <b>Steeve Pommier</b>, a private individual, on a non-commercial basis: it is free, shows no ads and sells nothing. As a non-professional publisher, the identification details required by French law (Loi pour la confiance dans l’économie numérique, art. 6-III) are kept with the host named below. Contact: through <a href="https://github.com/CostardRouge/spotify-poller">the repository on GitHub</a>.</p>
+    <h3>Hosting</h3>
+    <p><b>costardrouge.github.io/spotify-poller</b> is served by GitHub Pages: GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, United States, <a href="https://github.com">github.com</a>. Like any host, GitHub processes your IP address to deliver the page; see <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a>.</p>
+    <h3>What this page knows about you</h3>
+    <p>Nothing. It loads no tracker, no analytics script and no third-party resource, sets no cookie and stores nothing in your browser; nobody counts your visit. The screenshots show the application over fixture data generated in its build pipeline — no real Spotify account and no real listening history were involved.</p>
+    <p>The application itself is self-hosted by whoever installs it, on their own machine, and keeps their own data there: this page does not run it and holds none of it.</p>
+    <h3>Licence</h3>
+    <p>spotify-poller is free software: its <a href="https://github.com/CostardRouge/spotify-poller">source code</a> is published under the <a href="https://github.com/CostardRouge/spotify-poller/blob/main/LICENSE">MIT licence</a>. Spotify is a trademark of Spotify AB; this project is not affiliated with it.</p>
+  </section>
   <footer>
     Screenshots generated from seeded fixture data in CI — no real Spotify account involved.
-    <a href="https://github.com/CostardRouge/spotify-poller">costardrouge/spotify-poller</a>
+    <a href="https://github.com/CostardRouge/spotify-poller">costardrouge/spotify-poller</a> · <a href="#legal">Legal notice</a>
   </footer>
 </body>
 </html>

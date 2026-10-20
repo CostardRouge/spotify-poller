@@ -35,14 +35,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Pinned to the same exact version as the Dockerfiles, on purpose: with a
-      # floating `24` this job resolved to 24.21.0 and aborted in the seed step
-      # (better-sqlite3, "Assertion failed: (env) != nullptr", nodejs/node#63642)
-      # on every run since at least 2026-10-02. Bump it together with the
-      # Dockerfiles, once that issue is fixed in the target release.
+      # .nvmrc holds the same exact version as the Dockerfiles (24.18.0), on
+      # purpose: with a floating `24` this job resolved to 24.21.0 and aborted
+      # in the seed step (better-sqlite3, "Assertion failed: (env) != nullptr",
+      # nodejs/node#63642) on every run since at least 2026-10-02. Raise .nvmrc
+      # together with the Dockerfiles, once that issue is fixed in the target
+      # release; this job and ci.yml follow it.
       - uses: actions/setup-node@v5
         with:
-          node-version: 24.18.0
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
@@ -73,11 +74,13 @@ jobs:
         env:
           BASE_URL: http://127.0.0.1:3000
 
+      # The page's icons are the app's own set (public/icons, C11), copied
+      # whole so the showcase's head links resolve under /spotify-poller/.
       - name: Assemble site
         run: |
           mkdir -p site
           cp showcase/index.html site/
-          cp public/favicon.svg site/
+          cp -r public/icons site/icons
 
       - name: Show server log (debug aid)
         if: always()

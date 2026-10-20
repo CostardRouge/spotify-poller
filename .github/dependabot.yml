@@ -1,0 +1,38 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    ignore:
+      # Keep Node type definitions in step with the Node.js version in .nvmrc.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+    groups:
+      dev-dependencies:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    ignore:
+      # The Node base image is held at 24.18.0 on purpose: 24.19.0 and later
+      # crash better-sqlite3 at random (nodejs/node#63642 — CLAUDE.md, Other
+      # rules). A bot raising it would ship that crash to production again.
+      # It is raised by hand, .nvmrc and both Dockerfiles together, once the
+      # issue is fixed in the target release.
+      - dependency-name: node

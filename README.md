@@ -391,7 +391,7 @@ Full rationale, restore procedures and off-site advice: `docs/backup.md`.
 ### Prerequisites
 
 ```bash
-node --version   # Node 20.9+ (Next.js 16 minimum)
+node --version   # Node 22+ (`engines`); the container and CI run 24.18.0 (`.nvmrc`)
 sudo apt install -y build-essential python3   # better-sqlite3 compiles at install time
 ```
 
@@ -449,6 +449,13 @@ is caught up as soon as the machine comes back.
 
 ## Acceptance tests
 
+Unit tests first: `npm test` runs Node's own test runner through `tsx` over
+`tests/` — pure server logic (query parsing, the local-clock arithmetic, the
+backup rotation, the Listening filter) and the insert invariant on an
+in-memory SQLite database with the migrations applied. CI runs it with lint,
+typecheck and build on every pull request. The round-trips below check what
+those cannot: a real account, a real run, a real file.
+
 ```bash
 # Idempotence (I2): replay 'played' twice in a row (through the dashboard's
 # session cookie, or curl -b/-c against /api/auth/login)
@@ -495,7 +502,13 @@ batches).
 (`scripts/seed-demo.ts` — no real Spotify account involved), captures real
 screenshots with Playwright (`scripts/showcase-screenshots.mjs`) and deploys
 `showcase/index.html` to GitHub Pages on every push to `main`. One-time repo
-setup: **Settings → Pages → Source: "GitHub Actions"**.
+setup: **Settings → Pages → Source: "GitHub Actions"**. The page carries its
+own legal notice (publisher, host, and that it loads no tracker), a canonical
+address and link-preview tags pointing at the dashboard screenshot.
+
+## Licence
+
+[MIT](LICENSE). Reuse it, fork it, run it on your own box.
 
 ## Out of scope (unchanged, §14 of the spec)
 
