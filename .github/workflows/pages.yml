@@ -33,7 +33,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # .nvmrc holds the same exact version as the Dockerfiles (24.18.0), on
       # purpose: with a floating `24` this job resolved to 24.21.0 and aborted
@@ -41,7 +41,7 @@ jobs:
       # nodejs/node#63642) on every run since at least 2026-10-02. Raise .nvmrc
       # together with the Dockerfiles, once that issue is fixed in the target
       # release; this job and ci.yml follow it.
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
