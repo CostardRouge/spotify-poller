@@ -1,25 +1,61 @@
+# Dependabot, the portfolio's shape (COMMON-PROJECT-SPEC.md, C20), trimmed
+# to what this repository has: one package.json at the root, two Dockerfiles
+# at the root, GitHub Actions. No docker-compose block: the only image a
+# compose file names is this repository's own (ghcr.io/…:latest).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
+      interval: monthly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 3
+    groups:
+      # Families that only work in step: a major moves the whole family.
+      # Listed first, since a dependency goes to the first group it matches —
+      # which is also why `next` comes before `eslint`: eslint-config-next
+      # matches both and must move with Next.
+      react:
+        patterns: ['react', 'react-dom', '@types/react', '@types/react-dom']
+        update-types: [major]
+      next:
+        patterns: ['next', 'eslint-config-next', '@next/*']
+        update-types: [major]
+      eslint:
+        patterns: ['eslint', '@eslint/*', 'typescript-eslint', '@typescript-eslint/*', 'eslint-plugin-*', 'eslint-config-*']
+        update-types: [major]
+      tailwind:
+        patterns: ['tailwindcss', '@tailwindcss/*']
+        update-types: [major]
+      # Every minor and patch, production and development together:
+      # one pull request a month. react and react-dom pin each other's exact
+      # version as a peer, so a minor of one alone fails `npm ci` — here they
+      # always travel together.
+      minor-and-patch:
+        update-types: [minor, patch]
+      security:
+        applies-to: security-updates
+        patterns: ['*']
     ignore:
-      # Keep Node type definitions in step with the Node.js version in .nvmrc.
+      # Node's type definitions follow .nvmrc's major (C14).
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
-    groups:
-      dev-dependencies:
-        dependency-type: development
-        update-types: [minor, patch]
+      # ESLint 10 cannot run under eslint-config-next 16: measured here on
+      # 2026-10-21, eslint 10.13.0 aborts every file with "scopeManager.
+      # addGlobals is not a function" (the plugins and parser Next bundles
+      # predate it). Lift this when an eslint-config-next release declares
+      # eslint 10 in its peer range — docs/memory/deployment.md.
+      - dependency-name: 'eslint'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ['*']
@@ -27,12 +63,14 @@ updates:
   - package-ecosystem: docker
     directory: /
     schedule:
-      interval: weekly
-      day: monday
+      interval: monthly
+    cooldown:
+      default-days: 7
     ignore:
-      # The Node base image is held at 24.18.0 on purpose: 24.19.0 and later
-      # crash better-sqlite3 at random (nodejs/node#63642 — CLAUDE.md, Other
-      # rules). A bot raising it would ship that crash to production again.
-      # It is raised by hand, .nvmrc and both Dockerfiles together, once the
-      # issue is fixed in the target release.
-      - dependency-name: node
+      # Held outright, not only across a major: 24.19.0 and later abort
+      # better-sqlite3 at random (nodejs/node#63642 — CLAUDE.md, Other rules),
+      # so even a bot's patch bump would ship that crash to production again.
+      # The image is raised by hand, with .nvmrc and both Dockerfiles together,
+      # once that issue is fixed in the target release; a new major also
+      # brings CI and @types/node in the same PR (C14).
+      - dependency-name: 'node'
