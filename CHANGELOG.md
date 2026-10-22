@@ -10,6 +10,8 @@ major number comes from.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-10-22 — Andantino
+
 ### Added
 
 - Icons for a phone's home screen and a web app manifest: the dashboard installs as an app on iOS and Android, with its
