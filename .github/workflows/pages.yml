@@ -76,10 +76,14 @@ jobs:
 
       # The page's icons are the app's own set (public/icons, C11), copied
       # whole so the showcase's head links resolve under /spotify-poller/.
+      # llms.txt (C17, the llmstxt.org format) sits beside the page at the
+      # site's root, linked from nothing: crawlers look for it there.
+      # tests/llms.test.ts holds it to index.html and to this step.
       - name: Assemble site
         run: |
           mkdir -p site
           cp showcase/index.html site/
+          cp showcase/llms.txt site/
           cp -r public/icons site/icons
 
       - name: Show server log (debug aid)
