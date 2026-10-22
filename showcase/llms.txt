@@ -1,0 +1,19 @@
+# spotify-poller
+
+> A self-hosted collector that keeps a personal Spotify listening history (plays and likes) in a local SQLite database, with a dashboard that serves as its custody report.
+
+Spotify's API only exposes the last 50 played tracks, so any period not collected in time is lost for good. spotify-poller collects them continuously and unattended, declares the gaps it could not fill rather than letting an empty day read as silence, and lets its one operator browse, filter and export what was collected. The dashboard is built to tell healthy from degraded in under two seconds, from a phone. Stack: Next.js 16 (App Router), React 19, Tailwind CSS 4, better-sqlite3, JWT sessions; it ships as a Docker image for a home lab, with a bare-metal systemd alternative. Collection is proven alive by an external watchdog heartbeat; actionable events go out through ntfy. Free software under the MIT licence; not affiliated with Spotify.
+
+## Showcase
+
+- [Showcase](https://costardrouge.github.io/spotify-poller/): screenshots of the real interface (sign-in, dashboard, events, payload inspector, listening statistics, stats, accounts, run log), taken in CI over fixture data, with no real Spotify account involved
+- [Legal notice](https://costardrouge.github.io/spotify-poller/#legal): who publishes the showcase, who hosts it (GitHub Pages), and that it loads no tracker and measures nothing
+- [Dashboard screenshot](https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png): collector freshness at a glance, with the manual run buttons
+
+## Source
+
+- [Repository](https://github.com/CostardRouge/spotify-poller): the source code
+- [README](https://github.com/CostardRouge/spotify-poller#readme): stack, collectors, deployment (Docker, systemd), dashboard, endpoints, authentication, notifications, backup and export
+- [Product](https://github.com/CostardRouge/spotify-poller/blob/main/PRODUCT.md): who it is for, what it is for, its tone (instrument, honest, quiet) and its design principles
+- [Changelog](https://github.com/CostardRouge/spotify-poller/blob/main/CHANGELOG.md): what each release brought
+- [Licence](https://github.com/CostardRouge/spotify-poller/blob/main/LICENSE): MIT

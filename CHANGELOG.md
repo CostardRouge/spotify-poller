@@ -16,6 +16,8 @@ major number comes from.
   own icon instead of a screenshot of the login page.
 - The showcase page on GitHub Pages carries a legal notice (who publishes it, who hosts it, and that nothing is
   measured), a canonical address and link-preview tags, and the app's icons.
+- The showcase publishes an `llms.txt` at its root: a plain-text summary of what spotify-poller is, with links to the
+  showcase, its legal notice and the repository, for language models and the tools built on them.
 
 ## [2.2.1] - 2026-10-17 — Andante
 
