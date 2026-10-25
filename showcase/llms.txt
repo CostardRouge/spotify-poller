@@ -7,7 +7,7 @@ Spotify's API only exposes the last 50 played tracks, so any period not collecte
 ## Showcase
 
 - [Showcase](https://costardrouge.github.io/spotify-poller/): screenshots of the real interface (sign-in, dashboard, events, payload inspector, listening statistics, stats, accounts, run log), taken in CI over fixture data, with no real Spotify account involved
-- [Legal notice](https://costardrouge.github.io/spotify-poller/#legal): who publishes the showcase, who hosts it (GitHub Pages), and that it loads no tracker and measures nothing
+- [Legal notice](https://costardrouge.github.io/spotify-poller/#legal): who publishes the showcase, who hosts it (GitHub Pages), and how visits are counted: the publisher's self-hosted Umami at insight.steevepommier.com, cookie-free, no personal data, declined by Do Not Track, Global Privacy Control or a switch on the notice
 - [Dashboard screenshot](https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png): collector freshness at a glance, with the manual run buttons
 
 ## Source
