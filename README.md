@@ -503,8 +503,19 @@ batches).
 screenshots with Playwright (`scripts/showcase-screenshots.mjs`) and deploys
 `showcase/index.html` to GitHub Pages on every push to `main`. One-time repo
 setup: **Settings → Pages → Source: "GitHub Actions"**. The page carries its
-own legal notice (publisher, host, and that it loads no tracker), a canonical
-address and link-preview tags pointing at the dashboard screenshot.
+own legal notice (publisher, host, audience measurement), a canonical address
+and link-preview tags pointing at the dashboard screenshot.
+
+**The showcase is measured; the app is not.** Its visits are counted with the
+owner's self-hosted Umami (`insight.steevepommier.com`): no cookie, no event,
+no personal data, the IP not stored, counted only on `costardrouge.github.io`.
+A small loader in the page's `<head>` loads nothing for a visitor who sends Do
+Not Track or Global Privacy Control, or who pressed the switch in the legal
+notice (it sets Umami's own `umami.disabled` key in `localStorage`). The
+website id lives once, in that loader (`WEBSITE_ID`, public, not a secret):
+empty it to turn measurement off entirely. `tests/showcase-audience.test.ts`
+holds the loader and the notice to each other. The dashboard behind its login
+loads no tracker.
 
 ## Licence
 

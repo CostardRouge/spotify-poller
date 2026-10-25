@@ -29,6 +29,41 @@
 <meta name="twitter:description" content="Self-hosted collector of a personal Spotify listening history: proves collection is running, surfaces gaps, lets the operator browse and export." />
 <meta name="twitter:image" content="https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png" />
 <meta name="twitter:image:alt" content="The dashboard: collector freshness at a glance, with the run buttons." />
+<!--
+  Audience measurement (2026-10-25): the owner's self-hosted Umami at insight.steevepommier.com, cookie-free, no event,
+  automatic page views only (one static page, every view a full load). The website id below is the ONE place it lives:
+  it is public, not a secret, and an empty value is the kill switch (no tag, nothing sent). Nothing loads for a visitor
+  who sends Do Not Track or Global Privacy Control, or who switched counting off in the legal notice (Umami's own
+  `umami.disabled` key in localStorage); the tag also asks the tracker to honour Do Not Track itself, and to count only
+  on costardrouge.github.io, so a local preview never counts. /insight, not /script.js: filter lists block that path.
+  tests/showcase-audience.test.ts holds this loader and the notice to each other.
+-->
+<script data-umami-loader>
+  (() => {
+    const WEBSITE_ID = "01ad0e3e-34af-4318-aede-894518182361";
+    const SRC = "https://insight.steevepommier.com/insight";
+    const DOMAINS = "costardrouge.github.io";
+    if (!WEBSITE_ID) return;
+    const nav = navigator;
+    const dnt = [window.doNotTrack, nav.doNotTrack, nav.msDoNotTrack].some((v) => v === 1 || v === "1" || v === "yes");
+    if (dnt || nav.globalPrivacyControl === true) return;
+    try {
+      if (window.localStorage.getItem("umami.disabled")) return;
+    } catch {
+      // storage refused (private mode, blocked site data): the tracker cannot read the opt-out either; DNT still holds
+    }
+    const s = document.createElement("script");
+    s.defer = true;
+    s.src = SRC;
+    s.setAttribute("data-umami", "audience");
+    s.setAttribute("data-website-id", WEBSITE_ID);
+    s.setAttribute("data-domains", DOMAINS);
+    s.setAttribute("data-do-not-track", "true");
+    s.setAttribute("data-exclude-search", "true");
+    s.setAttribute("data-exclude-hash", "true");
+    document.head.appendChild(s);
+  })();
+</script>
 <style>
   :root {
     --bg: oklch(0.985 0.003 160); --panel: oklch(1 0 0); --panel-2: oklch(0.966 0.004 160);
@@ -67,6 +102,14 @@
   .legal h3 { color: var(--text); font-size: 0.95rem; font-weight: 600; margin: 20px 0 6px; }
   .legal p { margin: 0 0 8px; max-width: 70ch; }
   .legal a { color: var(--accent); }
+  .legal code { font-size: 0.9em; }
+  .switch { border: 1px solid var(--line); border-radius: 6px; background: var(--panel); padding: 12px 14px; margin: 12px 0; max-width: 70ch; }
+  .switch p { margin: 0 0 8px; }
+  .switch button {
+    font: inherit; font-size: 0.9rem; padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    background: var(--accent); color: var(--on-accent); border: 1px solid var(--accent);
+  }
+  .switch button[hidden] { display: none; }
   footer { max-width: 880px; margin: 0 auto; padding: 24px; color: var(--muted); font-size: 0.85rem; }
   footer a { color: var(--accent); }
 </style>
@@ -103,15 +146,61 @@
     <p>This page is published by <b>Steeve Pommier</b>, a private individual, on a non-commercial basis: it is free, shows no ads and sells nothing. As a non-professional publisher, the identification details required by French law (Loi pour la confiance dans l’économie numérique, art. 6-III) are kept with the host named below. Contact: through <a href="https://github.com/CostardRouge/spotify-poller">the repository on GitHub</a>.</p>
     <h3>Hosting</h3>
     <p><b>costardrouge.github.io/spotify-poller</b> is served by GitHub Pages: GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, United States, <a href="https://github.com">github.com</a>. Like any host, GitHub processes your IP address to deliver the page; see <a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">GitHub’s privacy statement</a>.</p>
-    <h3>What this page knows about you</h3>
-    <p>Nothing. It loads no tracker, no analytics script and no third-party resource, sets no cookie and stores nothing in your browser; nobody counts your visit. The screenshots show the application over fixture data generated in its build pipeline — no real Spotify account and no real listening history were involved.</p>
-    <p>The application itself is self-hosted by whoever installs it, on their own machine, and keeps their own data there: this page does not run it and holds none of it.</p>
+    <h3>Audience measurement</h3>
+    <p>Visits are counted with <a href="https://umami.is">Umami</a>, self-hosted by the publisher at <code>insight.steevepommier.com</code>: the data is gathered there and nowhere else, no third party receives it, and none of it is used for advertising.</p>
+    <p><b>What is collected</b>, for each view of this page: the page viewed (its path alone, without query string or fragment), the referrer (the site you came from), your browser, your operating system, your device type and screen size, your browser’s language, and your country, derived from your IP address. No event is sent: nothing you do on the page is reported.</p>
+    <p><b>What never is</b>: no cookie is set, no personal data is collected, your IP address is not stored, and nothing can follow you from one site to another.</p>
+    <p><b>How to decline</b>: if your browser sends <i>Do Not Track</i> or <i>Global Privacy Control</i>, or if you switch counting off below, the counter is not even loaded and nothing is sent. The switch keeps your choice in this browser, under the key <code>umami.disabled</code>. Visits are only counted on <code>costardrouge.github.io</code>.</p>
+    <div class="switch" id="audience-switch">
+      <p id="audience-state">Without JavaScript, this page cannot tell whether your visits are counted; the counter does not run without it either.</p>
+      <button type="button" id="audience-toggle" hidden></button>
+    </div>
+    <h3>What else this page knows about you</h3>
+    <p>Nothing. It loads no other script and no other third-party resource, and stores nothing in your browser but the switch above. The screenshots show the application over fixture data generated in its build pipeline — no real Spotify account and no real listening history were involved.</p>
+    <p>The application itself is self-hosted by whoever installs it, on their own machine, and keeps their own data there: this page does not run it, holds none of it, and the application measures nothing.</p>
     <h3>Licence</h3>
     <p>spotify-poller is free software: its <a href="https://github.com/CostardRouge/spotify-poller">source code</a> is published under the <a href="https://github.com/CostardRouge/spotify-poller/blob/main/LICENSE">MIT licence</a>. Spotify is a trademark of Spotify AB; this project is not affiliated with it.</p>
   </section>
   <footer>
     Screenshots generated from seeded fixture data in CI — no real Spotify account involved.
-    <a href="https://github.com/CostardRouge/spotify-poller">costardrouge/spotify-poller</a> · <a href="#legal">Legal notice</a>
+    <a href="https://github.com/CostardRouge/spotify-poller">costardrouge/spotify-poller</a> · <a href="#legal">Legal notice</a> · visits counted anonymously, <a href="#audience-switch">can be declined</a>
   </footer>
+  <script data-umami-switch>
+    // The counting switch. Umami's tracker skips every send while localStorage holds "umami.disabled" (its own opt-out
+    // key), and the loader in <head> does not even load it then; the checks below mirror the loader's.
+    (() => {
+      const KEY = "umami.disabled";
+      const DOMAINS = ["costardrouge.github.io"];
+      const state = document.getElementById("audience-state");
+      const toggle = document.getElementById("audience-toggle");
+      const storage = (() => { try { return window.localStorage; } catch { return null; } })();
+      const dnt = [window.doNotTrack, navigator.doNotTrack, navigator.msDoNotTrack].some((v) => v === 1 || v === "1" || v === "yes");
+      const gpc = navigator.globalPrivacyControl === true;
+      const render = () => {
+        toggle.hidden = true;
+        if (dnt || gpc) {
+          state.textContent = "Your browser asks not to be tracked: the counter is not loaded and your visits are not counted.";
+        } else if (!storage) {
+          state.textContent = "This browser keeps no site data, so the switch cannot be kept: send Do Not Track or Global Privacy Control to stop counting.";
+        } else if (storage.getItem(KEY)) {
+          state.textContent = "Your visits are not counted in this browser.";
+          toggle.textContent = "Count my visits again";
+          toggle.hidden = false;
+        } else {
+          state.textContent = DOMAINS.includes(location.hostname)
+            ? "Your visits are counted, anonymously, in this browser."
+            : "This copy of the page does not count visits; the switch still keeps your choice.";
+          toggle.textContent = "Stop counting my visits";
+          toggle.hidden = false;
+        }
+      };
+      toggle.addEventListener("click", () => {
+        if (storage.getItem(KEY)) storage.removeItem(KEY);
+        else storage.setItem(KEY, "1");
+        render();
+      });
+      render();
+    })();
+  </script>
 </body>
 </html>

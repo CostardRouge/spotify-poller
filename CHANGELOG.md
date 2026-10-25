@@ -10,6 +10,12 @@ major number comes from.
 
 ## [Unreleased]
 
+### Added
+
+- The showcase page counts its visits anonymously with the publisher's self-hosted Umami: no cookie, no personal data.
+  Do Not Track and Global Privacy Control are honoured, and a switch in its legal notice turns counting off. The app
+  itself still measures nothing.
+
 ## [2.3.0] - 2026-10-22 — Andantino
 
 ### Added
