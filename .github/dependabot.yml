@@ -29,7 +29,18 @@ updates:
       tailwind:
         patterns: ['tailwindcss', '@tailwindcss/*']
         update-types: [major]
-      # Every minor and patch, production and development together:
+      # The tools that ARE the gate (linter, type checker) get a pull request
+      # of their own: their minors add rules and reformat files with nothing
+      # that ships touched (Biome 2.6 turned four repos red on 2026-11-01), so
+      # they never hold the month's runtime updates back. Trimmed to what this
+      # repo has: ESLint, and TypeScript's two names (`typescript` is the
+      # @typescript/typescript6 alias, `typescript7` the real 7).
+      # eslint-config-next is not here: it releases with `next`, so it stays
+      # in minor-and-patch.
+      tooling:
+        patterns: ['typescript', 'typescript7', '@typescript/*', 'eslint']
+        update-types: [minor, patch]
+      # Every other minor and patch, production and development together:
       # one pull request a month. react and react-dom pin each other's exact
       # version as a peer, so a minor of one alone fails `npm ci` — here they
       # always travel together.
