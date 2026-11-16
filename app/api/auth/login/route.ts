@@ -12,6 +12,10 @@ function safeEqual(a: string, b: string): boolean {
 /** Checks ADMIN_TOKEN and, on a match, mints a signed session cookie. */
 export async function POST(req: NextRequest) {
   const env = getEnv();
+  // With Sésame, the token door is shut: only /api/auth/sesame opens a session.
+  if (env.AUTH_MODE === "sesame") {
+    return NextResponse.json({ error: "sign in through Sésame" }, { status: 404 });
+  }
   if (!env.ADMIN_TOKEN) {
     return NextResponse.json({ error: "ADMIN_TOKEN is not configured on the server" }, { status: 500 });
   }

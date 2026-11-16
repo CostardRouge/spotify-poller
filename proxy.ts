@@ -20,7 +20,9 @@ import { isAuthorized } from "./lib/auth/session";
  */
 // /auth/callback is the legacy alias of /api/spotify/callback — same handler,
 // kept public for Spotify's redirect (protected by the state cookie instead).
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/health", "/api/spotify/callback", "/auth/callback"];
+// /api/auth/sesame is the round trip to Sésame (AUTH_MODE=sesame): its login
+// starts there, and its callback is protected by its signed flow cookie.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/sesame", "/api/health", "/api/spotify/callback", "/auth/callback"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;

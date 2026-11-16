@@ -13,7 +13,7 @@ import Database from "better-sqlite3";
  */
 export const GLOBAL_SCOPE = "";
 
-export type AuthMode = "token" | "proxy";
+export type AuthMode = "token" | "proxy" | "sesame";
 
 export interface Env {
   DB: Database.Database;
@@ -34,10 +34,13 @@ export interface Env {
    * because a dead poller sends nothing.
    */
   WATCHDOG_URL?: string;
-  /** Empty string is legal in proxy mode — see AUTH_MODE. */
+  /** Empty string is legal in proxy and sesame modes — see AUTH_MODE. */
   ADMIN_TOKEN: string;
   /**
    * 'token' (default): every admin route requires ADMIN_TOKEN.
+   * 'sesame': Sésame (the owner's identity provider, OpenID Connect) opens
+   * the session instead of the token; SESAME_ISSUER, SESAME_CLIENT_ID and
+   * SESAME_CLIENT_SECRET are required, ADMIN_TOKEN is not used.
    * 'proxy': the reverse proxy (Cloudflare Access, Traefik…) is the
    * authenticator. Pair it with PROXY_AUTH_HEADER so a request reaching the
    * origin directly — bypassing the proxy — is still rejected.
@@ -187,8 +190,12 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     return v;
   };
   const rawMode = process.env.AUTH_MODE ?? "token";
-  if (rawMode !== "token" && rawMode !== "proxy") {
-    throw new Error(`invalid AUTH_MODE: ${rawMode} (expected 'token' or 'proxy')`);
+  if (rawMode !== "token" && rawMode !== "proxy" && rawMode !== "sesame") {
+    throw new Error(`invalid AUTH_MODE: ${rawMode} (expected 'token', 'proxy' or 'sesame')`);
+  }
+  if (rawMode === "sesame") {
+    // Sésame opens the session JWT_SECRET signs: all four, or no sign-in at all.
+    for (const k of ["SESAME_ISSUER", "SESAME_CLIENT_ID", "SESAME_CLIENT_SECRET", "JWT_SECRET"]) need(k);
   }
 
   const timezone = process.env.TIMEZONE ?? "UTC";
@@ -208,8 +215,9 @@ export function loadEnvFromProcess(db: Database.Database): Env {
     SPOTIFY_REDIRECT_URI: process.env.SPOTIFY_REDIRECT_URI,
     WATCHDOG_URL: process.env.WATCHDOG_URL,
     // In proxy mode the token becomes optional: the proxy authenticates. It is
-    // still honoured when set, which keeps curl working locally.
-    ADMIN_TOKEN: rawMode === "proxy" ? (process.env.ADMIN_TOKEN ?? "") : need("ADMIN_TOKEN"),
+    // still honoured when set, which keeps curl working locally. In sesame
+    // mode it is not used at all: /api/auth/login refuses every token.
+    ADMIN_TOKEN: rawMode === "token" ? need("ADMIN_TOKEN") : (process.env.ADMIN_TOKEN ?? ""),
     AUTH_MODE: rawMode,
     PROXY_AUTH_HEADER: process.env.PROXY_AUTH_HEADER,
     NTFY_URL: process.env.NTFY_URL,

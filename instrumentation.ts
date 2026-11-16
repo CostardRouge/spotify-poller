@@ -44,6 +44,10 @@ export async function register() {
 /** Refuses to start silently wide open — a misconfiguration must be visible. */
 function warnAboutExposure(env: { AUTH_MODE: string; PROXY_AUTH_HEADER?: string }): void {
   if (env.AUTH_MODE === "token") return;
+  if (env.AUTH_MODE === "sesame") {
+    console.log("[auth] sesame mode — Sésame opens the session, ADMIN_TOKEN is not used");
+    return;
+  }
   if (env.PROXY_AUTH_HEADER) {
     console.log(`[auth] proxy mode — requiring header '${env.PROXY_AUTH_HEADER}' on admin routes`);
     return;

@@ -42,7 +42,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - Scheduling runs **inside** the long-running container (`SCHEDULE_ENABLED=1`); host cron, an Ofelia container and host systemd timers were all considered and rejected — `deployment.md`, long form in `docs/scheduling.md`.
 - The Node base image is pinned to an exact version because a floating tag shipped a native-addon regression into production — `deployment.md`.
 - The healthcheck is deliberately slack-tuned: for a single-instance origin, eviction from the proxy *is* the outage — `deployment.md`.
-- Two secrets, not one: `ADMIN_TOKEN` unlocks the session, `JWT_SECRET` signs it — `auth.md`.
+- Two secrets, not one: `ADMIN_TOKEN` unlocks the session, `JWT_SECRET` signs it — `auth.md`. Since 2026-11-16 `AUTH_MODE=sesame` lets the owner's Sésame (OpenID Connect) open that same session instead, with no token — `auth.md`.
 - `/api/health` is liveness-only because it was once public *and* informative; detail moved to the gated `/api/status` — `observability.md`.
 - Only the external watchdog can detect silence; ntfy and the Docker healthcheck structurally cannot — `observability.md`.
 - The OKLCH design tokens were carried over verbatim from the pre-Next.js UI; the migration was meant to change the framework, not the design — `frontend.md`.
