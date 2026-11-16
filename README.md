@@ -217,7 +217,9 @@ Around the pages, the app shell carries the rest of the operator surface:
   operator action stays reachable on a 360 px screen (PRODUCT.md).
 
 `AUTH_MODE=token` (default): sign in once at `/login` with `ADMIN_TOKEN`; a
-signed JWT cookie (`JWT_SECRET`) carries the session for 30 days. Behind an
+signed JWT cookie (`JWT_SECRET`) carries the session for 30 days.
+`AUTH_MODE=sesame`: « Sign in with Sésame » (the owner's OpenID Connect
+provider) opens the same session, and no token exists. Behind an
 authenticating reverse proxy, set `AUTH_MODE=proxy` and the sign-in screen is
 skipped — see **Authentication** below.
 
@@ -326,6 +328,12 @@ JWT session cookie (`JWT_SECRET`, HS256, 30-day expiry) then gates every page
 and admin route (`proxy.ts`). Deliberately two separate secrets: `ADMIN_TOKEN`
 is the login password, `JWT_SECRET` signs the session it unlocks — a leaked
 cookie must not also leak (or let you derive) the password.
+
+`AUTH_MODE=sesame` — « Sign in with Sésame » on `/login`: the owner's OpenID
+Connect provider (`costardrouge/sesame`) opens the same JWT session, and no
+`ADMIN_TOKEN` exists. Set `SESAME_ISSUER`, `SESAME_CLIENT_ID` and
+`SESAME_CLIENT_SECRET` from the app `spotify-poller` in Sésame, whose redirect
+is `<this origin>/api/auth/sesame/callback`; who may sign in is decided there.
 
 `AUTH_MODE=proxy` — your reverse proxy authenticates (Cloudflare Access,
 Traefik basic auth…) and the sign-in screen is skipped entirely. Set

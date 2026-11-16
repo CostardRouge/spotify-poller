@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "./jwt";
 
-export type AuthMode = "token" | "proxy";
+export type AuthMode = "token" | "proxy" | "sesame";
 
 export function authMode(): AuthMode {
-  return process.env.AUTH_MODE === "proxy" ? "proxy" : "token";
+  const mode = process.env.AUTH_MODE;
+  return mode === "proxy" || mode === "sesame" ? mode : "token";
 }
 
 /**
@@ -13,6 +14,8 @@ export function authMode(): AuthMode {
  *
  *  - 'token' (default): a valid `sp_session` JWT cookie, minted by
  *    /api/auth/login after checking ADMIN_TOKEN.
+ *  - 'sesame': the same cookie, minted by /api/auth/sesame/callback after a
+ *    round trip to Sésame (lib/auth/sesame.ts); no token at all.
  *  - 'proxy': the reverse proxy authenticates (Cloudflare Access, Traefik…).
  *    PROXY_AUTH_HEADER must be present so a request that reaches the origin
  *    directly — bypassing the proxy — is still rejected; without it, every

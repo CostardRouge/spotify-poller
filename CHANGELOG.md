@@ -12,6 +12,9 @@ major number comes from.
 
 ### Added
 
+- Sign in with Sésame (`AUTH_MODE=sesame`): the login page offers your Sésame account — one passkey for every app —
+  instead of the admin token, which is then no longer needed. Who may sign in is decided in Sésame.
+
 - The showcase page counts its visits anonymously with the publisher's self-hosted Umami: no cookie, no personal data.
   Do Not Track and Global Privacy Control are honoured, and a switch in its legal notice turns counting off. The app
   itself still measures nothing.
