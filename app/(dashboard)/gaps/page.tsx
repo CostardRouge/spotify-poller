@@ -23,7 +23,7 @@ export default async function GapsPage({
     <div>
       <div className="panel">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="records w-full text-left text-sm">
             <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
               <tr>
                 <th className="px-3 py-2">#</th>
@@ -37,20 +37,20 @@ export default async function GapsPage({
             <tbody>
               {items.map((g) => (
                 <tr key={g.id} className="border-t border-[color:var(--line)]">
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                  <td data-label="Gap" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                     #{g.id}
                   </td>
-                  <td className="px-3 py-2 font-[family-name:var(--mono)]">{g.collector}</td>
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
+                  <td data-label="Collector" className="px-3 py-2 font-[family-name:var(--mono)]">{g.collector}</td>
+                  <td data-label="From" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
                     {formatTimestamp(g.from_utc, env.TIMEZONE)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
+                  <td data-label="To" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
                     {formatTimestamp(g.to_utc, env.TIMEZONE)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                  <td data-label="Detected" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                     {formatTimestamp(g.detected_at, env.TIMEZONE)}
                   </td>
-                  <td className="px-3 py-2 text-[color:var(--ink-2)]">{g.note}</td>
+                  <td data-label="Note" className="rec-wide px-3 py-2 text-[color:var(--ink-2)]">{g.note}</td>
                 </tr>
               ))}
               {items.length === 0 && (

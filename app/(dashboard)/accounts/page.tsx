@@ -31,7 +31,7 @@ export default function AccountsPage() {
 
       <div className="panel mt-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="records w-full text-left text-sm">
             <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
               <tr>
                 <th className="px-3 py-2">Account</th>
@@ -53,21 +53,21 @@ export default function AccountsPage() {
                       <div className="text-[color:var(--ink)]">{a.display_name ?? a.id}</div>
                       <div className="font-[family-name:var(--mono)] text-xs text-[color:var(--ink-3)]">{a.id}</div>
                     </td>
-                    <td className="px-3 py-2">{(counts[a.id] ?? 0).toLocaleString()}</td>
-                    <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                    <td data-label="Events" className="px-3 py-2">{(counts[a.id] ?? 0).toLocaleString()}</td>
+                    <td data-label="Connected" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                       {formatTimestamp(a.connected_at, env.TIMEZONE)}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                    <td data-label="Last seen" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                       {a.last_seen_at ? formatTimestamp(a.last_seen_at, env.TIMEZONE) : "—"}
                     </td>
-                    <td className="px-3 py-2">
+                    <td data-label="Status" className="px-3 py-2">
                       <span className="flex items-center gap-1.5">
                         <span aria-hidden className={`dot ${bad ? "bad" : "ok"}`} />
                         {a.status}
                       </span>
                       {isActive && <span className="block text-xs text-[color:var(--ink-2)]">collected</span>}
                     </td>
-                    <td className="px-3 py-2">
+                    <td data-label="Scope" className="px-3 py-2">
                       {a.scope_state === "ok" && <StatusPill tone="ok">ok</StatusPill>}
                       {a.scope_state === "missing" && (
                         <StatusPill tone="warn">missing {a.scopes_missing.join(", ")}</StatusPill>

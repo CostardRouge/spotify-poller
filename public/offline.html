@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8faf9" />
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b211d" />
+<title>Cannot reach the poller · spotify-poller</title>
+<!--
+  Served by public/sw.js when a page load gets no response at all. Self-contained on purpose: when this
+  shows, nothing else from the server can be fetched — no stylesheet, no font, no icon. The tokens are
+  app/globals.css's, copied. It must never claim a state: unreachable from this phone is not "down".
+  Changing this file means bumping VERSION in public/sw.js.
+-->
+<style>
+  :root {
+    --bg: oklch(0.985 0.003 160); --surface: oklch(1 0 0); --line: oklch(0.905 0.006 160);
+    --line-strong: oklch(0.825 0.008 160); --ink: oklch(0.22 0.012 160); --ink-2: oklch(0.44 0.012 160);
+    --warn: oklch(0.56 0.120 75); --warn-soft: oklch(0.960 0.045 85); --focus: oklch(0.55 0.150 240);
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: oklch(0.168 0.008 162); --surface: oklch(0.208 0.009 162); --line: oklch(0.300 0.012 162);
+      --line-strong: oklch(0.400 0.014 162); --ink: oklch(0.960 0.005 162); --ink-2: oklch(0.760 0.011 162);
+      --warn: oklch(0.820 0.135 85); --warn-soft: oklch(0.300 0.045 80); --focus: oklch(0.780 0.120 240);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: center;
+    padding: max(1.5rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      max(1.5rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    background: var(--bg); color: var(--ink);
+    font: 0.9375rem/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    width: 100%; max-width: 26rem; padding: 1.25rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem;
+    border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--line)); border-radius: 999px;
+    background: var(--warn-soft); font-size: 0.75rem; font-weight: 500;
+  }
+  .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--warn); }
+  h1 { margin: 0.9rem 0 0.4rem; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; }
+  p { margin: 0 0 0.75rem; color: var(--ink-2); text-wrap: pretty; }
+  button {
+    margin-top: 0.25rem; padding: 0.55rem 0.9rem; min-height: 2.75rem;
+    background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 9px;
+    font: inherit; font-weight: 500; cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <span class="chip"><span class="dot" aria-hidden="true"></span>Unreachable</span>
+  <h1>Cannot reach the poller</h1>
+  <p>This device got no answer from the server: no network, the VPN off, or the server itself down.</p>
+  <p>That says nothing about collection. The poller runs on its own and may well be collecting right now; only the watchdog can tell a silent poller from an unreachable one.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+</main>
+</body>
+</html>

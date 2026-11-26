@@ -41,7 +41,7 @@ export default async function RunsPage({
 
       <div className="panel mt-4">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="records w-full text-left text-sm">
             <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
               <tr>
                 <th className="px-3 py-2">#</th>
@@ -58,23 +58,23 @@ export default async function RunsPage({
             <tbody>
               {items.map((r) => (
                 <tr key={r.id} className="border-t border-[color:var(--line)]">
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                  <td data-label="Run" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                     #{r.id}
                   </td>
-                  <td className="px-3 py-2 font-[family-name:var(--mono)]">{r.collector}</td>
-                  <td className="px-3 py-2 text-[color:var(--ink-2)]">{r.trigger_kind}</td>
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
+                  <td data-label="Collector" className="px-3 py-2 font-[family-name:var(--mono)]">{r.collector}</td>
+                  <td data-label="Trigger" className="px-3 py-2 text-[color:var(--ink-2)]">{r.trigger_kind}</td>
+                  <td data-label="Started" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)]">
                     {formatTimestamp(r.started_at, env.TIMEZONE)}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                  <td data-label="Finished" className="whitespace-nowrap px-3 py-2 font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                     {r.finished_at ? formatTimestamp(r.finished_at, env.TIMEZONE) : "—"}
                   </td>
-                  <td className="px-3 py-2">
+                  <td data-label="Status" className="px-3 py-2">
                     {r.status ? <StatusPill tone={TONE[r.status]}>{r.status}</StatusPill> : "never finished"}
                   </td>
-                  <td className="px-3 py-2">{r.items_fetched}</td>
-                  <td className="px-3 py-2">{r.items_inserted}</td>
-                  <td className="max-w-xs truncate px-3 py-2 text-[color:var(--ink-2)]" title={r.error ?? ""}>
+                  <td data-label="Fetched" className="px-3 py-2">{r.items_fetched}</td>
+                  <td data-label="New" className="px-3 py-2">{r.items_inserted}</td>
+                  <td data-label="Error" className="rec-wide max-w-xs truncate px-3 py-2 text-[color:var(--ink-2)]" title={r.error ?? ""}>
                     {r.error ?? ""}
                   </td>
                 </tr>

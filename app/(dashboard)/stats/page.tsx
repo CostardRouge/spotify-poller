@@ -58,7 +58,7 @@ export default async function StatsPage({
 
       <h2 className="mt-8 text-sm font-medium text-[color:var(--text)]">Last 20 runs</h2>
       <div className="mt-2 overflow-x-auto rounded-lg border border-[color:var(--line)]">
-        <table className="w-full text-left text-sm">
+        <table className="records w-full text-left text-sm">
           <thead className="bg-[color:var(--panel-2)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
             <tr>
               <th className="px-3 py-2">Started</th>
@@ -73,17 +73,17 @@ export default async function StatsPage({
           <tbody>
             {runs.map((r, i) => (
               <tr key={`${r.started_at}-${i}`} className="border-t border-[color:var(--line-soft)]">
-                <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">
+                <td data-label="Started" className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">
                   {formatTimestamp(r.started_at, env.TIMEZONE)}
                 </td>
-                <td className="px-3 py-2">{r.collector}</td>
-                <td className="px-3 py-2 text-[color:var(--muted)]">{r.trigger_kind}</td>
-                <td className="px-3 py-2">
+                <td data-label="Collector" className="px-3 py-2">{r.collector}</td>
+                <td data-label="Trigger" className="px-3 py-2 text-[color:var(--muted)]">{r.trigger_kind}</td>
+                <td data-label="Status" className="px-3 py-2">
                   <StatusPill tone={TONE[r.status]}>{r.status}</StatusPill>
                 </td>
-                <td className="px-3 py-2">{r.items_fetched}</td>
-                <td className="px-3 py-2">{r.items_inserted}</td>
-                <td className="max-w-xs truncate px-3 py-2 text-[color:var(--muted)]" title={r.error ?? ""}>
+                <td data-label="Fetched" className="px-3 py-2">{r.items_fetched}</td>
+                <td data-label="Inserted" className="px-3 py-2">{r.items_inserted}</td>
+                <td data-label="Note" className="rec-wide max-w-xs truncate px-3 py-2 text-[color:var(--muted)]" title={r.error ?? ""}>
                   {r.error ?? ""}
                 </td>
               </tr>

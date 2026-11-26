@@ -145,7 +145,7 @@ export default async function OverviewPage({
           </Link>
         </header>
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="records w-full text-left text-sm">
             <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
               <tr>
                 <th className="px-3 py-2">Started</th>
@@ -162,14 +162,14 @@ export default async function OverviewPage({
                     {formatTimestamp(r.started_at, tz)}
                     <span className="block text-xs text-[color:var(--ink-2)]">{relativeFromNow(r.started_at)}</span>
                   </td>
-                  <td className="px-3 py-2 font-[family-name:var(--mono)]">
+                  <td data-label="Collector" className="px-3 py-2 font-[family-name:var(--mono)]">
                     {r.collector} <span className="text-[color:var(--ink-2)]">{r.trigger_kind}</span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td data-label="Status" className="px-3 py-2">
                     <StatusPill tone={RUN_TONE[r.status]}>{r.status}</StatusPill>
                   </td>
-                  <td className="px-3 py-2">{r.items_fetched}</td>
-                  <td className="px-3 py-2">{r.items_inserted}</td>
+                  <td data-label="Fetched" className="px-3 py-2">{r.items_fetched}</td>
+                  <td data-label="New" className="px-3 py-2">{r.items_inserted}</td>
                 </tr>
               ))}
               {recentRuns.length === 0 && (

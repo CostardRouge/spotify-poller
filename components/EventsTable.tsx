@@ -55,7 +55,7 @@ export default function EventsTable({
   return (
     <>
       <div className="overflow-x-auto rounded-lg border border-[color:var(--line)]">
-        <table className="w-full text-left text-sm">
+        <table className="records w-full text-left text-sm">
           <thead className="bg-[color:var(--panel-2)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
             <tr>
               <th className="px-3 py-2">When ({timezone})</th>
@@ -69,12 +69,13 @@ export default function EventsTable({
           <tbody>
             {items.map((ev) => (
               <tr key={ev.id} className="border-t border-[color:var(--line-soft)]">
-                <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{ev.when}</td>
-                <td className="px-3 py-2">{ev.type}</td>
+                <td data-label={`When (${timezone})`} className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{ev.when}</td>
+                <td data-label="Type" className="px-3 py-2">{ev.type}</td>
+                {/* On a phone the title and artist need no label: they read as the record's headline. */}
                 <td className="px-3 py-2 text-[color:var(--text)]">{ev.title}</td>
                 <td className="px-3 py-2 text-[color:var(--muted)]">{ev.subtitle}</td>
-                <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{formatDuration(ev.duration_s)}</td>
-                <td className="px-3 py-2 text-right">
+                <td data-label="Duration" className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">{formatDuration(ev.duration_s)}</td>
+                <td className="rec-act px-3 py-2 text-right">
                   <button type="button" onClick={() => open(ev)} className="btn sm">
                     Payload
                   </button>

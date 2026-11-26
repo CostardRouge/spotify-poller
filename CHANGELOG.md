@@ -19,6 +19,27 @@ major number comes from.
   Do Not Track and Global Privacy Control are honoured, and a switch in its legal notice turns counting off. The app
   itself still measures nothing.
 
+- The installed app opens on a "Cannot reach the poller" page when the phone gets no answer from the server, instead
+  of a blank screen. It says only that the server is unreachable, never whether collection is running, and the app
+  still keeps no copy of its pages: you never see an old "Healthy" served from a cache.
+- Long-press shortcuts on the app's icon (Android): Gaps, Runs, Events, Listening.
+- Links to the app and to the showcase preview as a drawn card (name and purpose, no data from your history).
+
+### Fixed
+
+- On a phone, the Overview no longer runs off the right edge of the screen: the Run now and Review buttons and the
+  panel notes were cut off.
+- On a phone, every table (runs, gaps, events, playback, stats, accounts, database) now shows each row as a card
+  with labelled values instead of scrolling sideways.
+- In the installed iPhone app, the bottom tab bar sits above the home indicator and clear of the screen's rounded
+  corners, and stays clear of the notch in landscape.
+- Tapping a search or filter field on a phone no longer zooms the whole page in.
+
+### Security
+
+- The app asks search engines and AI crawlers not to index it (`robots.txt` and a `noindex` tag): an instance
+  reachable from the internet no longer invites crawling of its login page.
+
 ## [2.3.0] - 2026-10-22 — Andantino
 
 ### Added

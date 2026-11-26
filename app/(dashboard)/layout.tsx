@@ -36,7 +36,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <Alerts auth={auth} rateLimit={rateLimit} playbackEnabled={env.PLAYBACK_ENABLED} />
-        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 pb-24 sm:px-8 md:pb-8">{children}</main>
+        <main className="tabbar-clearance min-w-0 flex-1 overflow-x-hidden px-4 pt-6 sm:px-8">{children}</main>
       </div>
       <BottomNav accounts={accounts} activeAccountId={activeAccountId} gapsByAccount={gapsByAccount} />
       <CommandPalette />
