@@ -15,6 +15,7 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
   const router = useRouter();
   const params = useSearchParams();
   const sesameError = params.get("sesame");
+  const signedOut = params.has("signed_out");
   const [token, setToken] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,9 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
         className="w-full max-w-sm rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-8 shadow-sm"
       >
         <h1 className="font-[family-name:var(--serif)] text-xl text-[color:var(--text)]">spotify-poller</h1>
-        <p className="mt-1 text-sm text-[color:var(--muted)]">Custody report — sign in to continue.</p>
+        <p className="mt-1 text-sm text-[color:var(--muted)]">
+          {signedOut ? "Signed out." : "Custody report — sign in to continue."}
+        </p>
 
         {mode === "sesame" ? (
           <>

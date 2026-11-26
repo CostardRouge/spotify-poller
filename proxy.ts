@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isAuthorized } from "./lib/auth/session";
+import { authMode, isAuthorized } from "./lib/auth/session";
+import { signInPath } from "./lib/auth/login-target";
 
 /**
  * Gate on both the admin pages and the admin API routes — the one place that
@@ -41,9 +42,9 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const loginUrl = new URL("/login", req.url);
-  loginUrl.searchParams.set("next", pathname);
-  return NextResponse.redirect(loginUrl);
+  // In sesame mode a page visit goes straight to Sésame, not to a /login page
+  // whose only content would be a button (lib/auth/login-target.ts).
+  return NextResponse.redirect(new URL(signInPath(authMode(), pathname), req.url));
 }
 
 export const config = {

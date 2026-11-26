@@ -25,6 +25,12 @@ major number comes from.
 - Long-press shortcuts on the app's icon (Android): Gaps, Runs, Events, Listening.
 - Links to the app and to the showcase preview as a drawn card (name and purpose, no data from your history).
 
+### Changed
+
+- With Sésame sign-in, opening the app while signed out now goes straight to Sésame instead of first showing a page
+  with a single « Sign in with Sésame » button. That page still appears after you sign out (so you are not signed
+  straight back in) and when Sésame refuses or fails, to say why.
+
 ### Fixed
 
 - On a phone, the Overview no longer runs off the right edge of the screen: the Run now and Review buttons and the
