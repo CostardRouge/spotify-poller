@@ -13,6 +13,23 @@ const PATHS: Record<string, React.ReactNode> = {
   // Trace: the pen line, the same drawing as the app icon.
   trace: <path d="M2 12h4l2-6 4 12 3-9 2 3h5" />,
   "chevron-left": <path d="M15 5l-7 7 7 7" />,
+  "chevron-up": <path d="M6 15l6-6 6 6" />,
+  // Journal (2026-11-27): a page with its lines, for the thread of runs and
+  // declared gaps that replaced the Runs, Gaps and Stats pages.
+  journal: (
+    <>
+      <path d="M5 4h11l3 3v13H5z" />
+      <path d="M9 10h6M9 14h6M9 18h3" />
+    </>
+  ),
+  // System: two rack units, for the instrument itself (accounts, storage, server).
+  system: (
+    <>
+      <rect x="4" y="4" width="16" height="6" rx="2" />
+      <rect x="4" y="14" width="16" height="6" rx="2" />
+      <path d="M8 7h.01M8 17h.01" />
+    </>
+  ),
   "chevron-right": <path d="M9 5l7 7-7 7" />,
   events: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
   playback: (

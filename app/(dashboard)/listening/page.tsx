@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RunNowButton from "@/components/RunNowButton";
 import { getEnv } from "@/lib/server/runtime";
 import { getActiveAccountId } from "@/lib/server/db";
 import { GLOBAL_SCOPE } from "@/lib/server/types";
@@ -234,7 +235,7 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
               sub={
                 <>
                   {stats.streaks.silent_days_in_span.toLocaleString()} silent days in the span —{" "}
-                  <Link href="/gaps" className="underline">
+                  <Link href="/journal?gaps=1" className="underline">
                     some may be lost, not quiet
                   </Link>
                 </>
@@ -389,7 +390,7 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
                       ? "1 declared gap overlaps this range"
                       : `${stats.gaps_in_range.length} declared gaps overlap this range`}{" "}
                     — those days are missing from every number above, and the plays are gone for good.{" "}
-                    <Link href="/gaps" className="underline">
+                    <Link href="/journal?gaps=1" className="underline">
                       Review them
                     </Link>
                     .
@@ -462,9 +463,9 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
                   separately. Run the <code className="font-[family-name:var(--mono)]">artists</code> collector once
                   and this panel fills in — it needs no extra permission.
                 </p>
-                <Link href="/runs" className="btn">
-                  Run it from the Runs page
-                </Link>
+                {/* Run where the need is: since the Runs page folded into the
+                    Journal (2026-11-27), this and ⌘K are the artists' Run now. */}
+                <RunNowButton collector="artists" label="Run artists now" variant="outline" />
               </div>
             ) : (
               <div className="grid gap-4 p-4 lg:grid-cols-2">
@@ -696,7 +697,7 @@ export default async function ListeningPage({ searchParams }: { searchParams: Pr
                 <strong className="text-[color:var(--ink)]">A silent day may be a lost day.</strong>{" "}
                 Nothing here can
                 tell &ldquo;did not listen&rdquo; from &ldquo;was not collected&rdquo;; only the{" "}
-                <Link href="/gaps" className="underline">
+                <Link href="/journal?gaps=1" className="underline">
                   declared gaps
                 </Link>{" "}
                 can, and only for the windows the poller noticed.

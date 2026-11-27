@@ -100,4 +100,4 @@ sqlite3 backups/life-events-2026-08-07-0300.db \
   "PRAGMA integrity_check; SELECT account_id, COUNT(*), MIN(ts_utc), MAX(ts_utc) FROM events GROUP BY account_id;"
 ```
 
-and compare against `/stats`.
+and compare against the Journal's "Stored" card (`/journal`) or `GET /api/stats`.
