@@ -1,16 +1,16 @@
 import { getEnv } from "@/lib/server/runtime";
 import { eventCountsByAccount, gapCountsByAccount, getActiveAccountId, listAccounts } from "@/lib/server/db";
-import { schedulerEnabled } from "@/lib/server/scheduler";
 import { authStatus } from "@/lib/server/spotify/auth";
 import { getRateLimit } from "@/lib/server/spotify/api";
 import { VERSION } from "@/lib/version";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import CommandPalette from "@/components/CommandPalette";
-import SettingsDialog from "@/components/SettingsDialog";
 import ShortcutsDialog from "@/components/ShortcutsDialog";
 import Topbar from "@/components/Topbar";
 import Alerts from "@/components/Alerts";
+import AccountDialog from "@/components/AccountMenu";
+import { systemChecks } from "@/lib/server/system";
 
 // Every page under this layout reads live SQLite state (and requires the
 // admin session the proxy already enforces) — never prerender it statically.
@@ -24,6 +24,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const gapsByAccount = gapCountsByAccount(env);
   const auth = authStatus(env);
   const rateLimit = getRateLimit(env);
+  // What System wants looked at, counted once for the sidebar and the menu.
+  const toCheck = systemChecks(env).filter((c) => c.warn).length;
 
   // overflow-x-clip: whatever a page lets overflow sideways, the window never
   // scrolls horizontally. Without it, a card wider than its column (the Now
@@ -38,28 +40,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         activeAccountId={activeAccountId}
         eventsByAccount={eventsByAccount}
         gapsByAccount={gapsByAccount}
+        toCheck={toCheck}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar />
+        <Topbar accounts={accounts} activeAccountId={activeAccountId} />
         <Alerts auth={auth} rateLimit={rateLimit} playbackEnabled={env.PLAYBACK_ENABLED} />
         <main className="tabbar-clearance min-w-0 flex-1 overflow-x-hidden px-4 pt-6 sm:px-8">{children}</main>
       </div>
-      <BottomNav accounts={accounts} activeAccountId={activeAccountId} gapsByAccount={gapsByAccount} />
+      <BottomNav activeAccountId={activeAccountId} gapsByAccount={gapsByAccount} />
       <CommandPalette />
       <ShortcutsDialog />
-      <SettingsDialog
-        info={{
-          authMode: env.AUTH_MODE,
-          timezone: env.TIMEZONE,
-          scheduleEnabled: schedulerEnabled(),
-          playbackEnabled: env.PLAYBACK_ENABLED,
-          backupEnabled: env.BACKUP_ENABLED,
-          backupDir: env.BACKUP_DIR,
-          backupKeep: env.BACKUP_KEEP,
-          watchdogConfigured: !!env.WATCHDOG_URL,
-          ntfyConfigured: !!env.NTFY_URL,
-          version: VERSION,
-        }}
+      <AccountDialog
+        accounts={accounts}
+        activeId={activeAccountId}
+        eventsByAccount={eventsByAccount}
+        info={{ version: VERSION, backupDir: env.BACKUP_DIR, backupEnabled: env.BACKUP_ENABLED, toCheck }}
       />
     </div>
   );

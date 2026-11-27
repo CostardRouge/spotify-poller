@@ -16,17 +16,20 @@ interface Command {
  * theme, R refreshes the current view, ? opens the shortcut list. All of them
  * stand down while an input, textarea or dialog has focus.
  */
+// The five places and their views (lib/nav.ts), in sidebar order. Since
+// 2026-11-27 Runs, Gaps and Stats are one Journal, Database is Storage under
+// System, and Events/Playback/Listening are Library's Plays/Sessions/Trends.
 const SECTIONS = [
   { label: "Now", href: "/" },
   { label: "Trace", href: "/trace" },
-  { label: "Events", href: "/events" },
-  { label: "Listening", href: "/listening" },
-  { label: "Runs", href: "/runs" },
-  { label: "Gaps", href: "/gaps" },
-  { label: "Stats", href: "/stats" },
-  { label: "Accounts", href: "/accounts" },
-  { label: "Playback", href: "/playback" },
-  { label: "Database", href: "/database" },
+  { label: "Journal — runs and gaps", href: "/journal" },
+  { label: "Declared gaps", href: "/journal?gaps=1" },
+  { label: "Library — plays", href: "/events" },
+  { label: "Library — sessions", href: "/playback" },
+  { label: "Library — trends", href: "/listening" },
+  { label: "System", href: "/system" },
+  { label: "System — accounts", href: "/accounts" },
+  { label: "System — storage", href: "/database" },
 ];
 
 export default function CommandPalette() {
@@ -60,6 +63,7 @@ export default function CommandPalette() {
       ...sections.map((s) => ({ label: s.label, group: "Go to" as const, run: go(s.href) })),
       { label: "Run played collector", group: "Action", run: runCollector("played") },
       { label: "Run liked collector", group: "Action", run: runCollector("liked") },
+      { label: "Run artists collector", group: "Action", run: runCollector("artists") },
       {
         label: "Export events as NDJSON",
         group: "Action",
@@ -97,11 +101,11 @@ export default function CommandPalette() {
         },
       },
       {
-        label: "Open settings",
+        label: "Account and settings",
         group: "View",
         run: () => {
           close();
-          window.dispatchEvent(new Event("sp:open-settings"));
+          window.dispatchEvent(new Event("sp:open-account"));
         },
       },
       {
@@ -156,10 +160,22 @@ export default function CommandPalette() {
 
       // Appended, never reordered: 1…7 have been muscle memory since the old
       // UI, and renumbering them to match the sidebar would cost more than the
-      // consistency is worth.
-      const jump = ["/", "/events", "/runs", "/gaps", "/stats", "/accounts", "/playback", "/listening", "/trace"];
-      if (/^[1-9]$/.test(e.key)) {
-        router.push(jump[Number(e.key) - 1]);
+      // consistency is worth. Since 2026-11-27 each key lands where its page's
+      // content went (3 Runs, 4 Gaps and 5 Stats are the Journal), and 0 is System.
+      const jump: Record<string, string> = {
+        "1": "/",
+        "2": "/events",
+        "3": "/journal",
+        "4": "/journal?gaps=1",
+        "5": "/journal",
+        "6": "/accounts",
+        "7": "/playback",
+        "8": "/listening",
+        "9": "/trace",
+        "0": "/system",
+      };
+      if (jump[e.key]) {
+        router.push(jump[e.key]);
         return;
       }
       if (e.key === "/") {

@@ -18,7 +18,18 @@ major number comes from.
 - The Overview leads with one sentence that says whether every play is being collected, then today's listening drawn
   as a trace; on a computer, a dial of today's polls and the whole week. A declared gap shows as a dashed amber stretch,
   never as an empty one.
-- On a phone, the tabs are now Now, Trace, Library and More.
+- Lighter navigation: five places instead of ten — Now, Trace and Journal to watch collection, Library for what was
+  collected, System for the instrument itself. Library holds Plays, Sessions and Trends; System holds Server, Accounts
+  and Storage, as tabs under each page's title.
+- The Journal replaces Runs, Gaps and Stats: every collection attempt and every declared gap in one thread, by day,
+  filterable by collector or down to gaps alone, with the week's counts beside it. Old links to `/runs`, `/gaps` and
+  `/stats` still land there, and the number keys 3, 4 and 5 too (0 opens System).
+- One account menu replaces the settings dialog, the sidebar's account selector and theme switch, and the phone's More
+  sheet: which account you are viewing, theme, export, backup, shortcuts, System and sign out. It opens from the
+  account button at the bottom of the sidebar, or the round button at the top right on a phone.
+- The server configuration (scheduler, backups, watchdog, ntfy, sign-in mode, timezone, version) now lives on the new
+  System page only, which also counts what is left to set up ("2 to check" beside System).
+- On a phone, the tabs are now Now, Trace, Library and Journal; the Journal tab shows how many gaps are declared.
 
 ### Added
 

@@ -1,130 +1,93 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 import Icon from "./Icon";
-import { verdict } from "@/lib/verdict";
+import { AccountAvatar, type AccountOption } from "./AccountMenu";
+import { useStatus, verdictOf } from "./useStatus";
+import { SUBVIEWS, sectionOf } from "@/lib/nav";
 
-/** Title + subtitle per section, same copy as the old TABS map. */
 const TITLES: Record<string, { title: string; sub: string }> = {
   "/": { title: "Now", sub: "Is collection alive, and did anything go missing" },
-  "/events": { title: "Events", sub: "Everything collected, filterable and exportable" },
-  "/playback": { title: "Playback", sub: "Reconstructed listening sessions" },
-  "/runs": { title: "Runs", sub: "Every collection attempt, successful or not" },
-  "/gaps": { title: "Gaps", sub: "Windows the poller knows it did not cover" },
-  "/accounts": { title: "Accounts", sub: "Connections, tokens and which one is collected" },
-  "/stats": { title: "Stats", sub: "Volumes and the recent run history" },
-  "/listening": { title: "Listening", sub: "What the collected history says about the listening itself" },
   "/trace": { title: "Trace", sub: "Every day as the pen drew it, gaps declared" },
-  "/database": { title: "Database", sub: "What it weighs, what is filling it, and whether it is backed up" },
+  "/journal": { title: "Journal", sub: "Every collection attempt, and every window the poller knows it missed" },
+  "/events": { title: "Library", sub: "Everything collected, filterable and exportable" },
+  "/playback": { title: "Library", sub: "Listening sessions, reconstructed from sampled playback" },
+  "/listening": { title: "Library", sub: "What the collected history says about the listening itself" },
+  "/system": { title: "System", sub: "What runs the instrument, and what is left to set up" },
+  "/accounts": { title: "System", sub: "Connections, tokens and which one is collected" },
+  "/database": { title: "System", sub: "What it weighs, what is filling it, and whether it is backed up" },
 };
 
-interface StatusPayload {
-  collector_played_last_success: string | null;
-  auth: { connected: boolean; active_account_id: string | null; accounts: { id: string; status: string }[] };
-  rate_limit: { limited: boolean; until: string | null };
-  scheduler: { playedEveryMinutes: number } | null;
-}
-
-/** The shared decision tree (lib/verdict.ts), fed from the /api/status payload. */
-function verdictOf(s: StatusPayload) {
-  const active = s.auth.accounts.find((a) => a.id === s.auth.active_account_id);
-  return verdict(
-    {
-      playedLastSuccess: s.collector_played_last_success,
-      connected: s.auth.connected,
-      activeRevoked: active?.status === "revoked",
-      rateLimitedUntil: s.rate_limit.limited ? s.rate_limit.until : null,
-      playedEveryMinutes: s.scheduler?.playedEveryMinutes ?? null,
-    },
-    Date.now()
+/**
+ * The page header (2026-11-27, design lab iteration 2). On a desk it is only
+ * the page's title and, inside a section with several views, the segmented
+ * row of those views: health, search and settings moved into the sidebar
+ * (lib/nav.ts, components/AccountMenu.tsx). On a phone it carries the mark,
+ * the health chip on every page but Now (which says it in a sentence), the
+ * ⌘K palette and the account button that replaced the "More" sheet.
+ */
+function SubNav({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+  const section = sectionOf(pathname);
+  const views = section ? SUBVIEWS[section.id] : undefined;
+  if (!views) return null;
+  // Keep the viewed account across views: ?account= is the scope every page reads.
+  const account = searchParams.get("account");
+  const q = account ? `?account=${encodeURIComponent(account)}` : "";
+  return (
+    <nav aria-label={`${section!.label} views`} className="subnav">
+      {views.map((v) => (
+        <Link key={v.href} href={`${v.href}${q}`} aria-current={pathname === v.href ? "page" : undefined}>
+          {v.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
 
-export default function Topbar() {
+export default function Topbar({ accounts, activeAccountId }: { accounts: AccountOption[]; activeAccountId: string | null }) {
   const pathname = usePathname();
-  const [status, setStatus] = useState<StatusPayload | null>(null);
+  const status = useStatus();
   const t = TITLES[pathname] ?? TITLES["/"];
-
-  useEffect(() => {
-    let alive = true;
-    async function poll() {
-      try {
-        const res = await fetch("/api/status");
-        if (res.ok && alive) setStatus(await res.json());
-      } catch {
-        /* transient — next poll catches up */
-      }
-    }
-    poll();
-    const id = setInterval(poll, 30_000);
-    return () => {
-      alive = false;
-      clearInterval(id);
-    };
-  }, []);
-
   const h = status ? verdictOf(status) : null;
-  const tone = h ? h.tone : null;
-  // The Overview states the verdict as its headline, so the bar does not
-  // repeat it there; on every other page the chip keeps collection health one
-  // glance away (PRODUCT.md, freshness before features).
-  const isOverview = pathname === "/";
+  const isNow = pathname === "/";
 
   return (
-    <header
-      className={
-        "flex flex-wrap items-center gap-3 px-4 pt-4 pb-2 sm:px-8 md:py-3 " +
-        (isOverview ? "" : "md:border-b md:border-[color:var(--line)]")
-      }
-    >
-      <span className="font-[family-name:var(--display)] text-xl font-bold tracking-[-0.03em] text-[color:var(--ink)] md:hidden">
-        témoin
-      </span>
-      {!isOverview && (
-        <div className="hidden min-w-0 md:block">
-          <h1 className="font-[family-name:var(--display)] text-lg leading-tight text-[color:var(--ink)]">{t.title}</h1>
-          <p className="truncate text-xs text-[color:var(--ink-2)]">{t.sub}</p>
-        </div>
-      )}
-      <span className="flex-1" />
-      <div className="flex items-center gap-1.5">
-        {!isOverview && (
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new Event("sp:open-settings"))}
-            title={h?.why ?? "Collection health"}
-            className={`chip ${tone ?? ""}`}
-          >
-            <span aria-hidden className={`voyant ${tone ?? ""}`} />
-            {h?.text ?? "checking…"}
-          </button>
+    <header className={"flex flex-col gap-3 px-4 pt-4 sm:px-8 md:pt-7 " + (isNow ? "pb-0" : "pb-2")}>
+      {/* Phone row: mark, chip, palette, account. */}
+      <div className="flex items-center gap-2 md:hidden">
+        <span className="font-[family-name:var(--display)] text-xl font-bold tracking-[-0.03em] text-[color:var(--ink)]">témoin</span>
+        <span className="flex-1" />
+        {!isNow && (
+          <Link href="/" title={h?.why ?? "Collection health"} className={`chip ${h?.tone ?? ""}`}>
+            <span aria-hidden className={`voyant ${h?.tone ?? ""}`} />
+            {h?.text ?? "Checking…"}
+          </Link>
         )}
         <button
           type="button"
           onClick={() => window.dispatchEvent(new Event("sp:open-palette"))}
-          title="Command palette (⌘K)"
-          aria-label="Open command palette"
+          aria-label="Jump to a section or action"
           className="btn ghost icon-only"
         >
           <Icon name="search" className="h-4 w-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => window.dispatchEvent(new Event("sp:open-settings"))}
-          title="Settings"
-          aria-label="Open settings"
-          className="btn ghost icon-only"
-        >
-          <Icon name="settings" className="h-4 w-4" />
-        </button>
+        <AccountAvatar accounts={accounts} activeId={activeAccountId} />
       </div>
-      {!isOverview && (
-        <div className="w-full min-w-0 md:hidden">
-          <h1 className="font-[family-name:var(--display)] text-2xl font-bold leading-tight tracking-[-0.03em] text-[color:var(--ink)]">
-            {t.title}
-          </h1>
-          <p className="text-sm text-[color:var(--ink-2)]">{t.sub}</p>
+
+      {!isNow && (
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="font-[family-name:var(--display)] text-2xl font-bold leading-tight tracking-[-0.03em] text-[color:var(--ink)] md:text-[2rem]">
+              {t.title}
+            </h1>
+            <p className="text-sm text-[color:var(--ink-2)]">{t.sub}</p>
+          </div>
+          <Suspense>
+            <SubNav pathname={pathname} />
+          </Suspense>
         </div>
       )}
     </header>

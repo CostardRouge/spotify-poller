@@ -9,7 +9,7 @@ import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp, relativeFromNow } from "@/lib/format";
 import { ago, verdict } from "@/lib/verdict";
 import { renderTime } from "@/lib/clock";
-import Row, { RowTone } from "@/components/Row";
+import type { RowTone } from "@/components/Row";
 import RunNowButton from "@/components/RunNowButton";
 import TraceStrip, { traceLabel, weekdayOf } from "@/components/TraceStrip";
 
@@ -64,6 +64,9 @@ function HourAxis() {
  * Order of reading, on every viewport: the voyant and one sentence (healthy or
  * not, in under two seconds), what to do about it, then the evidence — today's
  * trace on a phone, the dial and the week on a desk — and the details last.
+ * Since 2026-11-27 (design lab iteration 2) the "Stored data" and "Server"
+ * panels are gone from here: the counts live beside the runs on the Journal,
+ * the server read-out on System. Each fact has one home.
  * The verdict comes from lib/verdict.ts, the same tree the top bar uses on
  * every other page, so the two can never disagree.
  */
@@ -110,9 +113,6 @@ export default async function OverviewPage({
       : []),
   ];
 
-  const byType = Object.entries(health.events_by_type)
-    .map(([k, n]) => `${k} ${n.toLocaleString()}`)
-    .join(" · ");
   const gaps = stats.gaps as Gap[];
   const recentRuns = (stats.last_20_runs as RecentRun[]).slice(0, 5);
   const latestGap = gaps[0];
@@ -279,8 +279,8 @@ export default async function OverviewPage({
         <section className="panel">
           <header>
             <h2>Recent runs</h2>
-            <Link href="/runs" className="hint underline">
-              all runs
+            <Link href="/journal" className="hint underline">
+              the journal
             </Link>
           </header>
           <div className="flex flex-col px-4 py-1">
@@ -323,7 +323,7 @@ export default async function OverviewPage({
               Plays from a gap are recovered on the next poll if they were still among your last 50. The window stays
               declared, so an empty stretch never reads as silence.
             </p>
-            <Link href="/gaps" className="btn sm mt-auto self-start">
+            <Link href="/journal?gaps=1" className="btn sm mt-auto self-start">
               Review
             </Link>
           </section>
@@ -333,81 +333,6 @@ export default async function OverviewPage({
             <p className="text-sm text-[color:var(--ink-2)]">No window is known to be missing.</p>
           </section>
         )}
-      </div>
-
-      {/* The details: everything the old Overview showed, kept, below the fold. */}
-      <div className="grid gap-4 md:gap-5 @3xl:grid-cols-2">
-        <section className="panel">
-          <header>
-            <h2>Stored data</h2>
-            <span className="hint">account {scope || "—"}</span>
-          </header>
-          <div className="rows">
-            <Row tone={null} label="Events" value={stats.event_rows.toLocaleString()} sub={byType || "no events yet"} />
-            <Row tone={null} label="Raw API rows" value={stats.raw_rows.toLocaleString()} sub="Untouched Spotify responses, kept for replay." />
-            {!health.playback.enabled && (
-              <Row
-                tone="none"
-                label="Playback"
-                value="Disabled"
-                sub={
-                  <>
-                    Opt-in: set <code className="font-[family-name:var(--mono)]">PLAYBACK_ENABLED=1</code> with the in-process scheduler.
-                  </>
-                }
-              />
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <header>
-            <h2>Server</h2>
-          </header>
-          <div className="rows">
-            <Row
-              tone={sched ? "ok" : null}
-              label="Scheduler"
-              value={sched ? "In-process" : "External (systemd)"}
-              sub={sched ? `backup every ${sched.backupEveryHours} h` : "collection driven by systemd timers"}
-            />
-            <Row
-              tone={env.BACKUP_ENABLED ? "ok" : "warn"}
-              label="Backups"
-              value={env.BACKUP_ENABLED ? "Enabled" : "Disabled"}
-              sub={env.BACKUP_ENABLED ? `${env.BACKUP_DIR} · keep ${env.BACKUP_KEEP}` : "Set BACKUP_ENABLED=1 to snapshot the database."}
-            />
-            <Row
-              tone={env.WATCHDOG_URL ? "ok" : "warn"}
-              label="Watchdog"
-              value={env.WATCHDOG_URL ? "Configured" : "Not configured"}
-              sub={
-                env.WATCHDOG_URL
-                  ? "Alerts on silence, the only thing that catches a dead poller."
-                  : "Without WATCHDOG_URL nothing alerts you when the poller goes quiet."
-              }
-            />
-            <Row
-              tone={env.NTFY_URL ? "ok" : null}
-              label="ntfy"
-              value={env.NTFY_URL ? "Configured" : "Not configured"}
-              sub="Push channel for actionable events. It cannot detect silence."
-            />
-            <Row
-              tone={null}
-              label="Auth mode"
-              value={env.AUTH_MODE}
-              sub={
-                env.AUTH_MODE === "proxy"
-                  ? "A reverse proxy authenticates requests."
-                  : env.AUTH_MODE === "sesame"
-                    ? "Sésame opens the session."
-                    : "JWT session unlocked by ADMIN_TOKEN."
-              }
-            />
-            <Row tone={null} label="Timezone" value={tz} sub="Display only; every timestamp is stored in UTC." />
-          </div>
-        </section>
       </div>
     </div>
   );
