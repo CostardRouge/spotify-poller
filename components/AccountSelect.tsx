@@ -51,7 +51,7 @@ function Selector({ accounts, activeId }: { accounts: AccountOption[]; activeId:
         ))}
       </select>
       {viewingOther && (
-        <p className="mt-1 text-[10px] leading-snug text-[color:var(--warn)]">
+        <p className="mt-1 text-[10px] leading-snug text-[color:var(--warn-text)]">
           You are looking at an account that is not the one being collected.
         </p>
       )}

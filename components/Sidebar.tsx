@@ -7,11 +7,16 @@ import AccountSelect, { AccountOption } from "./AccountSelect";
 import SidebarStatus from "./SidebarStatus";
 import ThemeToggle from "./ThemeToggle";
 import Icon, { IconName } from "./Icon";
+import Mark from "./Mark";
 
-/** Same sections, order and icons as the old sidebar nav (public/index.html on main). */
+/**
+ * The sections. Témoin (2026-11-27) leads with Now and Trace — the two views of
+ * "is my history safe" — then the library and the instrument's own records.
+ */
 export const NAV: { href: string; label: string; icon: IconName; count?: "events" | "gaps" }[] = [
-  { href: "/", label: "Overview", icon: "overview" },
-  { href: "/events", label: "Events", icon: "events", count: "events" },
+  { href: "/", label: "Now", icon: "overview" },
+  { href: "/trace", label: "Trace", icon: "trace" },
+  { href: "/events", label: "Library", icon: "events", count: "events" },
   { href: "/listening", label: "Listening", icon: "listening" },
   { href: "/playback", label: "Playback", icon: "playback" },
   { href: "/runs", label: "Runs", icon: "runs" },
@@ -49,19 +54,19 @@ function NavList({
             href={item.href}
             aria-current={active ? "page" : undefined}
             className={
-              "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors " +
+              "flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm transition-colors " +
               (active
                 ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]"
                 : "text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]")
             }
           >
-            <Icon name={item.icon} className={"h-4 w-4 " + (active ? "text-[color:var(--accent-text)]" : "")} />
+            <Icon name={item.icon} className="h-4 w-4" />
             {item.label}
             {count ? (
               <span
                 className={
                   "ml-auto font-[family-name:var(--mono)] text-xs " +
-                  (item.count === "gaps" ? "text-[color:var(--warn)]" : "text-[color:var(--ink-3)]")
+                  (item.count === "gaps" ? "text-[color:var(--warn-text)]" : "text-[color:var(--ink-2)]")
                 }
               >
                 {count.toLocaleString()}
@@ -87,11 +92,10 @@ export default function Sidebar({
 }) {
   return (
     <aside className="hidden h-screen w-60 shrink-0 flex-col border-r border-[color:var(--line)] bg-[color:var(--surface)] px-4 py-5 md:flex">
-      <div className="flex items-center gap-2.5">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color:var(--accent)] text-[color:var(--on-accent)]">
-          <Icon name="overview" className="h-4.5 w-4.5" />
-        </span>
-        <span className="text-base font-semibold text-[color:var(--ink)]">spotify-poller</span>
+      <div className="flex items-center gap-2.5 px-2">
+        {/* The app icon itself, so the sidebar and the home screen show one mark. */}
+        <Mark />
+        <span className="font-[family-name:var(--display)] text-2xl font-bold tracking-[-0.03em] text-[color:var(--ink)]">témoin</span>
       </div>
 
       <div className="mt-5">

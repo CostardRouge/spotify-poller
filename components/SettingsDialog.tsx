@@ -33,9 +33,9 @@ function InfoRow({ tone, label, value, sub }: { tone: "ok" | "warn" | null; labe
         className={
           "shrink-0 text-sm " +
           (tone === "ok"
-            ? "text-[color:var(--ok)]"
+            ? "text-[color:var(--ok-text)]"
             : tone === "warn"
-              ? "text-[color:var(--warn)]"
+              ? "text-[color:var(--warn-text)]"
               : "text-[color:var(--ink)]")
         }
       >

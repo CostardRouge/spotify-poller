@@ -3,7 +3,17 @@
  * symbols (public/index.html on main) — same 24×24 stroke style throughout.
  */
 const PATHS: Record<string, React.ReactNode> = {
-  overview: <path d="M3 13h4l3 7 4-16 3 9h4" />,
+  // Now: the voyant — a ring with its light in the middle (Témoin, 2026-11-27).
+  overview: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="3" fill="currentColor" />
+    </>
+  ),
+  // Trace: the pen line, the same drawing as the app icon.
+  trace: <path d="M2 12h4l2-6 4 12 3-9 2 3h5" />,
+  "chevron-left": <path d="M15 5l-7 7 7 7" />,
+  "chevron-right": <path d="M9 5l7 7-7 7" />,
   events: <path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01" />,
   playback: (
     <>

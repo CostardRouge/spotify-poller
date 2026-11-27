@@ -1,49 +1,39 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <!--
     The link-preview card (OpenGraph / Twitter, 1200 × 630), rasterised to public/og.png by
-    scripts/gen-icons.mjs. Colours are app/globals.css's light tokens as hex (bg, surface,
-    surface-2, line, ink, ink-2, ink-3; an XML comment cannot hold a double hyphen). The panel on the right is a sketch of the Overview's
-    Collection panel with its values left as bars: a preview is shown to whoever a link is sent to, so
-    it carries no number, no track and no account, and no green dot either — green means healthy, and a
-    drawing cannot know that.
+    scripts/gen-icons.mjs. The Témoin look (2026-11-27): the paper, the ink, the blue pen. The strip on
+    the right is a drawing of the trace, not data: a preview is shown to whoever a link is sent to, so it
+    carries no number, no track and no account, and no green either, since green means healthy and a
+    drawing cannot know that. The dashed amber stretch is how a declared gap is drawn in the app.
   -->
-  <rect width="1200" height="630" fill="#f8fbf9"/>
+  <rect width="1200" height="630" fill="#f2eee4"/>
 
   <g transform="translate(80 80) scale(2.75)">
-    <rect width="32" height="32" rx="7" fill="#1db954"/>
-    <path d="M5 17.3h5.3l4-9.3 5.3 16 4-6.7H27" fill="none" stroke="#08210f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect width="32" height="32" rx="7" fill="#141613"/>
+    <path d="M5.5 16h3.6l2.4-6.2 3.7 12.4 2.9-8.4 1.7 2.2H22" fill="none" stroke="#f2eee4" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="25.2" cy="16" r="2.4" fill="#8ea2ff"/>
   </g>
 
-  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
-    <text x="80" y="282" font-size="72" font-weight="600" letter-spacing="-1.2" fill="#161c19">spotify-poller</text>
-    <text x="80" y="342" font-size="32" fill="#4d5550">A custody report for a personal</text>
-    <text x="80" y="384" font-size="32" fill="#4d5550">Spotify listening history.</text>
-    <text x="80" y="550" font-size="24" fill="#757c78">Self-hosted · Next.js · SQLite · MIT</text>
+  <g font-family="Inter Tight, Inter, ui-sans-serif, system-ui, sans-serif">
+    <text x="80" y="290" font-size="96" font-weight="700" letter-spacing="-3.5" fill="#141613">témoin</text>
+    <text x="80" y="350" font-size="32" fill="#4b4a42">A custody report for a personal</text>
+    <text x="80" y="392" font-size="32" fill="#4b4a42">Spotify listening history.</text>
   </g>
+  <text x="80" y="550" font-family="IBM Plex Mono, DejaVu Sans Mono, monospace" font-size="22" fill="#4b4a42">Self-hosted · Next.js · SQLite · MIT</text>
 
-  <g transform="translate(700 150)" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
-    <rect x="0.5" y="0.5" width="419" height="329" rx="20" fill="#ffffff" stroke="#dce1de"/>
-    <path d="M20.5 0.5h379a20 20 0 0 1 20 20v43.5h-419v-43.5a20 20 0 0 1 20-20z" fill="#f2f5f3"/>
-    <line x1="0.5" y1="64" x2="419.5" y2="64" stroke="#dce1de"/>
-    <text x="28" y="41" font-size="22" font-weight="650" fill="#161c19">Collection</text>
-
-    <g font-size="23" font-weight="550" fill="#161c19">
-      <circle cx="36" cy="109" r="6" fill="#757c78"/>
-      <text x="58" y="117">played</text>
-      <rect x="200" y="96" width="130" height="12" rx="6" fill="#dce1de"/>
-      <rect x="200" y="116" width="170" height="8" rx="4" fill="#ecefed"/>
-      <line x1="0.5" y1="152" x2="419.5" y2="152" stroke="#dce1de"/>
-
-      <circle cx="36" cy="197" r="6" fill="#757c78"/>
-      <text x="58" y="205">liked</text>
-      <rect x="200" y="184" width="100" height="12" rx="6" fill="#dce1de"/>
-      <rect x="200" y="204" width="170" height="8" rx="4" fill="#ecefed"/>
-      <line x1="0.5" y1="240" x2="419.5" y2="240" stroke="#dce1de"/>
-
-      <circle cx="36" cy="285" r="6" fill="#757c78"/>
-      <text x="58" y="293">playback</text>
-      <rect x="200" y="272" width="115" height="12" rx="6" fill="#dce1de"/>
-      <rect x="200" y="292" width="170" height="8" rx="4" fill="#ecefed"/>
+  <g transform="translate(650 150)">
+    <rect x="0.5" y="0.5" width="469" height="329" rx="22" fill="#fbf9f4" stroke="#e2dccd"/>
+    <g font-family="IBM Plex Mono, DejaVu Sans Mono, monospace" font-size="15" fill="#4b4a42">
+      <text x="28" y="44">00</text><text x="141" y="44">06</text><text x="254" y="44">12</text><text x="367" y="44">18</text><text x="440" y="44">24</text>
     </g>
+    <g stroke="#e2dccd"><line x1="0" y1="96" x2="470" y2="96"/><line x1="0" y1="176" x2="470" y2="176"/><line x1="0" y1="256" x2="470" y2="256"/></g>
+    <g fill="none" stroke="#2340a8" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M28 136 H150 l6 -22 l6 22 l6 18 l6 -30 l6 30 H230 l5 -14 l5 14 H300 l6 -26 l6 26 l6 20 l6 -32 l6 32 l6 -14 l6 14 H442"/>
+      <path d="M28 216 H120 l6 -18 l6 18 H170"/>
+      <path d="M262 216 H300 l6 -24 l6 24 l6 16 l6 -28 l6 28 H442"/>
+      <path d="M28 296 H200 l6 -20 l6 20 l6 14 l6 -24 l6 24 H330"/>
+    </g>
+    <path d="M170 216 H262" fill="none" stroke="#b86a00" stroke-width="3" stroke-dasharray="7 7"/>
+    <circle cx="330" cy="296" r="9" fill="#2340a8"/>
   </g>
 </svg>

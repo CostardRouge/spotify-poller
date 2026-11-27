@@ -6,14 +6,17 @@ import { Suspense, useRef, useState } from "react";
 import AccountSelect, { AccountOption } from "./AccountSelect";
 import Icon, { IconName } from "./Icon";
 
-// Same four slots as the old mobile tabbar: Overview, Events, Playback, More.
+// Témoin (2026-11-27): Now, Trace, Library, and More for the rest — the
+// design lab's three tabs, plus the sheet that keeps every other section and
+// action one tap away (PRODUCT.md, phone-complete).
 const PRIMARY: { href: string; label: string; icon: IconName }[] = [
-  { href: "/", label: "Overview", icon: "overview" },
-  { href: "/events", label: "Events", icon: "events" },
-  { href: "/playback", label: "Playback", icon: "playback" },
+  { href: "/", label: "Now", icon: "overview" },
+  { href: "/trace", label: "Trace", icon: "trace" },
+  { href: "/events", label: "Library", icon: "events" },
 ];
 
 const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
+  { href: "/playback", label: "Playback", icon: "playback" },
   { href: "/runs", label: "Runs", icon: "runs" },
   { href: "/gaps", label: "Gaps", icon: "gaps" },
   { href: "/listening", label: "Listening", icon: "listening" },
@@ -68,8 +71,8 @@ function BottomNavInner({
   }
 
   const itemClass = (active: boolean) =>
-    "flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-center text-[11px] " +
-    (active ? "bg-[color:var(--accent-soft)] font-medium text-[color:var(--ink)]" : "text-[color:var(--ink-2)]");
+    "flex flex-1 flex-col items-center gap-1 rounded-[10px] px-2 py-1.5 text-center text-[11px] " +
+    (active ? "font-semibold text-[color:var(--ink)]" : "font-medium text-[color:var(--ink-2)]");
 
   return (
     <>
@@ -79,7 +82,7 @@ function BottomNavInner({
       >
         {PRIMARY.map((item) => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className={itemClass(pathname === item.href)}>
-            <Icon name={item.icon} className="h-4 w-4" />
+            <Icon name={item.icon} className="h-5 w-5" />
             {item.label}
           </Link>
         ))}
@@ -91,12 +94,12 @@ function BottomNavInner({
           }}
           className={"relative " + itemClass(MORE_LINKS.some((l) => l.href === pathname))}
         >
-          <Icon name="more" className="h-4 w-4" />
+          <Icon name="more" className="h-5 w-5" />
           More
           {gapCount > 0 && (
             <span
               aria-label={`${gapCount} declared gap(s)`}
-              className="absolute right-1/4 top-0 min-w-4 -translate-y-1 rounded-full bg-[color:var(--danger)] px-1 text-center text-[10px] font-bold leading-4 text-[color:var(--on-accent)]"
+              className="absolute right-1/4 top-0 min-w-4 -translate-y-1 rounded-full border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-1 text-center text-[10px] font-bold leading-4 text-[color:var(--warn-text)]"
             >
               {gapCount > 9 ? "9+" : gapCount}
             </span>

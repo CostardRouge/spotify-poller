@@ -2,9 +2,21 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import ServiceWorker from "@/components/ServiceWorker";
 import { requestOrigin } from "@/lib/server/origin";
+// Self-hosted fonts (the Témoin design, 2026-11-27): bundled from npm at build
+// time and served by the app itself, so a page never calls a font CDN, works
+// offline behind the VPN, and the build does not depend on Google's servers.
+// Inter for reading, Inter Tight for the verdict and titles, IBM Plex Mono for
+// everything that is a measurement (times, counts, durations).
+import "@fontsource-variable/inter";
+import "@fontsource-variable/inter-tight";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 
-const title = "spotify-poller";
+// The product's name since 2026-11-27 (the design lab, the owner's pick). The
+// repository, the image and the domain still say spotify-poller until the
+// rename is carried out (docs/memory/deployment.md lists its steps).
+const title = "Témoin";
 const description =
   "Custody report for a personal Spotify listening history — proves collection is running, surfaces gaps, and lets the operator browse, filter and export what was collected.";
 
@@ -28,7 +40,7 @@ export async function generateMetadata(): Promise<Metadata> {
 const metadata: Metadata = {
   title: {
     default: title,
-    template: "%s · spotify-poller",
+    template: "%s · Témoin",
   },
   description,
   applicationName: title,
@@ -46,13 +58,14 @@ const metadata: Metadata = {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   // The label under the icon on an iOS home screen; the manifest's short_name
-  // is its Android twin. Twelve characters or so before the launcher cuts it.
+  // is its Android twin. "Témoin" fits whole (six letters), where the old
+  // "spotify-poller" had to be cut to "Poller".
   // `capable` is the legacy switch iOS still reads to open a home-screen launch
   // standalone (the manifest's `display` says the same to everyone else).
   // `default` keeps the status bar opaque and its text dark-on-light or
   // light-on-dark with the system: `black-translucent` would lay the page under
   // white status-bar text, unreadable on the light theme this app opens with.
-  appleWebApp: { title: "Poller", capable: true, statusBarStyle: "default" },
+  appleWebApp: { title: "Témoin", capable: true, statusBarStyle: "default" },
   // A private instance, never a search result: this is one person's listening
   // history behind a login, and the only page a crawler can reach is that
   // login. public/robots.txt says the same to crawlers that read it first; the
@@ -67,7 +80,7 @@ const metadata: Metadata = {
     siteName: title,
     title: `${title} — a custody report for a Spotify listening history`,
     description,
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "spotify-poller — a custody report for a Spotify listening history." }],
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "Témoin — a custody report for a Spotify listening history." }],
   },
   twitter: {
     card: "summary_large_image",
@@ -79,8 +92,8 @@ const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8faf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#1b211d" },
+    { media: "(prefers-color-scheme: light)", color: "#f2eee4" },
+    { media: "(prefers-color-scheme: dark)", color: "#14130f" },
   ],
   colorScheme: "light dark",
   // Hands the page the whole screen, notch and rounded corners included, so
