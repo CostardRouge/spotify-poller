@@ -72,8 +72,8 @@ Obligations:
 ## Rule 3 — Report the project's state (MANDATORY)
 
 The register of what is open is the private `second-brain` repository: one
-folder per project, filed by group and domain and found by its slug (`temoin`
-here), whose `README.md` carries a typed front matter (`state`, `point`,
+folder per project, filed by group and domain and found by its slug (`spotify-poller`
+here — a slug never changes, even after the rename to Témoin), whose `README.md` carries a typed front matter (`state`, `point`,
 `repos`) and a `## To do` list of checkboxes. `PROJECTS.md` at its root is
 GENERATED from those folders. That register is the source of truth — not this
 conversation, not Claude's memory, not `git log`, which records what changed
@@ -94,7 +94,7 @@ clean and its French does not mix with an English description. The labels are
 English, what follows them is French:
 
     <!-- Registry
-    Project: temoin
+    Project: spotify-poller
     Last point: <the project as it now stands, in French>
     - [x] <an existing box this work closes, copied from the fiche>
     - [ ] <a new open action, in French>
