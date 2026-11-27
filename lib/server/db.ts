@@ -1,4 +1,5 @@
 import type Database from "better-sqlite3";
+import { purgeOrphanPayloads, storeRawPayload } from "./raw-payload";
 import { Account, CollectorId, Env, GLOBAL_SCOPE, PublicAccount, RunStatus, nowIso } from "./types";
 
 /**
@@ -20,10 +21,18 @@ export function insertRaw(
   requestUrl: string,
   payload: string | null
 ): void {
-  env.DB.prepare(
-    `INSERT INTO raw_spotify (account_id, collector, fetched_at, http_status, request_url, payload)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(accountId, collector, nowIso(), httpStatus, requestUrl, payload);
+  // Since migration 0009 the body goes to raw_payloads, once per distinct
+  // content and gzipped, and this row only carries its hash. Same transaction,
+  // so a row never points at a snapshot that was not written. A NULL payload
+  // (network error, no response) still means "no body": both columns NULL.
+  const tx = env.DB.transaction(() => {
+    const sha = payload === null ? null : storeRawPayload(env, accountId, payload);
+    env.DB.prepare(
+      `INSERT INTO raw_spotify (account_id, collector, fetched_at, http_status, request_url, payload, payload_sha256)
+       VALUES (?, ?, ?, ?, ?, NULL, ?)`
+    ).run(accountId, collector, nowIso(), httpStatus, requestUrl, sha);
+  });
+  tx();
 }
 
 /**
@@ -42,10 +51,14 @@ export function insertRaw(
  */
 export function purgeRawRows(env: Env, retentionDays: number, maxRows = 5000): number {
   const cutoff = new Date(Date.now() - retentionDays * 86_400_000).toISOString();
-  return env.DB.prepare(
+  const purged = env.DB.prepare(
     `DELETE FROM raw_spotify WHERE id IN
        (SELECT id FROM raw_spotify WHERE fetched_at < ? ORDER BY fetched_at LIMIT ?)`
   ).run(cutoff, maxRows).changes;
+  // A snapshot can be shared by an old row and a recent one (same body), so
+  // only those no remaining row points at go — never by age.
+  if (purged > 0) purgeOrphanPayloads(env, maxRows);
+  return purged;
 }
 
 // ---------- events (invariant I2) ----------
@@ -328,6 +341,13 @@ export function adoptLegacyRows(env: Env, accountId: string): Record<string, num
       );
       adopted[table] = info.changes;
     }
+    // Snapshots follow the raw rows that point at them. OR IGNORE: if the
+    // account already holds the same body, its copy is identical by
+    // definition (same hash) and the moved rows resolve to it; the leftover
+    // '' copy is harmless and is swept as an orphan by the next purge.
+    adopted.raw_payloads = env.DB.prepare(
+      `UPDATE OR IGNORE raw_payloads SET account_id = ? WHERE account_id = ?`
+    ).run(accountId, GLOBAL_SCOPE).changes;
 
     const dropped = env.DB.prepare(
       `DELETE FROM poller_state WHERE account_id = ? AND key IN (${ph(DROP)})`

@@ -168,6 +168,10 @@ backups-dir: ## Create ./backups owned by the container user (uid 1001) — run 
 prod-backup: ## Write a full .db snapshot into ./backups on the host
 	$(DC_PROD) exec spotify-poller $(TSX) scripts/backup.ts
 
+.PHONY: prod-compact-raw
+prod-compact-raw: ## Raw archive snapshots: read-only measure; ARGS=--apply converts, ARGS=--vacuum (poller stopped) shrinks
+	$(DC_PROD) exec spotify-poller $(TSX) scripts/compact-raw.ts $(ARGS)
+
 .PHONY: prod-export
 prod-export: ## Dump the active account's events as NDJSON: make prod-export > events.ndjson
 	@$(DC_PROD) exec -T spotify-poller $(TSX) scripts/export.ts

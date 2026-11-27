@@ -19,6 +19,7 @@
     "run:liked": "tsx scripts/run-once.ts liked",
     "run:artists": "tsx scripts/run-once.ts artists",
     "backup": "tsx scripts/backup.ts",
+    "compact:raw": "tsx scripts/compact-raw.ts",
     "export": "tsx scripts/export.ts",
     "import": "tsx scripts/import.ts",
     "seed:demo": "tsx scripts/seed-demo.ts"
