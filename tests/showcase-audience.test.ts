@@ -16,7 +16,11 @@ const PAGE = readFileSync(join(ROOT, "showcase", "index.html"), "utf8");
 const WEBSITE_ID = "01ad0e3e-34af-4318-aede-894518182361";
 const HOST = "insight.steevepommier.com";
 
-const scripts = [...PAGE.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)].map(([, attrs, body]) => ({ attrs, body }));
+// Executable scripts only: a JSON-LD block (type="application/ld+json") is data the browser never runs, held to the
+// page's address by tests/showcase-seo.test.ts.
+const scripts = [...PAGE.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
+  .map(([, attrs, body]) => ({ attrs, body }))
+  .filter(({ attrs }) => !/type="application\/ld\+json"/.test(attrs));
 const loader = scripts.find(({ attrs }) => attrs.includes("data-umami-loader"))?.body ?? "";
 const toggle = scripts.find(({ attrs }) => attrs.includes("data-umami-switch"))?.body ?? "";
 

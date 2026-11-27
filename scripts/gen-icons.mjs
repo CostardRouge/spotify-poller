@@ -11,6 +11,9 @@
  * never clips the drawing. A server could rasterise on request; the showcase
  * on GitHub Pages cannot, and one committed set serves both.
  *
+ * Also draws public/og.png, the 1200 × 630 link-preview card, from
+ * scripts/og-card.svg (see the end of the file).
+ *
  * Usage:  node scripts/gen-icons.mjs
  *
  * sharp is an optional dependency of Next.js and is already in node_modules;
@@ -58,6 +61,23 @@ for (const job of JOBS) {
   if (job.opaque) pipeline = pipeline.flatten({ background: TILE }).removeAlpha();
   await pipeline.png().toFile(join(ICONS_DIR, job.out));
   console.log(`✓ ${job.out} (${job.size}×${job.size}) — ${job.why}`);
+}
+
+// The link-preview card (OpenGraph / Twitter), 1200 × 630, the size every
+// preview fetcher crops to without surprise. Its source sits in scripts/, not
+// public/, because only the PNG is served. The app declares it in
+// app/layout.tsx; pages.yml copies it beside the showcase, whose og:image it
+// also is. Opaque like the touch icon: a preview drawn on a dark chat theme
+// would otherwise show the transparent margin as black.
+{
+  const svg = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "og-card.svg"));
+  await sharp(svg, { density: 144 })
+    .resize(1200, 630)
+    .flatten({ background: "#f8fbf9" })
+    .removeAlpha()
+    .png({ compressionLevel: 9 })
+    .toFile(join(ICONS_DIR, "..", "og.png"));
+  console.log("✓ ../og.png (1200×630) — link previews");
 }
 
 console.log("Done. Commit the PNGs alongside the SVG you changed.");

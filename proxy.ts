@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isAuthorized } from "./lib/auth/session";
+import { authMode, isAuthorized } from "./lib/auth/session";
+import { signInPath } from "./lib/auth/login-target";
 
 /**
  * Gate on both the admin pages and the admin API routes — the one place that
@@ -16,7 +17,12 @@ import { isAuthorized } from "./lib/auth/session";
  * touch icon before anyone has signed in, so behind the gate they came back as
  * a redirect to /login: an installed app with no icon, and a manifest Chrome
  * refused. They reveal nothing but a drawing and a name the public repository
- * already shows.
+ * already shows. The same holds for the rest of that list, each fetched
+ * before or without a session: /sw.js (a worker script answered with a login
+ * redirect fails to register), /offline.html (the worker caches it at install,
+ * possibly before sign-in), /robots.txt (a crawler that gets the login page
+ * instead reads "allow everything") and /og.png (a link preview's fetcher
+ * never signs in). All are static files in public/ that name no account.
  */
 // /auth/callback is the legacy alias of /api/spotify/callback — same handler,
 // kept public for Spotify's redirect (protected by the state cookie instead).
@@ -36,11 +42,11 @@ export async function proxy(req: NextRequest) {
   if (pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  const loginUrl = new URL("/login", req.url);
-  loginUrl.searchParams.set("next", pathname);
-  return NextResponse.redirect(loginUrl);
+  // In sesame mode a page visit goes straight to Sésame, not to a /login page
+  // whose only content would be a button (lib/auth/login-target.ts).
+  return NextResponse.redirect(new URL(signInPath(authMode(), pathname), req.url));
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons/|manifest.webmanifest|sw.js|offline.html|robots.txt|og.png).*)"],
 };

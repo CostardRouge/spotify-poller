@@ -13,22 +13,47 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8faf9" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b211d" />
-<!-- Link previews: the dashboard screenshot pages.yml captures (2880 × 1800, a 1440 × 900 viewport at 2×). -->
+<!-- Link previews: the card drawn for them (public/og.png, 1200 × 630, from scripts/og-card.svg), copied here by pages.yml — the size previews crop to without surprise, where the 2880 × 1800 dashboard screenshot came out as an unreadable strip. -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="spotify-poller" />
 <meta property="og:title" content="spotify-poller — a custody report for a Spotify listening history" />
 <meta property="og:description" content="Self-hosted collector of a personal Spotify listening history: proves collection is running, surfaces gaps, lets the operator browse and export. Screenshots of the real interface over fixture data." />
 <meta property="og:url" content="https://costardrouge.github.io/spotify-poller/" />
-<meta property="og:image" content="https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png" />
-<meta property="og:image:width" content="2880" />
-<meta property="og:image:height" content="1800" />
-<meta property="og:image:alt" content="The dashboard: collector freshness at a glance, with the run buttons." />
+<meta property="og:image" content="https://costardrouge.github.io/spotify-poller/og.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="spotify-poller — a custody report for a personal Spotify listening history." />
 <meta property="og:locale" content="en_US" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="spotify-poller — a custody report for a Spotify listening history" />
 <meta name="twitter:description" content="Self-hosted collector of a personal Spotify listening history: proves collection is running, surfaces gaps, lets the operator browse and export." />
-<meta name="twitter:image" content="https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png" />
-<meta name="twitter:image:alt" content="The dashboard: collector freshness at a glance, with the run buttons." />
+<meta name="twitter:image" content="https://costardrouge.github.io/spotify-poller/og.png" />
+<meta name="twitter:image:alt" content="spotify-poller — a custody report for a personal Spotify listening history." />
+<!--
+  Structured data (schema.org, JSON-LD): what search engines and answer engines read to say what this is — a free,
+  MIT-licensed, self-hosted web application, by whom, where its code lives — without inferring it from prose. Data,
+  not code: the browser runs nothing here. tests/showcase-seo.test.ts holds it to the canonical address.
+-->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "spotify-poller",
+  "url": "https://costardrouge.github.io/spotify-poller/",
+  "description": "Self-hosted collector and custody report for a personal Spotify listening history. Spotify only ever returns the last 50 plays, so it polls continuously into SQLite, proves collection is running, declares the gaps it knows of, and lets the operator browse, filter and export what was collected.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Docker, Linux",
+  "softwareRequirements": "Node.js 24, Docker",
+  "image": "https://costardrouge.github.io/spotify-poller/og.png",
+  "screenshot": "https://costardrouge.github.io/spotify-poller/screenshots/dashboard.png",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "codeRepository": "https://github.com/CostardRouge/spotify-poller",
+  "author": { "@type": "Person", "name": "Steeve Pommier" }
+}
+</script>
 <!--
   Audience measurement (2026-10-25): the owner's self-hosted Umami at insight.steevepommier.com, cookie-free, no event,
   automatic page views only (one static page, every view a full load). The website id below is the ONE place it lives:

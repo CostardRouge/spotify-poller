@@ -49,7 +49,7 @@ export default async function PlaybackPage({
   return (
     <div>
       <div className="overflow-x-auto rounded-lg border border-[color:var(--line)]">
-        <table className="w-full text-left text-sm">
+        <table className="records w-full text-left text-sm">
           <thead className="bg-[color:var(--panel-2)] text-xs uppercase tracking-wide text-[color:var(--muted)]">
             <tr>
               <th className="px-3 py-2">Started</th>
@@ -62,19 +62,19 @@ export default async function PlaybackPage({
           <tbody>
             {items.map((s) => (
               <tr key={s.id} className="border-t border-[color:var(--line-soft)]">
-                <td className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">
+                <td data-label="Started" className="whitespace-nowrap px-3 py-2 text-[color:var(--muted)]">
                   {formatTimestamp(s.started_at, env.TIMEZONE)}
                 </td>
-                <td className="px-3 py-2 text-[color:var(--text)]">
+                <td data-label="Title" className="rec-wide px-3 py-2 text-[color:var(--text)]">
                   {s.title ?? "—"}
                   {s.subtitle && <span className="text-[color:var(--muted)]"> — {s.subtitle}</span>}
                 </td>
-                <td className="px-3 py-2 text-[color:var(--muted)]">{s.device_name ?? "—"}</td>
-                <td className="px-3 py-2">
+                <td data-label="Device" className="px-3 py-2 text-[color:var(--muted)]">{s.device_name ?? "—"}</td>
+                <td data-label="Completion" className="px-3 py-2">
                   {s.completion_ratio != null ? `${Math.round(s.completion_ratio * 100)}%` : "—"}
                   {s.skipped === 1 && <span className="ml-1 text-xs text-[color:var(--warn)]">skipped</span>}
                 </td>
-                <td className="px-3 py-2 text-[color:var(--muted)]">{s.close_reason ?? "in progress"}</td>
+                <td data-label="Ended by" className="px-3 py-2 text-[color:var(--muted)]">{s.close_reason ?? "in progress"}</td>
               </tr>
             ))}
             {items.length === 0 && (

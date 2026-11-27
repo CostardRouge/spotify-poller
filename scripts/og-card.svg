@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <!--
+    The link-preview card (OpenGraph / Twitter, 1200 × 630), rasterised to public/og.png by
+    scripts/gen-icons.mjs. Colours are app/globals.css's light tokens as hex (bg, surface,
+    surface-2, line, ink, ink-2, ink-3; an XML comment cannot hold a double hyphen). The panel on the right is a sketch of the Overview's
+    Collection panel with its values left as bars: a preview is shown to whoever a link is sent to, so
+    it carries no number, no track and no account, and no green dot either — green means healthy, and a
+    drawing cannot know that.
+  -->
+  <rect width="1200" height="630" fill="#f8fbf9"/>
+
+  <g transform="translate(80 80) scale(2.75)">
+    <rect width="32" height="32" rx="7" fill="#1db954"/>
+    <path d="M5 17.3h5.3l4-9.3 5.3 16 4-6.7H27" fill="none" stroke="#08210f" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <text x="80" y="282" font-size="72" font-weight="600" letter-spacing="-1.2" fill="#161c19">spotify-poller</text>
+    <text x="80" y="342" font-size="32" fill="#4d5550">A custody report for a personal</text>
+    <text x="80" y="384" font-size="32" fill="#4d5550">Spotify listening history.</text>
+    <text x="80" y="550" font-size="24" fill="#757c78">Self-hosted · Next.js · SQLite · MIT</text>
+  </g>
+
+  <g transform="translate(700 150)" font-family="Inter, ui-sans-serif, system-ui, sans-serif">
+    <rect x="0.5" y="0.5" width="419" height="329" rx="20" fill="#ffffff" stroke="#dce1de"/>
+    <path d="M20.5 0.5h379a20 20 0 0 1 20 20v43.5h-419v-43.5a20 20 0 0 1 20-20z" fill="#f2f5f3"/>
+    <line x1="0.5" y1="64" x2="419.5" y2="64" stroke="#dce1de"/>
+    <text x="28" y="41" font-size="22" font-weight="650" fill="#161c19">Collection</text>
+
+    <g font-size="23" font-weight="550" fill="#161c19">
+      <circle cx="36" cy="109" r="6" fill="#757c78"/>
+      <text x="58" y="117">played</text>
+      <rect x="200" y="96" width="130" height="12" rx="6" fill="#dce1de"/>
+      <rect x="200" y="116" width="170" height="8" rx="4" fill="#ecefed"/>
+      <line x1="0.5" y1="152" x2="419.5" y2="152" stroke="#dce1de"/>
+
+      <circle cx="36" cy="197" r="6" fill="#757c78"/>
+      <text x="58" y="205">liked</text>
+      <rect x="200" y="184" width="100" height="12" rx="6" fill="#dce1de"/>
+      <rect x="200" y="204" width="170" height="8" rx="4" fill="#ecefed"/>
+      <line x1="0.5" y1="240" x2="419.5" y2="240" stroke="#dce1de"/>
+
+      <circle cx="36" cy="285" r="6" fill="#757c78"/>
+      <text x="58" y="293">playback</text>
+      <rect x="200" y="272" width="115" height="12" rx="6" fill="#dce1de"/>
+      <rect x="200" y="292" width="170" height="8" rx="4" fill="#ecefed"/>
+    </g>
+  </g>
+</svg>

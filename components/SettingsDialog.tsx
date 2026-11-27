@@ -65,7 +65,9 @@ export default function SettingsDialog({ info }: { info: ServerInfo }) {
   async function lock() {
     await fetch("/api/auth/logout", { method: "POST" });
     dialogRef.current?.close();
-    router.push("/login");
+    // ?signed_out=1 keeps /login on screen in sesame mode: a bare /login would
+    // hand over to Sésame, whose own session would sign straight back in.
+    router.push("/login?signed_out=1");
     router.refresh();
   }
 

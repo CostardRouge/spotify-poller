@@ -75,7 +75,7 @@ function BottomNavInner({
     <>
       <nav
         aria-label="Sections"
-        className="fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--surface)] p-2 md:hidden"
+        className="tabbar fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--surface)] md:hidden"
       >
         {PRIMARY.map((item) => (
           <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className={itemClass(pathname === item.href)}>

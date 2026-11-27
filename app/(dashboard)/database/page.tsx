@@ -232,7 +232,7 @@ export default async function DatabasePage({
           </div>
         ) : breakdown.available ? (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="records w-full text-left text-sm">
               <thead className="bg-[color:var(--surface-2)] text-xs uppercase tracking-wide text-[color:var(--ink-2)]">
                 <tr>
                   <th className="px-3 py-2">Object</th>
@@ -250,17 +250,17 @@ export default async function DatabasePage({
                       {o.kind === "index" && <span className="text-[color:var(--ink-3)]">↳ </span>}
                       {o.name}
                     </td>
-                    <td className="px-3 py-2 text-[color:var(--ink-2)]">{o.kind}</td>
-                    <td className="px-3 py-2 text-right font-[family-name:var(--mono)]">
+                    <td data-label="Kind" className="px-3 py-2 text-[color:var(--ink-2)]">{o.kind}</td>
+                    <td data-label="Rows" className="px-3 py-2 text-right font-[family-name:var(--mono)]">
                       {o.rows === null ? "—" : o.rows.toLocaleString()}
                     </td>
-                    <td className="px-3 py-2 text-right font-[family-name:var(--mono)]">
+                    <td data-label="Size" className="px-3 py-2 text-right font-[family-name:var(--mono)]">
                       {formatBytes(o.bytes)}
                     </td>
-                    <td className="px-3 py-2 text-right font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
+                    <td data-label="Per row" className="px-3 py-2 text-right font-[family-name:var(--mono)] text-[color:var(--ink-2)]">
                       {o.rows && o.rows > 0 ? formatBytes(o.bytes / o.rows, 0) : "—"}
                     </td>
-                    <td className="px-3 py-2">
+                    <td data-label="Share" className="px-3 py-2">
                       <span className="flex items-center gap-2">
                         <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-[color:var(--surface-sunk)]">
                           <span
@@ -280,12 +280,12 @@ export default async function DatabasePage({
                     <td className="px-3 py-2 italic">
                       {collapsed.length} smaller object{collapsed.length === 1 ? "" : "s"} below 0.1%
                     </td>
-                    <td className="px-3 py-2">—</td>
-                    <td className="px-3 py-2 text-right">—</td>
-                    <td className="px-3 py-2 text-right font-[family-name:var(--mono)]">
+                    <td data-label="Kind" className="px-3 py-2">—</td>
+                    <td data-label="Rows" className="px-3 py-2 text-right">—</td>
+                    <td data-label="Size" className="px-3 py-2 text-right font-[family-name:var(--mono)]">
                       {formatBytes(collapsedBytes)}
                     </td>
-                    <td className="px-3 py-2 text-right">—</td>
+                    <td data-label="Per row" className="px-3 py-2 text-right">—</td>
                     <td className="px-3 py-2" />
                   </tr>
                 )}
