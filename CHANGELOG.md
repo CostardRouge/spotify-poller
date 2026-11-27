@@ -33,6 +33,8 @@ major number comes from.
 
 ### Fixed
 
+- A health check that probes `/health` now gets an answer. With Sésame sign-in, such a probe was sent on to Sésame,
+  failed, and the reverse proxy took the whole site offline (a 404) although collection kept running.
 - On a phone, the Overview no longer runs off the right edge of the screen: the Run now and Review buttons and the
   panel notes were cut off.
 - On a phone, every table (runs, gaps, events, playback, stats, accounts, database) now shows each row as a card

@@ -8,7 +8,7 @@ Read before touching `/api/health`, the notification channels, the lifecycle mar
 
 ## `/api/health` is deliberately almost empty (2026-08-20)
 
-**Decision**: it returns `{status, auth_mode}` and nothing else. **Why**: it used to return collector timestamps and per-type event counters while being **public** — enough to leak listening volume and activity windows to anyone who could reach the port. That detail moved to `/api/status`, behind the session gate. The Docker healthcheck only ever needed liveness. **How to apply**: do not enrich `/api/health`; add to `/api/status` instead.
+**Decision**: it returns `{status, auth_mode}` and nothing else. **Why**: it used to return collector timestamps and per-type event counters while being **public** — enough to leak listening volume and activity windows to anyone who could reach the port. That detail moved to `/api/status`, behind the session gate. The Docker healthcheck only ever needed liveness. **How to apply**: do not enrich `/api/health`; add to `/api/status` instead. Since 2026-11-27 `/health` is the same handler under the conventional name (`app/health/route.ts`), because the Home Lab's Portainer stack probed it and the probe once rode the login redirect into an outage (`deployment.md`).
 
 ## ntfy carries what is actionable, throttled (2026-08-20)
 

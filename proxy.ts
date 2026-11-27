@@ -28,7 +28,9 @@ import { signInPath } from "./lib/auth/login-target";
 // kept public for Spotify's redirect (protected by the state cookie instead).
 // /api/auth/sesame is the round trip to Sésame (AUTH_MODE=sesame): its login
 // starts there, and its callback is protected by its signed flow cookie.
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/sesame", "/api/health", "/api/spotify/callback", "/auth/callback"];
+// /health is /api/health under the conventional name (app/health/route.ts):
+// probes written against it must not ride the login redirect.
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/sesame", "/api/health", "/health", "/api/spotify/callback", "/auth/callback"];
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
