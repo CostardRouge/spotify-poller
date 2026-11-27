@@ -81,7 +81,7 @@ export function reportBoot(env: Env): void {
 
   console.log(`[lifecycle] ${note}`);
   void notify(env, {
-    title: "Spotify poller — started",
+    title: "Témoin — started",
     message: note,
     priority: ordinary ? "min" : "default",
     tags: ordinary ? ["arrow_forward"] : ["arrow_forward", "warning"],
@@ -129,7 +129,7 @@ export function installProcessGuards(env: Env): void {
       reason instanceof Error ? `${reason.name}: ${reason.message}\n${reason.stack ?? ""}` : String(reason);
     console.error("[lifecycle] UNHANDLED REJECTION (kept alive):", msg);
     void notifyOnce(env, "process", {
-      title: "Spotify poller — unhandled rejection",
+      title: "Témoin — unhandled rejection",
       message:
         `${msg.slice(0, 1500)}\n\n` +
         `The process was kept alive (collection and UI continue) — but this is a bug worth reporting.`,
@@ -152,7 +152,7 @@ export function installProcessGuards(env: Env): void {
     // container's restart policy brings us back; the boot report explains.
     // Give the crash alert one bounded chance to leave the machine first.
     const alert = notify(env, {
-      title: "Spotify poller — crashed",
+      title: "Témoin — crashed",
       message: `${msg.slice(0, 1500)}\n\nThe container is restarting; details in the startup report.`,
       priority: "high",
       tags: ["rotating_light"],

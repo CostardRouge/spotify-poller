@@ -75,7 +75,7 @@ jobs:
           BASE_URL: http://127.0.0.1:3000
 
       # The page's icons are the app's own set (public/icons, C11), copied
-      # whole so the showcase's head links resolve under /spotify-poller/.
+      # whole so the showcase's head links resolve under /temoin/.
       # llms.txt (C17, the llmstxt.org format) sits beside the page at the
       # site's root, linked from nothing: crawlers look for it there.
       # tests/llms.test.ts holds it to index.html and to this step. og.png is

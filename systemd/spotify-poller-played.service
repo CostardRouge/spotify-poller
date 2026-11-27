@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller — collector 'played' (recently-played, critical)
+Description=Témoin — collector 'played' (recently-played, critical)
 After=network-online.target
 Wants=network-online.target
 

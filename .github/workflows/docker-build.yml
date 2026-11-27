@@ -18,7 +18,7 @@ jobs:
       # Optional: point this at the Watchtower HTTP API on the Optiplex/NAS to
       # trigger an instant redeploy after each push. Leave the secrets unset and
       # the build still publishes — only the redeploy step is skipped.
-      #   DEPLOY_WEBHOOK_URL   e.g. https://watchtower.example.com/v1/update?image=ghcr.io/costardrouge/spotify-poller
+      #   DEPLOY_WEBHOOK_URL   e.g. https://watchtower.example.com/v1/update?image=ghcr.io/costardrouge/temoin
       #   DEPLOY_WEBHOOK_TOKEN matches WATCHTOWER_HTTP_API_TOKEN on the host
       DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
       DEPLOY_WEBHOOK_TOKEN: ${{ secrets.DEPLOY_WEBHOOK_TOKEN }}

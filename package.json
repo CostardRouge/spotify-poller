@@ -1,5 +1,5 @@
 {
-  "name": "spotify-poller",
+  "name": "temoin",
   "version": "2.3.0",
   "private": true,
   "description": "Continuously and unattended, collects the listening history (and likes) of a personal Spotify account into a local SQLite database.",

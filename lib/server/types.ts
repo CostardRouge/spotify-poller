@@ -48,7 +48,7 @@ export interface Env {
   AUTH_MODE: AuthMode;
   /** e.g. 'Cf-Access-Authenticated-User-Email'. Must be present and non-empty. */
   PROXY_AUTH_HEADER?: string;
-  /** Full ntfy topic URL, e.g. https://ntfy.example.org/spotify-poller */
+  /** Full ntfy topic URL, e.g. https://ntfy.example.org/temoin */
   NTFY_URL?: string;
   /** Optional ntfy access token (Bearer) for a protected topic. */
   NTFY_TOKEN?: string;

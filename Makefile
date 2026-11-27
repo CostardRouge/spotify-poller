@@ -1,5 +1,5 @@
 # =============================================================================
-# Spotify Poller — Makefile
+# Témoin — Makefile
 # Controls the Docker Compose stacks (local dev + Home Lab).
 # Same conventions as the Spotify Calendar Makefile.
 # =============================================================================
@@ -15,7 +15,7 @@ TSX       := node_modules/.bin/tsx
 # ---- Meta -------------------------------------------------------------------
 .PHONY: help
 help: ## Show this help
-	@echo "Spotify Poller — available commands:"
+	@echo "Témoin — available commands:"
 	@echo ""
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -136,23 +136,23 @@ prod-deploy: ## Pull the latest image and (re)start the Home Lab stack
 
 .PHONY: prod-shell
 prod-shell: ## Open a shell inside the Home Lab container
-	$(DC_PROD) exec spotify-poller sh
+	$(DC_PROD) exec temoin sh
 
 .PHONY: prod-migrate
 prod-migrate: ## Apply pending SQL migrations inside the Home Lab container
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/migrate.ts
+	$(DC_PROD) exec temoin $(TSX) scripts/migrate.ts
 
 .PHONY: prod-run-played
 prod-run-played: ## Run the 'played' collector once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts played
+	$(DC_PROD) exec temoin $(TSX) scripts/run-once.ts played
 
 .PHONY: prod-run-liked
 prod-run-liked: ## Run the 'liked' collector once inside the Home Lab container
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts liked
+	$(DC_PROD) exec temoin $(TSX) scripts/run-once.ts liked
 
 .PHONY: prod-run-artists
 prod-run-artists: ## Fetch artist genres for the collected history (Home Lab container)
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/run-once.ts artists
+	$(DC_PROD) exec temoin $(TSX) scripts/run-once.ts artists
 
 # The snapshot lands on ./backups, bind-mounted from the host — deliberately
 # OUTSIDE the spotify-poller-data volume. A backup stored next to the database
@@ -166,20 +166,20 @@ backups-dir: ## Create ./backups owned by the container user (uid 1001) — run 
 
 .PHONY: prod-backup
 prod-backup: ## Write a full .db snapshot into ./backups on the host
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/backup.ts
+	$(DC_PROD) exec temoin $(TSX) scripts/backup.ts
 
 .PHONY: prod-compact-raw
 prod-compact-raw: ## Raw archive snapshots: read-only measure; ARGS=--apply converts, ARGS=--vacuum (poller stopped) shrinks
-	$(DC_PROD) exec spotify-poller $(TSX) scripts/compact-raw.ts $(ARGS)
+	$(DC_PROD) exec temoin $(TSX) scripts/compact-raw.ts $(ARGS)
 
 .PHONY: prod-export
 prod-export: ## Dump the active account's events as NDJSON: make prod-export > events.ndjson
-	@$(DC_PROD) exec -T spotify-poller $(TSX) scripts/export.ts
+	@$(DC_PROD) exec -T temoin $(TSX) scripts/export.ts
 
 .PHONY: prod-import
 prod-import: ## Restore events from NDJSON: make prod-import FILE=events.ndjson
 	@test -n "$(FILE)" || { echo "usage: make prod-import FILE=events.ndjson"; exit 2; }
-	$(DC_PROD) exec -T spotify-poller $(TSX) scripts/import.ts < "$(FILE)"
+	$(DC_PROD) exec -T temoin $(TSX) scripts/import.ts < "$(FILE)"
 
 # ---- Housekeeping -----------------------------------------------------------
 .PHONY: ps
@@ -190,7 +190,7 @@ ps: ## Show running containers
 clean: ## Stop everything and remove built image (keeps the PROD data volume!)
 	-$(DC) down -v
 	-$(DC_PROD) down
-	-docker image rm ghcr.io/costardrouge/spotify-poller:latest 2>/dev/null || true
+	-docker image rm ghcr.io/costardrouge/temoin:latest 2>/dev/null || true
 	@echo "NOTE: the prod data volume (spotify-poller-data) is intentionally kept —"
 	@echo "      the collected history is irreplaceable. Remove it manually if you"
 	@echo "      really mean it: docker volume rm spotify-poller_spotify-poller-data"

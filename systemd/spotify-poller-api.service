@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller dashboard + admin API (Next.js) — run `npm run build` first
+Description=Témoin dashboard + admin API (Next.js) — run `npm run build` first
 After=network-online.target
 Wants=network-online.target
 

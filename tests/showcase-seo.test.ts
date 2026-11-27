@@ -23,7 +23,7 @@ describe("showcase metadata", () => {
     assert.equal(data["@type"], "SoftwareApplication");
     assert.equal(data.url, CANONICAL);
     assert.equal(data.image, `${CANONICAL}og.png`);
-    assert.equal(data.codeRepository, "https://github.com/CostardRouge/spotify-poller");
+    assert.equal(data.codeRepository, "https://github.com/CostardRouge/temoin");
   });
 
   it("previews with the card pages.yml copies, at the size it declares", () => {

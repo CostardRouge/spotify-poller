@@ -1,5 +1,5 @@
 [Unit]
-Description=Spotify Poller — collector 'liked' (liked-tracks)
+Description=Témoin — collector 'liked' (liked-tracks)
 After=network-online.target
 Wants=network-online.target
 
