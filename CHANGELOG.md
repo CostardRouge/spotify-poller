@@ -50,6 +50,10 @@ major number comes from.
   failed, and the reverse proxy took the whole site offline (a 404) although collection kept running.
 - On a phone, the Overview no longer runs off the right edge of the screen: the Run now and Review buttons and the
   panel notes were cut off.
+- On a computer or tablet window of middle width (roughly 768 to 1280 px), the Now page no longer squeezes its
+  status card: the collectors' times no longer break letter by letter, the Run now buttons stay inside the card, the
+  page never scrolls sideways (which pushed the sidebar's "Viewing" selector against the left edge), and the panels'
+  rows put their label above the value when the panel is narrow.
 - On a phone, every table (runs, gaps, events, playback, stats, accounts, database) now shows each row as a card
   with labelled values instead of scrolling sideways.
 - In the installed iPhone app, the bottom tab bar sits above the home indicator and clear of the screen's rounded

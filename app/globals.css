@@ -337,7 +337,10 @@ dialog::backdrop {
 .alert.bad .icon { color: var(--danger); }
 
 /* status list — the Overview primitive. A row is: state, label, value, detail. */
-.rows { display: grid; }
+/* A container: a row folds on the width of its own panel, not of the window.
+   The Now page sets its panels two abreast beside a 240 px sidebar, so at a
+   1024 px window a panel is ~310 px wide although the viewport is a desktop's. */
+.rows { display: grid; container-type: inline-size; }
 .row {
   display: grid; grid-template-columns: 1rem 9rem minmax(0, 1fr) auto;
   align-items: center; gap: 0.75rem;
@@ -368,10 +371,14 @@ dialog::backdrop {
 .panel > header h2 { font-size: 0.9375rem; font-weight: 700; }
 .panel > header .hint { margin-left: auto; min-width: 0; font-size: 0.6875rem; color: var(--ink-2); text-align: right; }
 
-/* A status row on a phone: the 9rem label column left the value ~45 px, so a
-   timestamp wrapped onto three lines. Below 36rem the label sits above its
-   value and the action keeps the right edge, centred on both lines. */
-@media (max-width: 35.99rem) {
+/* A status row in a narrow panel: the 9rem label column left the value ~45 px,
+   so a timestamp wrapped onto three lines (first seen on a phone, then in the
+   Now page's half-width panels at mid widths, 2026-11-27). Below 28rem of
+   PANEL (the .rows container above), the label sits above its value and the
+   action keeps the right edge, centred on both lines. 28rem is the width at
+   which the value column still holds a "Not configured" + sub-line without
+   breaking every word. */
+@container (max-width: 27.99rem) {
   .row {
     grid-template-columns: 1rem minmax(0, 1fr) auto;
     grid-template-areas: "state label act" ". value act";

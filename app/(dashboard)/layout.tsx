@@ -25,8 +25,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const auth = authStatus(env);
   const rateLimit = getRateLimit(env);
 
+  // overflow-x-clip: whatever a page lets overflow sideways, the window never
+  // scrolls horizontally. Without it, a card wider than its column (the Now
+  // page's status card at mid widths, 2026-11-27) dragged the whole layout
+  // left in Safari, so the sidebar lost its left padding and "Viewing" touched
+  // the edge. `clip`, not `hidden`: it makes no scroll container, so nothing
+  // sticky inside stops sticking.
   return (
-    <div className="flex min-h-screen bg-[color:var(--bg)]">
+    <div className="flex min-h-screen overflow-x-clip bg-[color:var(--bg)]">
       <Sidebar
         accounts={accounts}
         activeAccountId={activeAccountId}

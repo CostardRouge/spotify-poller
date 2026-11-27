@@ -129,7 +129,13 @@ export default async function OverviewPage({
   const lastLine = `Last poll ${ago(health.collector_played_last_success, now)}${sched ? ` · next ${nextPoll(health.collector_played_last_success, sched.playedEveryMinutes, now)}` : ""}`;
 
   return (
-    <div className="grid max-w-6xl gap-4 md:gap-5">
+    // @container: the top pair splits on the width of the page column, not of
+    // the viewport. Beside a 240 px sidebar, a 1024 px window leaves ~720 px,
+    // where the 1.3:1 split squeezed the status card's collectors to ~30 px
+    // ("6m ago · on time" broke letter by letter, Run now overflowed the card,
+    // and Safari scrolled the whole page sideways). Below 56rem the two cards
+    // stack, each full width.
+    <div className="@container grid max-w-6xl gap-4 md:gap-5">
       {connected && (
         <div role="status" className="alert">
           <p>
@@ -146,7 +152,7 @@ export default async function OverviewPage({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:gap-5">
+      <div className="grid gap-4 md:gap-5 @4xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         {/* The verdict. On a phone it sits on the paper itself; on a desk it is a sheet. */}
         <section className="flex min-w-0 flex-col gap-3 pt-2 md:rounded-[24px] md:border md:border-[color:var(--line)] md:bg-[color:var(--surface)] md:p-8">
           <div className="flex items-center gap-2.5">
@@ -173,34 +179,42 @@ export default async function OverviewPage({
         </section>
 
         {/* Desk: the dial of today's polls, and the collectors with their own Run now. */}
-        <section className="hidden min-w-0 items-center gap-6 rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 md:grid md:grid-cols-[176px_minmax(0,1fr)]">
-          <div className="relative h-44 w-44" role="img" aria-label={`${polls.ok} successful polls today${polls.failed ? `, ${polls.failed} failed` : ""}`}>
-            {dial.map((t, i) => (
-              <span
-                key={i}
-                aria-hidden
-                className={`absolute left-1/2 top-0 w-[2px] rounded-full ${t.cls}`}
-                style={{ height: t.len, transformOrigin: "1px 88px", transform: `translateX(-50%) rotate(${t.deg}deg)` }}
-              />
-            ))}
-            <div className="absolute inset-9 flex flex-col items-center justify-center text-center">
-              <span className="font-[family-name:var(--display)] text-3xl font-bold tracking-[-0.03em]">{polls.ok}</span>
-              <span className="text-xs text-[color:var(--ink-2)]">{polls.ok === 1 ? "poll" : "polls"} today</span>
-              {polls.failed > 0 && <span className="mt-1 font-[family-name:var(--mono)] text-xs tone-warn">{polls.failed} failed</span>}
-            </div>
-          </div>
-          <div className="flex min-w-0 flex-col">
-            {collectors.map((c, i) => (
-              <div key={c.id} className={`flex items-center justify-between gap-3 py-2.5 ${i ? "border-t border-[color:var(--line)]" : ""}`}>
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-sm font-semibold capitalize">{c.id}</span>
-                  <span className="font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
-                    {c.iso ? relativeFromNow(c.iso) : "never"} · <span className={`tone-${c.tone === "none" ? "warn" : c.tone}`}>{FRESH_WORD[c.tone ?? "none"]}</span>
-                  </span>
-                </div>
-                <RunNowButton collector={c.id} />
+        {/* Its own @container: the dial sits beside the collectors only when the
+            card leaves them ~10rem (176 px dial + gap + 10rem = 21rem);
+            narrower, the dial goes on top, centred, and the rows take the width. */}
+        <section className="@container hidden min-w-0 rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 md:block">
+          <div className="grid h-full items-center gap-6 @[21rem]:grid-cols-[176px_minmax(0,1fr)]">
+            <div className="relative h-44 w-44 justify-self-center" role="img" aria-label={`${polls.ok} successful polls today${polls.failed ? `, ${polls.failed} failed` : ""}`}>
+              {dial.map((t, i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className={`absolute left-1/2 top-0 w-[2px] rounded-full ${t.cls}`}
+                  style={{ height: t.len, transformOrigin: "1px 88px", transform: `translateX(-50%) rotate(${t.deg}deg)` }}
+                />
+              ))}
+              <div className="absolute inset-9 flex flex-col items-center justify-center text-center">
+                <span className="font-[family-name:var(--display)] text-3xl font-bold tracking-[-0.03em]">{polls.ok}</span>
+                <span className="text-xs text-[color:var(--ink-2)]">{polls.ok === 1 ? "poll" : "polls"} today</span>
+                {polls.failed > 0 && <span className="mt-1 font-[family-name:var(--mono)] text-xs tone-warn">{polls.failed} failed</span>}
               </div>
-            ))}
+            </div>
+            <div className="flex min-w-0 flex-col">
+              {collectors.map((c, i) => (
+                // Wraps rather than squeezes: when the row is too narrow for the
+                // text and the button side by side, Run now drops under the text
+                // instead of overlapping it, and the age never breaks mid-word.
+                <div key={c.id} className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5 ${i ? "border-t border-[color:var(--line)]" : ""}`}>
+                  <div className="flex min-w-0 flex-col">
+                    <span className="text-sm font-semibold capitalize">{c.id}</span>
+                    <span className="whitespace-nowrap font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
+                      {c.iso ? relativeFromNow(c.iso) : "never"} · <span className={`tone-${c.tone === "none" ? "warn" : c.tone}`}>{FRESH_WORD[c.tone ?? "none"]}</span>
+                    </span>
+                  </div>
+                  <RunNowButton collector={c.id} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </div>
@@ -237,7 +251,7 @@ export default async function OverviewPage({
 
       {/* Desk: the week, one strip per day. */}
       <section className="hidden rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] px-6 py-5 md:block">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-xl font-bold">The week, as a trace</h2>
           <span className="font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
             {weekPlays.toLocaleString()} plays · dashed = needle lifted, declared
@@ -261,7 +275,7 @@ export default async function OverviewPage({
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+      <div className="grid gap-4 md:gap-5 @3xl:grid-cols-2">
         <section className="panel">
           <header>
             <h2>Recent runs</h2>
@@ -322,7 +336,7 @@ export default async function OverviewPage({
       </div>
 
       {/* The details: everything the old Overview showed, kept, below the fold. */}
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+      <div className="grid gap-4 md:gap-5 @3xl:grid-cols-2">
         <section className="panel">
           <header>
             <h2>Stored data</h2>
