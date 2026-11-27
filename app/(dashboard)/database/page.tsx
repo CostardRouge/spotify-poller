@@ -75,7 +75,10 @@ export default async function DatabasePage({
   const tz = env.TIMEZONE;
   const freelistRatio = info.file_bytes > 0 ? info.freelist_bytes / info.file_bytes : 0;
   // Only known once the breakdown has been measured — see the retention panel.
-  const rawBytes = breakdown?.objects.find((o) => o.name === "raw_spotify")?.bytes ?? null;
+  // The archive is two tables since migration 0009: the per-call rows and the
+  // deduplicated, compressed snapshots they point at.
+  const rawObjects = breakdown?.objects.filter((o) => o.name === "raw_spotify" || o.name === "raw_payloads") ?? [];
+  const rawBytes = breakdown ? rawObjects.reduce((n, o) => n + o.bytes, 0) : null;
   const rawShare = rawBytes === null ? null : pct(rawBytes, info.file_bytes);
 
   // A schema this size is ~27 objects and all but a handful sit at one page.
@@ -330,7 +333,7 @@ export default async function DatabasePage({
                 ? "no raw responses stored"
                 : // The share is only known once the breakdown has been run; the
                   // point stands either way, so the row does not wait for it.
-                  `${rawShare === null ? "" : `${rawShare.toFixed(0)}% of the file — `}every API response is kept as evidence (I3) and NOTHING purges it, oldest ${relativeFromNow(info.raw.oldest)}`
+                  `${rawShare === null ? "" : `${rawShare.toFixed(0)}% of the file — `}every API response is kept as evidence (I3), each distinct body once and compressed (raw_payloads), oldest ${relativeFromNow(info.raw.oldest)}`
             }
           />
           <Row

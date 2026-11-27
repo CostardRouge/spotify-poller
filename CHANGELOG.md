@@ -12,6 +12,11 @@ major number comes from.
 
 ### Changed
 
+- The raw archive of Spotify's answers now keeps each distinct answer once, compressed, instead of a full copy at every
+  poll: it grows by a fraction of what it used to, and nothing it kept is lost. An existing database is converted by
+  hand with `npm run compact:raw` (it measures first, read-only; `--apply` converts; `--vacuum`, with the poller
+  stopped, gives the space back to the disk).
+
 - The app is now called **Témoin**, with a new look: warm paper, black ink and a blue pen, a new icon, and the same
   colour rules as before — green only ever means healthy. Install it again on your phone's home screen to get the new
   icon and name.

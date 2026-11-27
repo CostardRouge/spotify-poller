@@ -37,6 +37,7 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - Next is deliberately **not** built with `output: "standalone"`; `tsx` and `better-sqlite3` are runtime dependencies for that reason — `architecture.md`.
 - Every collected table is partitioned by `account_id` with a composite primary key; `events.id` was never rewritten — `data-model.md`, long form in `docs/accounts.md`.
 - Migrations are append-only and run at every container boot; the database is irreplaceable, so nothing deletes from `events` — `data-model.md`.
+- 2026-11-27 — Raw response bodies are stored once per distinct content, gzipped, in `raw_payloads` (migration 0009); old rows are converted by the hand-run `npm run compact:raw`, never at boot — `data-model.md`.
 - `recently-played` refetches the last 50 every run with no `after` cursor, and `429` is never retried within a run — `collectors.md`.
 - Playback is inferred from sampled progress and never writes into `events` — `collectors.md`.
 - Scheduling runs **inside** the long-running container (`SCHEDULE_ENABLED=1`); host cron, an Ofelia container and host systemd timers were all considered and rejected — `deployment.md`, long form in `docs/scheduling.md`.
@@ -66,6 +67,8 @@ This file is the **always-loaded index**. The detail lives in `docs/memory/<topi
 - 2026-10-19 — **The Node pin is held by hand**: `.nvmrc` and both Dockerfiles say 24.18.0 and Dependabot is told to ignore the `node` image, because 24.19.0 and later abort better-sqlite3 (nodejs/node#63642; `deployment.md`). The issue's state was not re-checked on 2026-10-19. When a 24.x carries the fix, raise the three together and measure `seed:demo` ten times before trusting it.
 - 2026-11-27 — **The rename to Témoin is decided, not done**: repository `temoin`, domain `temoin.steeve.website` (the owner's choice). Order agreed: the design first (done), then the second-brain fiche's slug (a session in that repo — never from here), then a PR here (package, compose, systemd, showcase canonical, `Project:` line), then GitHub's rename (Pages moves to `/temoin/` with no redirect; the image becomes `ghcr.io/costardrouge/temoin`), the Portainer stack and Traefik host (keep the old host as a redirect), Sésame's and Spotify's redirect URIs, the owner's site `steevepommier.com`. **Never rename** the Docker volume (declare it external under its old name) nor `life-events.db`. A MAJOR (3.0.0 "Grave") on the owner's word.
 - 2026-10-17 — **The backfilled releases v1.0.0–v2.2.0 wait on `second-brain`'s "Backfill releases" workflow**, run once by the owner with his token (a tag on a commit older than `release.yml` is refused to the workflow's own token); `release.yml` publishes v2.2.1 itself on the merge.
+
+- 2026-11-27 — **The production raw archive is not compacted yet**: after this ships, on the OptiPlex: `npm run backup`, `make prod-compact-raw` (read-only measure — the real numbers replace the code estimate in `data-model.md`), then `ARGS=--apply`, then `ARGS=--vacuum` with the poller stopped. Each step on the owner's word.
 
 ## Topic files — read before touching the area
 
