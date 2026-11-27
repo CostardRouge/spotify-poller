@@ -30,7 +30,7 @@ import sharp from "sharp";
 const ICONS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "icons");
 
 /** The tile's own green: what a transparent pixel is painted onto where alpha is dropped. */
-const TILE = "#1db954";
+const TILE = "#141613";
 
 /**
  * `flatten` + `removeAlpha` drop the alpha channel, for the touch icon only:
@@ -73,7 +73,7 @@ for (const job of JOBS) {
   const svg = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "og-card.svg"));
   await sharp(svg, { density: 144 })
     .resize(1200, 630)
-    .flatten({ background: "#f8fbf9" })
+    .flatten({ background: "#f2eee4" })
     .removeAlpha()
     .png({ compressionLevel: 9 })
     .toFile(join(ICONS_DIR, "..", "og.png"));

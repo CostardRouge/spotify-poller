@@ -1,45 +1,63 @@
 @import "tailwindcss";
 
 /* ==============================================================
-   Spotify Poller — design tokens carried over verbatim from the
-   pre-Next.js UI (public/index.html on main): green-tinted OKLCH
-   palette, light by default, dark under prefers-color-scheme, both
-   overridable by [data-theme] on <html> (manual choice wins in both
-   directions). Green is the accent AND "healthy" — never decoration.
+   Témoin — design tokens (2026-11-27, the design lab's "fusion":
+   the name and the verdict of Témoin, the paper and the pen of
+   Sismo). They replace the OKLCH palette carried over from the
+   pre-Next.js UI; the variable NAMES are unchanged, so every page
+   restyles without being touched.
+
+   Three roles, never mixed: ink to read, the blue pen for what was
+   recorded (traces, the "now" mark), green for HEALTHY and nothing
+   else. Amber dashed = a declared gap. Light by default, dark under
+   prefers-color-scheme, both overridable by [data-theme] on <html>
+   (a manual choice wins in both directions).
+
+   Contrast, measured against --bg and --surface: --ink-2 ≥ 7:1,
+   --ink-3 ≥ 4.5:1 in light (it stays reserved for ≥18px or non-text
+   in dark), --pen ≥ 7:1 as text, --ok-text/--warn-text ≥ 5:1.
    ============================================================== */
 
 :root {
-  --bg:            oklch(0.985 0.003 160);
-  --surface:       oklch(1 0 0);
-  --surface-2:     oklch(0.966 0.004 160);
-  --surface-sunk:  oklch(0.945 0.005 160);
-  --line:          oklch(0.905 0.006 160);
-  --line-strong:   oklch(0.825 0.008 160);
-  --ink:           oklch(0.22 0.012 160);
-  --ink-2:         oklch(0.44 0.012 160);   /* AA against --bg and --surface */
-  --ink-3:         oklch(0.58 0.010 160);   /* ≥18px or non-text only */
+  --bg:            #f2eee4;   /* the paper */
+  --surface:       #fbf9f4;   /* a sheet on it */
+  --surface-2:     #f6f2e9;
+  --surface-sunk:  #ece6d8;
+  --line:          #e2dccd;
+  --line-strong:   #cfc7b4;
+  --ink:           #141613;
+  --ink-2:         #4b4a42;   /* AA body secondary */
+  --ink-3:         #6b685e;   /* ≥18px or non-text */
 
-  --accent:        oklch(0.46 0.130 150);
-  --accent-hover:  oklch(0.40 0.120 150);
-  --accent-soft:   oklch(0.945 0.030 150);
-  --on-accent:     oklch(1 0 0);
-  --accent-text:   oklch(0.44 0.120 150);
+  /* The accent is the ink itself: primary buttons, the selected tab. */
+  --accent:        #141613;
+  --accent-hover:  #2c2e2a;
+  --accent-soft:   #ebe5d6;
+  --on-accent:     #fbf9f4;
+  --accent-text:   #2340a8;   /* links read as pen */
 
-  --ok:            oklch(0.55 0.130 150);
-  --ok-soft:       oklch(0.950 0.032 150);
-  --warn:          oklch(0.56 0.120 75);
-  --warn-soft:     oklch(0.960 0.045 85);
-  --danger:        oklch(0.52 0.180 25);
-  --danger-soft:   oklch(0.958 0.030 25);
-  --info:          oklch(0.50 0.120 250);
-  --info-soft:     oklch(0.955 0.028 250);
+  --pen:           #2340a8;   /* what was recorded */
+  --pen-soft:      #dde2f3;
 
-  --focus:         oklch(0.55 0.150 240);
-  --shadow-1: 0 1px 2px oklch(0.22 0.012 160 / .06), 0 1px 1px oklch(0.22 0.012 160 / .04);
-  --shadow-2: 0 8px 24px oklch(0.22 0.012 160 / .10), 0 2px 6px oklch(0.22 0.012 160 / .06);
+  --ok:            #1f9d55;
+  --ok-text:       #136b3a;
+  --ok-soft:       #d3e8d6;
+  --warn:          #b86a00;
+  --warn-text:     #7a4500;
+  --warn-soft:     #f7ecd8;
+  --danger:        #c2362b;
+  --danger-text:   #9b2a21;
+  --danger-soft:   #f6dcd6;
+  --info:          #2340a8;
+  --info-soft:     #dde2f3;
 
-  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "Cascadia Mono", Consolas, monospace;
+  --focus:         #2340a8;
+  --shadow-1: 0 1px 2px rgb(20 22 19 / .06);
+  --shadow-2: 0 10px 30px rgb(20 22 19 / .12), 0 2px 6px rgb(20 22 19 / .06);
+
+  --sans: "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --display: "Inter Tight Variable", "Inter Tight", var(--sans);
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Aliases the components were written against — one source of truth above. */
   --panel: var(--surface);
@@ -50,73 +68,85 @@
   --faint: var(--ink-3);
   --accent-wash: var(--accent-soft);
   --accent-strong: var(--accent-hover);
-  --serif: var(--sans);
+  --serif: var(--display);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) { color-scheme: dark; }
   :root:not([data-theme="light"]) {
-    --bg:            oklch(0.168 0.008 162);
-    --surface:       oklch(0.208 0.009 162);
-    --surface-2:     oklch(0.245 0.010 162);
-    --surface-sunk:  oklch(0.140 0.007 162);
-    --line:          oklch(0.300 0.012 162);
-    --line-strong:   oklch(0.400 0.014 162);
-    --ink:           oklch(0.960 0.005 162);
-    --ink-2:         oklch(0.760 0.011 162);
-    --ink-3:         oklch(0.640 0.011 162);
+    --bg:            #14130f;
+    --surface:       #1d1b16;
+    --surface-2:     #23211b;
+    --surface-sunk:  #100f0c;
+    --line:          #2f2c25;
+    --line-strong:   #45413a;
+    --ink:           #efe9dc;
+    --ink-2:         #b0a896;
+    --ink-3:         #8e877a;
 
-    --accent:        oklch(0.760 0.170 150);
-    --accent-hover:  oklch(0.820 0.170 150);
-    --accent-soft:   oklch(0.300 0.055 150);
-    --on-accent:     oklch(0.180 0.040 150);
-    --accent-text:   oklch(0.790 0.150 150);
+    --accent:        #efe9dc;
+    --accent-hover:  #ffffff;
+    --accent-soft:   #2a2720;
+    --on-accent:     #14130f;
+    --accent-text:   #a9b8ff;
 
-    --ok:            oklch(0.780 0.155 150);
-    --ok-soft:       oklch(0.290 0.050 150);
-    --warn:          oklch(0.820 0.135 85);
-    --warn-soft:     oklch(0.300 0.045 80);
-    --danger:        oklch(0.715 0.160 25);
-    --danger-soft:   oklch(0.295 0.055 25);
-    --info:          oklch(0.760 0.100 245);
-    --info-soft:     oklch(0.295 0.045 250);
+    --pen:           #8ea2ff;
+    --pen-soft:      #252b45;
 
-    --focus:         oklch(0.780 0.120 240);
-    --shadow-1: 0 1px 2px oklch(0 0 0 / .35);
-    --shadow-2: 0 12px 32px oklch(0 0 0 / .48), 0 2px 8px oklch(0 0 0 / .35);
+    --ok:            #3ccf7e;
+    --ok-text:       #6fe0a0;
+    --ok-soft:       #1c3326;
+    --warn:          #f0a93b;
+    --warn-text:     #f5c070;
+    --warn-soft:     #352a17;
+    --danger:        #ff7a6b;
+    --danger-text:   #ff9b8f;
+    --danger-soft:   #3a1f1b;
+    --info:          #8ea2ff;
+    --info-soft:     #252b45;
+
+    --focus:         #a9b8ff;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / .35);
+    --shadow-2: 0 12px 32px rgb(0 0 0 / .48), 0 2px 8px rgb(0 0 0 / .35);
   }
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg:            oklch(0.168 0.008 162);
-  --surface:       oklch(0.208 0.009 162);
-  --surface-2:     oklch(0.245 0.010 162);
-  --surface-sunk:  oklch(0.140 0.007 162);
-  --line:          oklch(0.300 0.012 162);
-  --line-strong:   oklch(0.400 0.014 162);
-  --ink:           oklch(0.960 0.005 162);
-  --ink-2:         oklch(0.760 0.011 162);
-  --ink-3:         oklch(0.640 0.011 162);
+  --bg:            #14130f;
+  --surface:       #1d1b16;
+  --surface-2:     #23211b;
+  --surface-sunk:  #100f0c;
+  --line:          #2f2c25;
+  --line-strong:   #45413a;
+  --ink:           #efe9dc;
+  --ink-2:         #b0a896;
+  --ink-3:         #8e877a;
 
-  --accent:        oklch(0.760 0.170 150);
-  --accent-hover:  oklch(0.820 0.170 150);
-  --accent-soft:   oklch(0.300 0.055 150);
-  --on-accent:     oklch(0.180 0.040 150);
-  --accent-text:   oklch(0.790 0.150 150);
+  --accent:        #efe9dc;
+  --accent-hover:  #ffffff;
+  --accent-soft:   #2a2720;
+  --on-accent:     #14130f;
+  --accent-text:   #a9b8ff;
 
-  --ok:            oklch(0.780 0.155 150);
-  --ok-soft:       oklch(0.290 0.050 150);
-  --warn:          oklch(0.820 0.135 85);
-  --warn-soft:     oklch(0.300 0.045 80);
-  --danger:        oklch(0.715 0.160 25);
-  --danger-soft:   oklch(0.295 0.055 25);
-  --info:          oklch(0.760 0.100 245);
-  --info-soft:     oklch(0.295 0.045 250);
+  --pen:           #8ea2ff;
+  --pen-soft:      #252b45;
 
-  --focus:         oklch(0.780 0.120 240);
-  --shadow-1: 0 1px 2px oklch(0 0 0 / .35);
-  --shadow-2: 0 12px 32px oklch(0 0 0 / .48), 0 2px 8px oklch(0 0 0 / .35);
+  --ok:            #3ccf7e;
+  --ok-text:       #6fe0a0;
+  --ok-soft:       #1c3326;
+  --warn:          #f0a93b;
+  --warn-text:     #f5c070;
+  --warn-soft:     #352a17;
+  --danger:        #ff7a6b;
+  --danger-text:   #ff9b8f;
+  --danger-soft:   #3a1f1b;
+  --info:          #8ea2ff;
+  --info-soft:     #252b45;
+
+  --focus:         #a9b8ff;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / .35);
+  --shadow-2: 0 12px 32px rgb(0 0 0 / .48), 0 2px 8px rgb(0 0 0 / .35);
 }
 
 :root[data-theme="light"] { color-scheme: light; }
@@ -161,8 +191,9 @@ body {
 }
 
 h1, h2, h3 {
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--display);
+  font-weight: 650;
+  letter-spacing: -0.02em;
 }
 
 :focus-visible {
@@ -221,10 +252,10 @@ dialog::backdrop {
 
 .btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.4rem 0.7rem; min-height: 2rem;
+  padding: 0.45rem 0.9rem; min-height: 2.25rem;
   background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line-strong); border-radius: 9px;
-  font-size: 0.8125rem; font-weight: 500; line-height: 1.2;
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  font-size: 0.8125rem; font-weight: 550; line-height: 1.2;
   cursor: pointer; white-space: nowrap; text-decoration: none;
   transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
@@ -232,18 +263,22 @@ dialog::backdrop {
 .btn:active { background: var(--surface-sunk); }
 .btn[disabled], .btn[aria-disabled="true"] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
 .btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+/* The second weight of action: outlined in ink, no fill. */
+.btn.outline { background: transparent; border: 1.5px solid var(--ink); font-weight: 600; }
+.btn.outline:hover { background: var(--accent-soft); }
+.btn.lg { min-height: 2.75rem; padding: 0.55rem 1.15rem; font-size: 0.875rem; }
 .btn.primary:hover { background: var(--accent-hover); }
 .btn.ghost { background: transparent; border-color: transparent; color: var(--ink-2); }
 .btn.ghost:hover { background: var(--surface-2); color: var(--ink); }
 .btn.danger { color: var(--danger); border-color: var(--line-strong); }
 .btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
-.btn.sm { padding: 0.22rem 0.5rem; min-height: 1.65rem; font-size: 0.6875rem; }
+.btn.sm { padding: 0.25rem 0.65rem; min-height: 1.75rem; font-size: 0.75rem; }
 .btn.icon-only { padding: 0.4rem; }
 
 .field {
-  padding: 0.4rem 0.6rem; min-height: 2rem;
+  padding: 0.4rem 0.7rem; min-height: 2.25rem;
   background: var(--surface); color: var(--ink);
-  border: 1px solid var(--line-strong); border-radius: 9px;
+  border: 1px solid var(--line-strong); border-radius: 12px;
   font-size: 0.8125rem;
   transition: border-color 120ms ease;
 }
@@ -272,9 +307,9 @@ dialog::backdrop {
   border: 1px solid var(--line); background: var(--surface);
   font-size: 0.6875rem; font-weight: 500; white-space: nowrap;
 }
-.chip.ok { border-color: color-mix(in oklab, var(--ok) 40%, var(--line)); background: var(--ok-soft); color: var(--ink); }
-.chip.warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); background: var(--warn-soft); color: var(--ink); }
-.chip.bad { border-color: color-mix(in oklab, var(--danger) 40%, var(--line)); background: var(--danger-soft); color: var(--ink); }
+.chip.ok { border-color: color-mix(in oklab, var(--ok) 40%, var(--line)); background: var(--ok-soft); color: var(--ok-text); }
+.chip.warn { border-color: color-mix(in oklab, var(--warn) 40%, var(--line)); background: var(--warn-soft); color: var(--warn-text); }
+.chip.bad { border-color: color-mix(in oklab, var(--danger) 40%, var(--line)); background: var(--danger-soft); color: var(--danger-text); }
 .chip.info { border-color: color-mix(in oklab, var(--info) 40%, var(--line)); background: var(--info-soft); color: var(--ink); }
 
 .kbd {
@@ -322,14 +357,15 @@ dialog::backdrop {
    screen, and main's overflow-x: hidden then cut the Run buttons off. */
 .panel {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: 14px; overflow: clip; min-width: 0;
+  border-radius: 20px; overflow: clip; min-width: 0;
 }
+/* A sheet of paper with a title on it, not a window with a title bar: the
+   header sits on the sheet itself, separated by a hairline. */
 .panel > header {
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.75rem;
-  padding: 0.7rem 1rem; border-bottom: 1px solid var(--line);
-  background: var(--surface-2);
+  padding: 0.9rem 1.1rem 0.7rem; border-bottom: 1px solid var(--line);
 }
-.panel > header h2 { font-size: 0.8125rem; font-weight: 650; }
+.panel > header h2 { font-size: 0.9375rem; font-weight: 700; }
 .panel > header .hint { margin-left: auto; min-width: 0; font-size: 0.6875rem; color: var(--ink-2); text-align: right; }
 
 /* A status row on a phone: the 9rem label column left the value ~45 px, so a
@@ -414,6 +450,37 @@ dialog::backdrop {
 .empty svg { width: 1.5rem; height: 1.5rem; color: var(--ink-3); }
 .empty h3 { font-size: 0.8125rem; margin: 0; }
 .empty p { font-size: 0.8125rem; color: var(--ink-2); max-width: 46ch; margin: 0; text-wrap: pretty; }
+
+/* ==============================================================
+   The voyant — the status light. Never colour alone (PRODUCT.md):
+   each tone has its own SHAPE as well — round for healthy, square
+   for behind, triangle for stale or broken — and is always paired
+   with a word in the markup.
+   ============================================================== */
+.voyant { display: inline-block; flex: none; width: 0.625rem; height: 0.625rem; border-radius: 50%; background: var(--ink-3); }
+.voyant.ok { background: var(--ok); box-shadow: 0 0 0 4px var(--ok-soft); }
+.voyant.warn { border-radius: 2px; background: var(--warn); box-shadow: 0 0 0 4px var(--warn-soft); }
+.voyant.bad {
+  width: 0.75rem; height: 0.7rem; border-radius: 0; background: var(--danger);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.voyant.lg { width: 0.8rem; height: 0.8rem; }
+.voyant.lg.ok, .voyant.lg.warn { box-shadow: 0 0 0 5px var(--ok-soft); }
+.voyant.lg.warn { box-shadow: 0 0 0 5px var(--warn-soft); }
+.voyant.lg.bad { width: 0.95rem; height: 0.9rem; }
+.tone-ok { color: var(--ok-text); }
+.tone-warn { color: var(--warn-text); }
+.tone-bad { color: var(--danger-text); }
+
+/* The trace: pen line, dashed declared gaps, the pen mark at "now". */
+.trace-line { fill: none; stroke: var(--pen); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+.trace-gap { fill: none; stroke: var(--warn); stroke-width: 2.6; stroke-dasharray: 4 4; }
+.trace-mid { stroke: var(--line); stroke-width: 1; }
+.trace-pen { fill: var(--pen); }
+.gap-dash {
+  display: inline-block; flex: none; width: 1.75rem; height: 3px;
+  background: repeating-linear-gradient(90deg, var(--warn) 0 4px, transparent 4px 8px);
+}
 
 .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; flex: none; background: var(--ink-3); }
 .dot.ok { background: var(--ok); }

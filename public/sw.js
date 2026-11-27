@@ -1,5 +1,5 @@
 /*
- * spotify-poller's service worker. One job: an offline page for navigations.
+ * Témoin's service worker. One job: an offline page for navigations.
  *
  * What it deliberately does NOT do is cache the app. Every page here is a
  * report on live state — "played last succeeded 7 min ago" — and a cached copy
@@ -17,7 +17,7 @@
  *
  * Bump VERSION when offline.html changes, so the new copy replaces the old.
  */
-const VERSION = "v1";
+const VERSION = "v2"; // v2: the Témoin offline page
 const CACHE = `sp-offline-${VERSION}`;
 const OFFLINE_URL = new URL("offline.html", self.registration.scope).href;
 

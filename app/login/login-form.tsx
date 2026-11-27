@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SESAME_ERRORS, type SesameError } from "@/lib/auth/sesame-errors";
+import Mark from "@/components/Mark";
 
 // Same rule as lib/auth/sesame-flow.ts's safeNext, kept here: this file is a
 // client component and that one imports jose.
@@ -46,10 +47,13 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
     <div className="flex min-h-screen items-center justify-center bg-[color:var(--bg)] px-4">
       <form
         onSubmit={onSubmit}
-        className="w-full max-w-sm rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-8 shadow-sm"
+        className="w-full max-w-sm rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] p-8"
       >
-        <h1 className="font-[family-name:var(--serif)] text-xl text-[color:var(--text)]">spotify-poller</h1>
-        <p className="mt-1 text-sm text-[color:var(--muted)]">
+        <div className="mb-5">
+          <Mark size={44} />
+        </div>
+        <h1 className="font-[family-name:var(--display)] text-3xl font-bold tracking-[-0.04em] text-[color:var(--ink)]">témoin</h1>
+        <p className="mt-1 text-sm text-[color:var(--ink-2)]">
           {signedOut ? "Signed out." : "Custody report — sign in to continue."}
         </p>
 
@@ -57,12 +61,12 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
           <>
             <a
               href={`/api/auth/sesame/login?next=${encodeURIComponent(safeNext(params.get("next")))}`}
-              className="mt-6 block w-full rounded-md bg-[color:var(--accent)] px-4 py-2 text-center text-sm font-medium text-[color:var(--on-accent)]"
+              className="btn primary lg mt-6 w-full justify-center"
             >
               Sign in with Sésame
             </a>
             {sesameError && sesameError in SESAME_ERRORS && (
-              <p role="alert" className="mt-3 text-sm text-[color:var(--danger)]">
+              <p role="alert" className="mt-3 text-sm text-[color:var(--danger-text)]">
                 {SESAME_ERRORS[sesameError as SesameError]}
               </p>
             )}
@@ -80,11 +84,11 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
           autoComplete="current-password"
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          className="mt-1 w-full rounded-md border border-[color:var(--line)] bg-[color:var(--panel-2)] px-3 py-2 text-[color:var(--text)] outline-none focus-visible:border-[color:var(--accent)]"
+          className="field mt-1 w-full"
         />
 
         {error && (
-          <p role="alert" className="mt-3 text-sm text-[color:var(--danger)]">
+          <p role="alert" className="mt-3 text-sm text-[color:var(--danger-text)]">
             {error}
           </p>
         )}
@@ -92,7 +96,7 @@ function LoginForm({ mode }: { mode: "token" | "sesame" }) {
         <button
           type="submit"
           disabled={busy || token.length === 0}
-          className="mt-6 w-full rounded-md bg-[color:var(--accent)] px-4 py-2 text-sm font-medium text-[color:var(--on-accent)] transition-opacity disabled:opacity-50"
+          className="btn primary lg mt-6 w-full justify-center"
         >
           {busy ? "Signing in…" : "Sign in"}
         </button>

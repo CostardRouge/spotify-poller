@@ -6,25 +6,25 @@
 <meta name="robots" content="noindex" />
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f8faf9" />
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1b211d" />
-<title>Cannot reach the poller · spotify-poller</title>
+<title>Cannot reach Témoin</title>
 <!--
   Served by public/sw.js when a page load gets no response at all. Self-contained on purpose: when this
   shows, nothing else from the server can be fetched — no stylesheet, no font, no icon. The tokens are
-  app/globals.css's, copied. It must never claim a state: unreachable from this phone is not "down".
+  app/globals.css's (the Témoin palette), copied. It must never claim a state: unreachable from this phone is not "down".
   Changing this file means bumping VERSION in public/sw.js.
 -->
 <style>
   :root {
-    --bg: oklch(0.985 0.003 160); --surface: oklch(1 0 0); --line: oklch(0.905 0.006 160);
-    --line-strong: oklch(0.825 0.008 160); --ink: oklch(0.22 0.012 160); --ink-2: oklch(0.44 0.012 160);
-    --warn: oklch(0.56 0.120 75); --warn-soft: oklch(0.960 0.045 85); --focus: oklch(0.55 0.150 240);
+    --bg: #f2eee4; --surface: #fbf9f4; --line: #e2dccd;
+    --line-strong: #cfc7b4; --ink: #141613; --ink-2: #4b4a42;
+    --warn: #b86a00; --warn-soft: #f7ecd8; --warn-text: #7a4500; --focus: #2340a8;
     color-scheme: light dark;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: oklch(0.168 0.008 162); --surface: oklch(0.208 0.009 162); --line: oklch(0.300 0.012 162);
-      --line-strong: oklch(0.400 0.014 162); --ink: oklch(0.960 0.005 162); --ink-2: oklch(0.760 0.011 162);
-      --warn: oklch(0.820 0.135 85); --warn-soft: oklch(0.300 0.045 80); --focus: oklch(0.780 0.120 240);
+      --bg: #14130f; --surface: #1d1b16; --line: #2f2c25;
+      --line-strong: #45413a; --ink: #efe9dc; --ink-2: #b0a896;
+      --warn: #f0a93b; --warn-soft: #352a17; --warn-text: #f5c070; --focus: #a9b8ff;
     }
   }
   * { box-sizing: border-box; }
@@ -37,21 +37,22 @@
     font: 0.9375rem/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
   main {
-    width: 100%; max-width: 26rem; padding: 1.25rem;
-    background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+    width: 100%; max-width: 26rem; padding: 1.5rem;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
   }
   .chip {
-    display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.6rem;
-    border: 1px solid color-mix(in oklab, var(--warn) 40%, var(--line)); border-radius: 999px;
-    background: var(--warn-soft); font-size: 0.75rem; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.25rem 0.65rem;
+    border-radius: 999px; background: var(--warn-soft); color: var(--warn-text);
+    font-size: 0.8125rem; font-weight: 600;
   }
-  .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--warn); }
-  h1 { margin: 0.9rem 0 0.4rem; font-size: 1.125rem; font-weight: 600; letter-spacing: -0.01em; }
+  /* The "behind" voyant of the app: a square, so the state is never colour alone. */
+  .dot { width: 0.55rem; height: 0.55rem; border-radius: 2px; background: var(--warn); }
+  h1 { margin: 1rem 0 0.5rem; font-size: 1.75rem; line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; }
   p { margin: 0 0 0.75rem; color: var(--ink-2); text-wrap: pretty; }
   button {
-    margin-top: 0.25rem; padding: 0.55rem 0.9rem; min-height: 2.75rem;
-    background: var(--surface); color: var(--ink); border: 1px solid var(--line-strong); border-radius: 9px;
-    font: inherit; font-weight: 500; cursor: pointer;
+    margin-top: 0.25rem; padding: 0.55rem 1.1rem; min-height: 2.75rem;
+    background: transparent; color: var(--ink); border: 1.5px solid var(--ink); border-radius: 999px;
+    font: inherit; font-weight: 600; cursor: pointer;
   }
   button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 </style>
@@ -59,7 +60,7 @@
 <body>
 <main>
   <span class="chip"><span class="dot" aria-hidden="true"></span>Unreachable</span>
-  <h1>Cannot reach the poller</h1>
+  <h1>Cannot reach Témoin</h1>
   <p>This device got no answer from the server: no network, the VPN off, or the server itself down.</p>
   <p>That says nothing about collection. The poller runs on its own and may well be collecting right now; only the watchdog can tell a silent poller from an unreachable one.</p>
   <button type="button" onclick="location.reload()">Try again</button>

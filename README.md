@@ -1,4 +1,7 @@
-# Spotify Poller — continuous listening-history collection
+# Témoin — continuous listening-history collection
+
+*Formerly Spotify Poller: the product took its name on 2026-11-27; the repository,
+image and paths below keep the old one until the rename is carried out.*
 
 **[Showcase / screenshots →](https://costardrouge.github.io/spotify-poller/)**
 

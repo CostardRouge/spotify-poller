@@ -10,7 +10,20 @@ major number comes from.
 
 ## [Unreleased]
 
+### Changed
+
+- The app is now called **Témoin**, with a new look: warm paper, black ink and a blue pen, a new icon, and the same
+  colour rules as before — green only ever means healthy. Install it again on your phone's home screen to get the new
+  icon and name.
+- The Overview leads with one sentence that says whether every play is being collected, then today's listening drawn
+  as a trace; on a computer, a dial of today's polls and the whole week. A declared gap shows as a dashed amber stretch,
+  never as an empty one.
+- On a phone, the tabs are now Now, Trace, Library and More.
+
 ### Added
+
+- A Trace page: each day of the week drawn as the pen recorded it, one line per day, with the declared gaps on it and a
+  week-by-week history (shortcut key 9).
 
 - Sign in with Sésame (`AUTH_MODE=sesame`): the login page offers your Sésame account — one passkey for every app —
   instead of the admin token, which is then no longer needed. Who may sign in is decided in Sésame.

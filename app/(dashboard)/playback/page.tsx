@@ -72,7 +72,7 @@ export default async function PlaybackPage({
                 <td data-label="Device" className="px-3 py-2 text-[color:var(--muted)]">{s.device_name ?? "—"}</td>
                 <td data-label="Completion" className="px-3 py-2">
                   {s.completion_ratio != null ? `${Math.round(s.completion_ratio * 100)}%` : "—"}
-                  {s.skipped === 1 && <span className="ml-1 text-xs text-[color:var(--warn)]">skipped</span>}
+                  {s.skipped === 1 && <span className="ml-1 text-xs text-[color:var(--warn-text)]">skipped</span>}
                 </td>
                 <td data-label="Ended by" className="px-3 py-2 text-[color:var(--muted)]">{s.close_reason ?? "in progress"}</td>
               </tr>
