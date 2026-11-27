@@ -65,13 +65,13 @@ await shoot(page, "listening");
 await page.goto(`${BASE}/accounts`, { waitUntil: "networkidle" });
 await shoot(page, "accounts");
 
-// 6. Runs.
-await page.goto(`${BASE}/runs`, { waitUntil: "networkidle" });
-await shoot(page, "runs");
+// 6. Journal — runs and gaps in one thread (it replaced Runs, Gaps and Stats).
+await page.goto(`${BASE}/journal`, { waitUntil: "networkidle" });
+await shoot(page, "journal");
 
-// 7. Stats.
-await page.goto(`${BASE}/stats`, { waitUntil: "networkidle" });
-await shoot(page, "stats");
+// 7. System — the instrument and the server read-out.
+await page.goto(`${BASE}/system`, { waitUntil: "networkidle" });
+await shoot(page, "system");
 
 // 8. Payload modal — the event inspector, open on the first row.
 await page.goto(`${BASE}/events`, { waitUntil: "networkidle" });

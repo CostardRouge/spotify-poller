@@ -9,7 +9,7 @@ import { GLOBAL_SCOPE } from "@/lib/server/types";
 import { formatTimestamp, relativeFromNow } from "@/lib/format";
 import { ago, verdict } from "@/lib/verdict";
 import { renderTime } from "@/lib/clock";
-import Row, { RowTone } from "@/components/Row";
+import type { RowTone } from "@/components/Row";
 import RunNowButton from "@/components/RunNowButton";
 import TraceStrip, { traceLabel, weekdayOf } from "@/components/TraceStrip";
 
@@ -64,6 +64,9 @@ function HourAxis() {
  * Order of reading, on every viewport: the voyant and one sentence (healthy or
  * not, in under two seconds), what to do about it, then the evidence — today's
  * trace on a phone, the dial and the week on a desk — and the details last.
+ * Since 2026-11-27 (design lab iteration 2) the "Stored data" and "Server"
+ * panels are gone from here: the counts live beside the runs on the Journal,
+ * the server read-out on System. Each fact has one home.
  * The verdict comes from lib/verdict.ts, the same tree the top bar uses on
  * every other page, so the two can never disagree.
  */
@@ -110,9 +113,6 @@ export default async function OverviewPage({
       : []),
   ];
 
-  const byType = Object.entries(health.events_by_type)
-    .map(([k, n]) => `${k} ${n.toLocaleString()}`)
-    .join(" · ");
   const gaps = stats.gaps as Gap[];
   const recentRuns = (stats.last_20_runs as RecentRun[]).slice(0, 5);
   const latestGap = gaps[0];
@@ -129,7 +129,13 @@ export default async function OverviewPage({
   const lastLine = `Last poll ${ago(health.collector_played_last_success, now)}${sched ? ` · next ${nextPoll(health.collector_played_last_success, sched.playedEveryMinutes, now)}` : ""}`;
 
   return (
-    <div className="grid max-w-6xl gap-4 md:gap-5">
+    // @container: the top pair splits on the width of the page column, not of
+    // the viewport. Beside a 240 px sidebar, a 1024 px window leaves ~720 px,
+    // where the 1.3:1 split squeezed the status card's collectors to ~30 px
+    // ("6m ago · on time" broke letter by letter, Run now overflowed the card,
+    // and Safari scrolled the whole page sideways). Below 56rem the two cards
+    // stack, each full width.
+    <div className="@container grid max-w-6xl gap-4 md:gap-5">
       {connected && (
         <div role="status" className="alert">
           <p>
@@ -146,7 +152,7 @@ export default async function OverviewPage({
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:gap-5">
+      <div className="grid gap-4 md:gap-5 @4xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
         {/* The verdict. On a phone it sits on the paper itself; on a desk it is a sheet. */}
         <section className="flex min-w-0 flex-col gap-3 pt-2 md:rounded-[24px] md:border md:border-[color:var(--line)] md:bg-[color:var(--surface)] md:p-8">
           <div className="flex items-center gap-2.5">
@@ -173,34 +179,42 @@ export default async function OverviewPage({
         </section>
 
         {/* Desk: the dial of today's polls, and the collectors with their own Run now. */}
-        <section className="hidden min-w-0 items-center gap-6 rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 md:grid md:grid-cols-[176px_minmax(0,1fr)]">
-          <div className="relative h-44 w-44" role="img" aria-label={`${polls.ok} successful polls today${polls.failed ? `, ${polls.failed} failed` : ""}`}>
-            {dial.map((t, i) => (
-              <span
-                key={i}
-                aria-hidden
-                className={`absolute left-1/2 top-0 w-[2px] rounded-full ${t.cls}`}
-                style={{ height: t.len, transformOrigin: "1px 88px", transform: `translateX(-50%) rotate(${t.deg}deg)` }}
-              />
-            ))}
-            <div className="absolute inset-9 flex flex-col items-center justify-center text-center">
-              <span className="font-[family-name:var(--display)] text-3xl font-bold tracking-[-0.03em]">{polls.ok}</span>
-              <span className="text-xs text-[color:var(--ink-2)]">{polls.ok === 1 ? "poll" : "polls"} today</span>
-              {polls.failed > 0 && <span className="mt-1 font-[family-name:var(--mono)] text-xs tone-warn">{polls.failed} failed</span>}
-            </div>
-          </div>
-          <div className="flex min-w-0 flex-col">
-            {collectors.map((c, i) => (
-              <div key={c.id} className={`flex items-center justify-between gap-3 py-2.5 ${i ? "border-t border-[color:var(--line)]" : ""}`}>
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-sm font-semibold capitalize">{c.id}</span>
-                  <span className="font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
-                    {c.iso ? relativeFromNow(c.iso) : "never"} · <span className={`tone-${c.tone === "none" ? "warn" : c.tone}`}>{FRESH_WORD[c.tone ?? "none"]}</span>
-                  </span>
-                </div>
-                <RunNowButton collector={c.id} />
+        {/* Its own @container: the dial sits beside the collectors only when the
+            card leaves them ~10rem (176 px dial + gap + 10rem = 21rem);
+            narrower, the dial goes on top, centred, and the rows take the width. */}
+        <section className="@container hidden min-w-0 rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] p-6 md:block">
+          <div className="grid h-full items-center gap-6 @[21rem]:grid-cols-[176px_minmax(0,1fr)]">
+            <div className="relative h-44 w-44 justify-self-center" role="img" aria-label={`${polls.ok} successful polls today${polls.failed ? `, ${polls.failed} failed` : ""}`}>
+              {dial.map((t, i) => (
+                <span
+                  key={i}
+                  aria-hidden
+                  className={`absolute left-1/2 top-0 w-[2px] rounded-full ${t.cls}`}
+                  style={{ height: t.len, transformOrigin: "1px 88px", transform: `translateX(-50%) rotate(${t.deg}deg)` }}
+                />
+              ))}
+              <div className="absolute inset-9 flex flex-col items-center justify-center text-center">
+                <span className="font-[family-name:var(--display)] text-3xl font-bold tracking-[-0.03em]">{polls.ok}</span>
+                <span className="text-xs text-[color:var(--ink-2)]">{polls.ok === 1 ? "poll" : "polls"} today</span>
+                {polls.failed > 0 && <span className="mt-1 font-[family-name:var(--mono)] text-xs tone-warn">{polls.failed} failed</span>}
               </div>
-            ))}
+            </div>
+            <div className="flex min-w-0 flex-col">
+              {collectors.map((c, i) => (
+                // Wraps rather than squeezes: when the row is too narrow for the
+                // text and the button side by side, Run now drops under the text
+                // instead of overlapping it, and the age never breaks mid-word.
+                <div key={c.id} className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 py-2.5 ${i ? "border-t border-[color:var(--line)]" : ""}`}>
+                  <div className="flex min-w-0 flex-col">
+                    <span className="text-sm font-semibold capitalize">{c.id}</span>
+                    <span className="whitespace-nowrap font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
+                      {c.iso ? relativeFromNow(c.iso) : "never"} · <span className={`tone-${c.tone === "none" ? "warn" : c.tone}`}>{FRESH_WORD[c.tone ?? "none"]}</span>
+                    </span>
+                  </div>
+                  <RunNowButton collector={c.id} />
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       </div>
@@ -237,7 +251,7 @@ export default async function OverviewPage({
 
       {/* Desk: the week, one strip per day. */}
       <section className="hidden rounded-[24px] border border-[color:var(--line)] bg-[color:var(--surface)] px-6 py-5 md:block">
-        <div className="flex items-baseline justify-between gap-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 className="text-xl font-bold">The week, as a trace</h2>
           <span className="font-[family-name:var(--mono)] text-xs text-[color:var(--ink-2)]">
             {weekPlays.toLocaleString()} plays · dashed = needle lifted, declared
@@ -261,12 +275,12 @@ export default async function OverviewPage({
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
+      <div className="grid gap-4 md:gap-5 @3xl:grid-cols-2">
         <section className="panel">
           <header>
             <h2>Recent runs</h2>
-            <Link href="/runs" className="hint underline">
-              all runs
+            <Link href="/journal" className="hint underline">
+              the journal
             </Link>
           </header>
           <div className="flex flex-col px-4 py-1">
@@ -309,7 +323,7 @@ export default async function OverviewPage({
               Plays from a gap are recovered on the next poll if they were still among your last 50. The window stays
               declared, so an empty stretch never reads as silence.
             </p>
-            <Link href="/gaps" className="btn sm mt-auto self-start">
+            <Link href="/journal?gaps=1" className="btn sm mt-auto self-start">
               Review
             </Link>
           </section>
@@ -319,81 +333,6 @@ export default async function OverviewPage({
             <p className="text-sm text-[color:var(--ink-2)]">No window is known to be missing.</p>
           </section>
         )}
-      </div>
-
-      {/* The details: everything the old Overview showed, kept, below the fold. */}
-      <div className="grid gap-4 md:grid-cols-2 md:gap-5">
-        <section className="panel">
-          <header>
-            <h2>Stored data</h2>
-            <span className="hint">account {scope || "—"}</span>
-          </header>
-          <div className="rows">
-            <Row tone={null} label="Events" value={stats.event_rows.toLocaleString()} sub={byType || "no events yet"} />
-            <Row tone={null} label="Raw API rows" value={stats.raw_rows.toLocaleString()} sub="Untouched Spotify responses, kept for replay." />
-            {!health.playback.enabled && (
-              <Row
-                tone="none"
-                label="Playback"
-                value="Disabled"
-                sub={
-                  <>
-                    Opt-in: set <code className="font-[family-name:var(--mono)]">PLAYBACK_ENABLED=1</code> with the in-process scheduler.
-                  </>
-                }
-              />
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <header>
-            <h2>Server</h2>
-          </header>
-          <div className="rows">
-            <Row
-              tone={sched ? "ok" : null}
-              label="Scheduler"
-              value={sched ? "In-process" : "External (systemd)"}
-              sub={sched ? `backup every ${sched.backupEveryHours} h` : "collection driven by systemd timers"}
-            />
-            <Row
-              tone={env.BACKUP_ENABLED ? "ok" : "warn"}
-              label="Backups"
-              value={env.BACKUP_ENABLED ? "Enabled" : "Disabled"}
-              sub={env.BACKUP_ENABLED ? `${env.BACKUP_DIR} · keep ${env.BACKUP_KEEP}` : "Set BACKUP_ENABLED=1 to snapshot the database."}
-            />
-            <Row
-              tone={env.WATCHDOG_URL ? "ok" : "warn"}
-              label="Watchdog"
-              value={env.WATCHDOG_URL ? "Configured" : "Not configured"}
-              sub={
-                env.WATCHDOG_URL
-                  ? "Alerts on silence, the only thing that catches a dead poller."
-                  : "Without WATCHDOG_URL nothing alerts you when the poller goes quiet."
-              }
-            />
-            <Row
-              tone={env.NTFY_URL ? "ok" : null}
-              label="ntfy"
-              value={env.NTFY_URL ? "Configured" : "Not configured"}
-              sub="Push channel for actionable events. It cannot detect silence."
-            />
-            <Row
-              tone={null}
-              label="Auth mode"
-              value={env.AUTH_MODE}
-              sub={
-                env.AUTH_MODE === "proxy"
-                  ? "A reverse proxy authenticates requests."
-                  : env.AUTH_MODE === "sesame"
-                    ? "Sésame opens the session."
-                    : "JWT session unlocked by ADMIN_TOKEN."
-              }
-            />
-            <Row tone={null} label="Timezone" value={tz} sub="Display only; every timestamp is stored in UTC." />
-          </div>
-        </section>
       </div>
     </div>
   );

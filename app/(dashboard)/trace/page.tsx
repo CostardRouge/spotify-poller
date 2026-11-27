@@ -112,7 +112,7 @@ export default async function TracePage({
           {gaps.map((g) => (
             <Link
               key={g.id}
-              href="/gaps"
+              href="/journal?gaps=1"
               className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-3 rounded-[18px] bg-[color:var(--warn-soft)] px-4 py-3.5"
             >
               <span className="gap-dash" aria-hidden />

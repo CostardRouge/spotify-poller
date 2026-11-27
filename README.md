@@ -193,31 +193,35 @@ honest, quiet):
   *Sunday nights*, *techno in the morning*, *this artist by month*. Plain links
   and a GET form: no client JavaScript, bookmarkable, and the same numbers are
   served as JSON by `/api/listening` for the same query string;
-- **Runs** (`/runs`) — the collector run log (`poller_runs`), status and
-  errors;
-- **Gaps** (`/gaps`) — declared holes in the history (`gaps`);
-- **Stats** (`/stats`) — collection volumes (events, raw evidence, gaps) and
-  the last 20 runs — custody, as opposed to the listening statistics above;
+- **Journal** (`/journal`) — every collection attempt (`poller_runs`) and
+  every declared gap (`gaps`) in one thread, by local day, filterable by
+  collector or down to gaps alone, with the last 7 days' counts and the stored
+  volumes beside it (custody, as opposed to the listening statistics above).
+  `/runs`, `/gaps` and `/stats` redirect here;
+- **System** (`/system`) — the instrument: database and disk, backups and
+  watchdog, the connected accounts, and the server configuration read-out;
 - **Playback** (`/playback`) — playback sessions; always in the navigation,
   and the page itself explains how to enable the collector when it is off.
 
 Around the pages, the app shell carries the rest of the operator surface:
 
-- a **sidebar** with the account view-scope selector (looking is not
-  collecting — a hint appears whenever the viewed account differs from the
-  collected one), a health chip (freshness of `played`, dot always paired with
-  a word), and a **now-playing widget** (title, progress bar, device, volume)
-  while the playback collector observes a listen;
-- a **settings dialog** (theme override, backup action, keyboard shortcut
-  list, server configuration read-out, sign out);
+- a **sidebar** with five places in three groups (Watch: Now, Trace, Journal;
+  History: Library = Plays, Sessions, Trends; Instrument: System = Server,
+  Accounts, Storage), the health voyant with its word, a "Jump to…" field for
+  the palette, and a **now-playing widget** while the playback collector
+  observes a listen;
+- an **account menu** (the button at the foot of the sidebar, the round button
+  in a phone's header): the viewed account (looking is not collecting — it
+  only changes `?account=`), theme, NDJSON export, backup, keyboard shortcuts,
+  System with what is left to set up, version, sign out;
 - a **command palette** on <kbd>⌘K</kbd> — sections and actions, searchable;
-  plus global shortcuts: <kbd>1</kbd>…<kbd>8</kbd> jump to a section,
-  <kbd>/</kbd> focuses the events search, <kbd>T</kbd> cycles the theme,
-  <kbd>R</kbd> refreshes, <kbd>?</kbd> shows the shortcut list, and
+  plus global shortcuts: <kbd>1</kbd>…<kbd>9</kbd> and <kbd>0</kbd> jump to a
+  section, <kbd>/</kbd> focuses the events search, <kbd>T</kbd> cycles the
+  theme, <kbd>R</kbd> refreshes, <kbd>?</kbd> shows the shortcut list, and
   <kbd>Esc</kbd> closes any overlay;
-- on phones the sidebar folds into a **bottom tab bar** with a More sheet
-  (remaining sections, run actions, settings, account selector) — every
-  operator action stays reachable on a 360 px screen (PRODUCT.md).
+- on phones a **bottom tab bar** (Now, Trace, Library, Journal) and the account
+  menu as a sheet — every operator action stays reachable on a 360 px screen
+  (PRODUCT.md).
 
 `AUTH_MODE=token` (default): sign in once at `/login` with `ADMIN_TOKEN`; a
 signed JWT cookie (`JWT_SECRET`) carries the session for 30 days.

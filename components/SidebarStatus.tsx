@@ -1,22 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-interface NowPlaying {
-  title: string | null;
-  subtitle: string | null;
-  item_id: string;
-  completion_ratio: number | null;
-  device_name: string | null;
-  volume_last: number | null;
-  last_is_playing: number;
-}
-
-interface StatusPayload {
-  playback: { enabled: boolean; now_playing: NowPlaying | null };
-}
-
-const POLL_MS = 20_000;
+import { useStatus } from "./useStatus";
 
 function pct(ratio: number | null): number {
   return Math.min(100, Math.round((ratio ?? 0) * 100));
@@ -28,25 +12,8 @@ function pct(ratio: number | null): number {
  * "paused" appended when playback is stopped mid-track.
  */
 export default function SidebarStatus() {
-  const [status, setStatus] = useState<StatusPayload | null>(null);
-
-  useEffect(() => {
-    let alive = true;
-    async function poll() {
-      try {
-        const res = await fetch("/api/status");
-        if (res.ok && alive) setStatus(await res.json());
-      } catch {
-        /* transient — next poll catches up */
-      }
-    }
-    poll();
-    const t = setInterval(poll, POLL_MS);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, []);
+  // Shares the shell's single /api/status poll (components/useStatus.ts).
+  const status = useStatus();
 
   const np = status?.playback.enabled ? status.playback.now_playing : null;
   if (!np) return null;

@@ -5,7 +5,9 @@ import Icon from "./Icon";
 
 const SHORTCUTS: { what: string; keys: string[] }[] = [
   { what: "Command palette", keys: ["⌘", "K"] },
-  { what: "Jump to section", keys: ["1", "…", "9"] },
+  { what: "Now · Plays · Journal · Gaps", keys: ["1", "2", "3", "4"] },
+  { what: "Accounts · Sessions · Trends · Trace", keys: ["6", "7", "8", "9"] },
+  { what: "System", keys: ["0"] },
   { what: "Search events", keys: ["/"] },
   { what: "Cycle theme", keys: ["T"] },
   { what: "Refresh current view", keys: ["R"] },
@@ -16,7 +18,7 @@ const SHORTCUTS: { what: string; keys: string[] }[] = [
 /**
  * The old UI's dedicated keyboard-shortcuts dialog (dlg-keys): one row per
  * shortcut, keycap-styled keys pushed to the right. Opened from anywhere via
- * the `sp:open-shortcuts` window event (settings, ⌘K palette, the ? key).
+ * the `sp:open-shortcuts` window event (account menu, ⌘K palette, the ? key).
  */
 export default function ShortcutsDialog() {
   const dialogRef = useRef<HTMLDialogElement>(null);

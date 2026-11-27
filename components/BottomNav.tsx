@@ -1,40 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useRef, useState } from "react";
-import AccountSelect, { AccountOption } from "./AccountSelect";
-import Icon, { IconName } from "./Icon";
-
-// Témoin (2026-11-27): Now, Trace, Library, and More for the rest — the
-// design lab's three tabs, plus the sheet that keeps every other section and
-// action one tap away (PRODUCT.md, phone-complete).
-const PRIMARY: { href: string; label: string; icon: IconName }[] = [
-  { href: "/", label: "Now", icon: "overview" },
-  { href: "/trace", label: "Trace", icon: "trace" },
-  { href: "/events", label: "Library", icon: "events" },
-];
-
-const MORE_LINKS: { href: string; label: string; icon: IconName }[] = [
-  { href: "/playback", label: "Playback", icon: "playback" },
-  { href: "/runs", label: "Runs", icon: "runs" },
-  { href: "/gaps", label: "Gaps", icon: "gaps" },
-  { href: "/listening", label: "Listening", icon: "listening" },
-  { href: "/stats", label: "Stats", icon: "stats" },
-  { href: "/accounts", label: "Accounts", icon: "accounts" },
-  { href: "/database", label: "Database", icon: "database" },
-];
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import Icon from "./Icon";
+import { SECTIONS, sectionOf } from "@/lib/nav";
 
 /**
- * Phone navigation (PRODUCT.md: phone-complete): the sidebar disappears below
- * md, this bar takes over — three primary sections plus a More sheet with the
- * rest, the collector run actions, the view-scope selector and Settings.
+ * Phone navigation (PRODUCT.md: phone-complete). Since 2026-11-27 (design lab
+ * iteration 2): four tabs — Now, Trace, Library, Journal — and no "More"
+ * sheet. What that sheet held now has one home each: System is in the account
+ * sheet (the round button in the header, components/AccountMenu.tsx), the run
+ * actions are on Now, the viewed account and the theme are in the account
+ * sheet too. Nothing an operator can do is desk-only.
  */
-export default function BottomNav(props: {
-  accounts: AccountOption[];
-  activeAccountId: string | null;
-  gapsByAccount: Record<string, number>;
-}) {
+const TABS = SECTIONS.filter((s) => s.id !== "system");
+// Trace, Library, Journal: the order the phone reads in — is it alive, what
+// was collected, what happened to the collector.
+TABS.sort((a, b) => ["now", "trace", "library", "journal"].indexOf(a.id) - ["now", "trace", "library", "journal"].indexOf(b.id));
+
+export default function BottomNav(props: { activeAccountId: string | null; gapsByAccount: Record<string, number> }) {
   // useSearchParams (for the viewed account's gaps badge) needs Suspense.
   return (
     <Suspense>
@@ -43,145 +28,43 @@ export default function BottomNav(props: {
   );
 }
 
-function BottomNavInner({
-  accounts,
-  activeAccountId,
-  gapsByAccount,
-}: {
-  accounts: AccountOption[];
-  activeAccountId: string | null;
-  gapsByAccount: Record<string, number>;
-}) {
+function BottomNavInner({ activeAccountId, gapsByAccount }: { activeAccountId: string | null; gapsByAccount: Record<string, number> }) {
   const pathname = usePathname();
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [runResult, setRunResult] = useState<string | null>(null);
   const viewing = searchParams.get("account") || activeAccountId || "";
   const gapCount = gapsByAccount[viewing] ?? 0;
-
-  async function run(collector: string) {
-    setRunResult(`running ${collector}…`);
-    const res = await fetch(`/api/run?collector=${collector}`, { method: "POST" });
-    const body = await res.json().catch(() => ({}));
-    setRunResult(
-      res.ok ? `${collector}: ${body.status} — ${body.inserted ?? 0} new` : `${collector}: ${body.error ?? "failed"}`
-    );
-    router.refresh();
-  }
-
-  const itemClass = (active: boolean) =>
-    "flex flex-1 flex-col items-center gap-1 rounded-[10px] px-2 py-1.5 text-center text-[11px] " +
-    (active ? "font-semibold text-[color:var(--ink)]" : "font-medium text-[color:var(--ink-2)]");
+  const current = sectionOf(pathname);
 
   return (
-    <>
-      <nav
-        aria-label="Sections"
-        className="tabbar fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--surface)] md:hidden"
-      >
-        {PRIMARY.map((item) => (
-          <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined} className={itemClass(pathname === item.href)}>
-            <Icon name={item.icon} className="h-5 w-5" />
-            {item.label}
+    <nav
+      aria-label="Sections"
+      className="tabbar fixed inset-x-0 bottom-0 z-40 flex gap-1 border-t border-[color:var(--line)] bg-[color:var(--surface)] md:hidden"
+    >
+      {TABS.map((s) => {
+        const active = current?.id === s.id;
+        return (
+          <Link
+            key={s.id}
+            href={s.href}
+            aria-current={active ? "page" : undefined}
+            className={
+              "relative flex flex-1 flex-col items-center gap-1 rounded-[10px] px-2 py-1.5 text-center text-[11px] " +
+              (active ? "font-semibold text-[color:var(--ink)]" : "font-medium text-[color:var(--ink-2)]")
+            }
+          >
+            <Icon name={s.icon} className="h-5 w-5" />
+            {s.label}
+            {s.id === "journal" && gapCount > 0 && (
+              <span
+                aria-label={`${gapCount} declared gap${gapCount === 1 ? "" : "s"}`}
+                className="absolute right-1/4 top-0 min-w-4 -translate-y-1 rounded-full border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-1 text-center text-[10px] font-bold leading-4 text-[color:var(--warn-text)]"
+              >
+                {gapCount > 9 ? "9+" : gapCount}
+              </span>
+            )}
           </Link>
-        ))}
-        <button
-          type="button"
-          onClick={() => {
-            setRunResult(null);
-            dialogRef.current?.showModal();
-          }}
-          className={"relative " + itemClass(MORE_LINKS.some((l) => l.href === pathname))}
-        >
-          <Icon name="more" className="h-5 w-5" />
-          More
-          {gapCount > 0 && (
-            <span
-              aria-label={`${gapCount} declared gap(s)`}
-              className="absolute right-1/4 top-0 min-w-4 -translate-y-1 rounded-full border border-[color:var(--warn)] bg-[color:var(--warn-soft)] px-1 text-center text-[10px] font-bold leading-4 text-[color:var(--warn-text)]"
-            >
-              {gapCount > 9 ? "9+" : gapCount}
-            </span>
-          )}
-        </button>
-      </nav>
-
-      <dialog
-        ref={dialogRef}
-        onClick={(e) => {
-          if (e.target === dialogRef.current) dialogRef.current?.close();
-        }}
-        className="m-auto w-full max-w-sm rounded-lg border border-[color:var(--line)] bg-[color:var(--panel)] p-0 text-[color:var(--text)]"
-        aria-label="More"
-      >
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg">More</h2>
-            <button
-              type="button"
-              onClick={() => dialogRef.current?.close()}
-              className="btn ghost icon-only"
-              aria-label="Close"
-            >
-              <Icon name="x" className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="mt-3 flex flex-col gap-1">
-            {MORE_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => dialogRef.current?.close()}
-                className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-[color:var(--ink-2)] hover:bg-[color:var(--surface-2)] hover:text-[color:var(--ink)]"
-              >
-                <Icon name={item.icon} className="h-4 w-4" />
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-3 border-t border-[color:var(--line-soft)] pt-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => run("played")}
-                className="btn"
-              >
-                <Icon name="play" className="h-4 w-4" />
-                Run played
-              </button>
-              <button
-                type="button"
-                onClick={() => run("liked")}
-                className="btn"
-              >
-                <Icon name="play" className="h-4 w-4" />
-                Run liked
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  dialogRef.current?.close();
-                  window.dispatchEvent(new Event("sp:open-settings"));
-                }}
-                className="btn"
-              >
-                <Icon name="settings" className="h-4 w-4" />
-                Settings
-              </button>
-            </div>
-            {runResult && <p className="mt-2 text-xs text-[color:var(--muted)]">{runResult}</p>}
-          </div>
-
-          {accounts.length > 0 && (
-            <div className="mt-3 border-t border-[color:var(--line-soft)] pt-3">
-              <AccountSelect accounts={accounts} activeId={activeAccountId} />
-            </div>
-          )}
-        </div>
-      </dialog>
-    </>
+        );
+      })}
+    </nav>
   );
 }

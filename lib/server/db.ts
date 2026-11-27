@@ -759,6 +759,94 @@ export function listGaps(env: Env, accountId: string, limit: number, offset: num
   return { account_id: accountId, total, limit, offset, items };
 }
 
+// ---------- the Journal (lib/journal.ts merges these) ----------
+
+/** Collectors that have ever run for this account, for the Journal's filter. */
+export function runCollectors(env: Env, accountId: string): string[] {
+  return (
+    env.DB.prepare(`SELECT DISTINCT collector FROM poller_runs WHERE account_id = ? ORDER BY collector`).all(accountId) as {
+      collector: string;
+    }[]
+  ).map((r) => r.collector);
+}
+
+/**
+ * One page of runs, newest first, plus the window its gaps belong to.
+ *
+ * The window is [oldest run of this page, oldest run of the page before): a
+ * gap that started inside it is drawn on this page, so paging through never
+ * shows one twice nor skips one. The first page is open upwards (a gap newer
+ * than every run still shows), the last page open downwards.
+ */
+export function journalRuns(env: Env, accountId: string, collector: string | null, limit: number, offset: number) {
+  const where = `account_id = ?${collector ? " AND collector = ?" : ""}`;
+  const args: unknown[] = collector ? [accountId, collector] : [accountId];
+  const total = (env.DB.prepare(`SELECT COUNT(*) AS n FROM poller_runs WHERE ${where}`).get(...args) as { n: number }).n;
+  const items = env.DB.prepare(
+    `SELECT id, collector, trigger_kind, started_at, finished_at, status, items_fetched, items_inserted, error
+     FROM poller_runs WHERE ${where} ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?`
+  ).all(...args, limit, offset) as { started_at: string }[];
+  const before =
+    offset > 0
+      ? ((
+          env.DB.prepare(`SELECT started_at FROM poller_runs WHERE ${where} ORDER BY started_at DESC, id DESC LIMIT 1 OFFSET ?`).get(
+            ...args,
+            offset - 1
+          ) as { started_at: string } | undefined
+        )?.started_at ?? null)
+      : null;
+  const last = offset + limit >= total;
+  return {
+    total,
+    items,
+    window: { from: last || items.length === 0 ? null : items[items.length - 1].started_at, to: before },
+  };
+}
+
+/** Gaps that started in [from, to) — either bound null for open. */
+export function gapsBetween(env: Env, accountId: string, collector: string | null, from: string | null, to: string | null) {
+  const clauses = ["account_id = ?"];
+  const args: unknown[] = [accountId];
+  if (collector) (clauses.push("collector = ?"), args.push(collector));
+  if (from) (clauses.push("from_utc >= ?"), args.push(from));
+  if (to) (clauses.push("from_utc < ?"), args.push(to));
+  return env.DB.prepare(
+    `SELECT id, collector, from_utc, to_utc, detected_at, note FROM gaps WHERE ${clauses.join(" AND ")} ORDER BY from_utc DESC`
+  ).all(...args);
+}
+
+/** Gaps alone, newest start first — the Journal's "Gaps only" view. */
+export function gapsByStart(env: Env, accountId: string, collector: string | null, limit: number, offset: number) {
+  const where = `account_id = ?${collector ? " AND collector = ?" : ""}`;
+  const args: unknown[] = collector ? [accountId, collector] : [accountId];
+  const total = (env.DB.prepare(`SELECT COUNT(*) AS n FROM gaps WHERE ${where}`).get(...args) as { n: number }).n;
+  const items = env.DB.prepare(
+    `SELECT id, collector, from_utc, to_utc, detected_at, note FROM gaps WHERE ${where} ORDER BY from_utc DESC, id DESC LIMIT ? OFFSET ?`
+  ).all(...args, limit, offset);
+  return { total, items };
+}
+
+/** Runs by status and declared gaps (count, total length) since an instant: the Journal's side card. */
+export function journalSummary(env: Env, accountId: string, since: string) {
+  const runs = env.DB.prepare(
+    `SELECT status, COUNT(*) AS n FROM poller_runs WHERE account_id = ? AND started_at >= ? GROUP BY status`
+  ).all(accountId, since) as { status: string | null; n: number }[];
+  const gaps = env.DB.prepare(
+    `SELECT COUNT(*) AS n, COALESCE(SUM((julianday(to_utc) - julianday(from_utc)) * 86400), 0) AS seconds
+     FROM gaps WHERE account_id = ? AND from_utc >= ?`
+  ).get(accountId, since) as { n: number; seconds: number };
+  const by = Object.fromEntries(runs.map((r) => [r.status ?? "unfinished", r.n])) as Record<string, number>;
+  return {
+    runs: runs.reduce((s, r) => s + r.n, 0),
+    ok: by.ok ?? 0,
+    partial: by.partial ?? 0,
+    error: by.error ?? 0,
+    unfinished: by.unfinished ?? 0,
+    gaps: gaps.n,
+    gapSeconds: gaps.seconds,
+  };
+}
+
 export function statsSnapshot(env: Env, accountId: string) {
   const runs = env.DB.prepare(
     `SELECT collector, trigger_kind, started_at, finished_at, status,
