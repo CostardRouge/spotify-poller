@@ -95,11 +95,11 @@ export async function runCollector(
       // Each of these is a no-op unless that kind actually alerted, so a
       // recovery produces one all-clear, not a burst.
       await notifyRecovered(env, "auth", {
-        title: "Spotify poller — account reconnected",
+        title: "Témoin — account reconnected",
         message: `Collection resumed for ${account?.display_name ?? account?.id ?? "the account"}.`,
       });
       await notifyRecovered(env, "run-error", {
-        title: `Spotify poller — collector ${collector} recovered`,
+        title: `Témoin — collector ${collector} recovered`,
         message: `Collector ${collector} is collecting again (${result.inserted} new events).`,
       });
     }
@@ -107,7 +107,7 @@ export async function runCollector(
       // A gap is history lost for good: the API only ever returns the last 50
       // plays, so nothing will bring those back. Worth waking someone up.
       await notifyOnce(env, "gap", {
-        title: "Spotify poller — gap in the history",
+        title: "Témoin — gap in the history",
         message:
           `No collection between ${result.gap.from} and ${result.gap.to}: the 50-track buffer ` +
           `was fully renewed in the meantime, those plays are lost.`,
@@ -136,7 +136,7 @@ async function alertOnError(
   const who = account?.display_name ?? account?.id ?? "no account";
   if (e instanceof AuthError) {
     await notifyOnce(env, "auth", {
-      title: "Spotify poller — reconnection required",
+      title: "Témoin — reconnection required",
       message: `Collection is STOPPED for ${who}.\n${errorMsg}\n\nReconnect the account to resume.`,
       priority: "high",
       tags: ["rotating_light", "musical_note"],
@@ -145,7 +145,7 @@ async function alertOnError(
     return;
   }
   await notifyOnce(env, "run-error", {
-    title: `Spotify poller — collector ${collector} failed`,
+    title: `Témoin — collector ${collector} failed`,
     message: `${errorMsg}\naccount: ${who}`,
     priority: "high",
     tags: ["warning"],

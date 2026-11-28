@@ -9,7 +9,7 @@ export function authMode(): AuthMode {
 }
 
 /**
- * Mirrors the previous ADMIN_TOKEN gate (spotify-poller pre-Next.js), now on
+ * Mirrors the previous ADMIN_TOKEN gate (the vanilla-Node version, before Next.js), now on
  * top of a signed session instead of a bearer header:
  *
  *  - 'token' (default): a valid `sp_session` JWT cookie, minted by

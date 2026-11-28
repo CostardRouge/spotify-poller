@@ -17,7 +17,7 @@ const LLMS = readFileSync(join(ROOT, "showcase", "llms.txt"), "utf8");
 const PAGE = readFileSync(join(ROOT, "showcase", "index.html"), "utf8");
 const WORKFLOW = readFileSync(join(ROOT, ".github", "workflows", "pages.yml"), "utf8");
 
-const REPO = "https://github.com/CostardRouge/spotify-poller";
+const REPO = "https://github.com/CostardRouge/temoin";
 
 /** The showcase's own address, read from the page rather than repeated here. */
 const CANONICAL = /<link rel="canonical" href="([^"]+)"/.exec(PAGE)?.[1];
@@ -32,7 +32,7 @@ const links = [...LLMS.matchAll(/^- \[([^\]]+)\]\(([^)]+)\): (.+)$/gm)].map(([, 
 describe("showcase llms.txt", () => {
   it("opens with an H1, a one-sentence blockquote and a paragraph", () => {
     const lines = LLMS.split("\n");
-    assert.equal(lines[0], "# spotify-poller");
+    assert.equal(lines[0], "# Témoin");
     assert.equal(lines[1], "");
     assert.match(lines[2], /^> \S.*\.$/);
     assert.equal(lines[3], "");

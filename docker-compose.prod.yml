@@ -5,9 +5,9 @@
 #   docker login ghcr.io -u <github-username> -p <PAT with read:packages>
 # Usage: make prod-pull && make prod-up
 services:
-  spotify-poller:
-    image: ghcr.io/costardrouge/spotify-poller:latest
-    container_name: spotify-poller
+  temoin:
+    image: ghcr.io/costardrouge/temoin:latest
+    container_name: temoin
     ports:
       # Dashboard + admin API: keep them on the local network (no direct
       # internet exposure — TLS reverse proxy if remote access is needed).
@@ -27,6 +27,7 @@ services:
     volumes:
       # The SQLite database is IRREPLACEABLE (spec §1): a named volume is
       # mandatory, never the container's writable layer. Include it in backups.
+      # It keeps the project's old name on purpose (see the volumes block).
       - spotify-poller-data:/data
       # Backups live on the HOST filesystem, deliberately outside the data
       # volume: a snapshot stored inside the volume it protects is not a backup.
@@ -52,4 +53,14 @@ services:
         max-file: "3"
 
 volumes:
+  # NEVER rename this volume, nor give it a new `name:`. Docker cannot rename a
+  # volume: a new name is a new, EMPTY volume, and the container would start
+  # collecting into a fresh database while the irreplaceable history sat unused
+  # in the old one. The project became Témoin on 2026-11-27; the data kept the
+  # name it was created under (docs/memory/deployment.md, "The rename to Témoin").
+  # Compose prefixes it with the project name, i.e. the checkout's folder, which
+  # is why the Makefile and docs/backup.md say spotify-poller_spotify-poller-data:
+  # a checkout cloned into a folder called `temoin` would get
+  # temoin_spotify-poller-data instead — clone into `spotify-poller`, or run
+  # with `-p spotify-poller`, to keep the existing volume.
   spotify-poller-data:

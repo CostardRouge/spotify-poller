@@ -1,9 +1,12 @@
 # Témoin — continuous listening-history collection
 
-*Formerly Spotify Poller: the product took its name on 2026-11-27; the repository,
-image and paths below keep the old one until the rename is carried out.*
+*Formerly spotify-poller: the product took its name on 2026-11-27, and the
+repository, image, domain and Sésame app followed. The data volume
+(`spotify-poller-data`), the database file (`life-events.db`) and the bare-metal
+paths and unit names keep the old name on purpose: renaming them would strand
+an existing install's history.*
 
-**[Showcase / screenshots →](https://costardrouge.github.io/spotify-poller/)**
+**[Showcase / screenshots →](https://costardrouge.github.io/temoin/)**
 
 Continuously and unattended, collects the listening history (and likes) of a
 personal Spotify account into a local SQLite database. See the spec for the
@@ -125,7 +128,8 @@ Non-negotiable points, wired into `docker-compose.prod.yml`:
 
 - **the SQLite database lives on the named volume `spotify-poller-data`** —
   never in the container's writable layer: the data is irreplaceable and must
-  be included in the host's backups;
+  be included in the host's backups. It keeps the old name: Docker cannot
+  rename a volume, and a new name would start empty;
 - **no secret in the image** — everything comes from `.env` via `env_file` at
   launch time;
 - **container-internal scheduling** (`SCHEDULE_ENABLED=1`): `played` every
@@ -146,7 +150,7 @@ to look:
    `docker stop`), a crash (with the exception), or an *unclean exit*, which
    is a SIGKILL: kernel OOM-killer, power loss. For OOM verdicts, the evidence
    is on the **host**: `dmesg -T | grep -i 'killed process'`. Restart history:
-   `docker inspect --format '{{.RestartCount}} {{.State.StartedAt}}' spotify-poller`.
+   `docker inspect --format '{{.RestartCount}} {{.State.StartedAt}}' temoin`.
 2. **The process stalled** long enough to fail the healthcheck's full retry
    budget without dying (the `/api/export` case, fixed in PR #8). The probe now
    tolerates 10 s stalls and only evicts after ~2.5 min of consecutive
@@ -336,7 +340,7 @@ cookie must not also leak (or let you derive) the password.
 Connect provider (`costardrouge/sesame`), which opens the same JWT session; no
 `ADMIN_TOKEN` exists. `/login` only shows itself after a sign-out or when
 Sésame refused or failed, with « Sign in with Sésame » to try again. Set `SESAME_ISSUER`, `SESAME_CLIENT_ID` and
-`SESAME_CLIENT_SECRET` from the app `spotify-poller` in Sésame, whose redirect
+`SESAME_CLIENT_SECRET` from the app `temoin` in Sésame, whose redirect
 is `<this origin>/api/auth/sesame/callback`; who may sign in is decided there.
 
 `AUTH_MODE=proxy` — your reverse proxy authenticates (Cloudflare Access,
@@ -425,6 +429,11 @@ sudo -u poller npm run migrate
 ```
 
 ### Systemd
+
+The units and `/opt/spotify-poller` keep the project's old name on purpose.
+Renamed units would not replace the ones an existing install already enabled:
+both sets of timers would fire, and units pointing at a new folder would not
+find the database. A fresh install loses nothing by the old name.
 
 ```bash
 sudo cp systemd/*.service systemd/*.timer /etc/systemd/system/

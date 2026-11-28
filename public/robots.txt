@@ -1,6 +1,6 @@
 # A private, self-hosted instance: one person's listening history behind a
 # login. Nothing here is meant for a search index or an AI crawler. The pages
 # also carry <meta name="robots" content="noindex">. The project's public page
-# is the showcase: https://costardrouge.github.io/spotify-poller/
+# is the showcase: https://costardrouge.github.io/temoin/
 User-agent: *
 Disallow: /

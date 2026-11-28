@@ -13,9 +13,10 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "./globals.css";
 
-// The product's name since 2026-11-27 (the design lab, the owner's pick). The
-// repository, the image and the domain still say spotify-poller until the
-// rename is carried out (docs/memory/deployment.md lists its steps).
+// The product's name since 2026-11-27 (the design lab, the owner's pick), and
+// since the rename the repository's, the image's and the domain's too; only the
+// data volume and the database file keep the old name, on purpose
+// (docs/memory/deployment.md, "The rename to Témoin").
 const title = "Témoin";
 const description =
   "Custody report for a personal Spotify listening history — proves collection is running, surfaces gaps, and lets the operator browse, filter and export what was collected.";
@@ -59,7 +60,7 @@ const metadata: Metadata = {
   },
   // The label under the icon on an iOS home screen; the manifest's short_name
   // is its Android twin. "Témoin" fits whole (six letters), where the old
-  // "spotify-poller" had to be cut to "Poller".
+  // name, spotify-poller, had to be cut to "Poller".
   // `capable` is the legacy switch iOS still reads to open a home-screen launch
   // standalone (the manifest's `display` says the same to everyone else).
   // `default` keeps the status bar opaque and its text dark-on-light or

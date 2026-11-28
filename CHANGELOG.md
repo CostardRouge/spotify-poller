@@ -1,6 +1,6 @@
 # Changelog
 
-What each release of spotify-poller brings to the person whose listening history it keeps. The format follows
+What each release of Témoin (formerly spotify-poller) brings to the person whose listening history it keeps. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html); `.github/workflows/release.yml` turns each section into a
 tag and a GitHub Release once it reaches `main` (COMMON-PROJECT-SPEC C13 in `second-brain`). Written in English, like
@@ -20,6 +20,11 @@ major number comes from.
 - The app is now called **Témoin**, with a new look: warm paper, black ink and a blue pen, a new icon, and the same
   colour rules as before — green only ever means healthy. Install it again on your phone's home screen to get the new
   icon and name.
+- Témoin has moved to new addresses: the app to temoin.steeve.website, the source to github.com/CostardRouge/temoin,
+  the showcase to costardrouge.github.io/temoin, the image to ghcr.io/costardrouge/temoin. The first visit on the new
+  address asks you to sign in once with Sésame (a new origin starts with no session), and an app installed on a
+  phone's home screen has to be added again from the new address. The old showcase address no longer answers. Your
+  collected history is untouched: it stays in the same volume and database file.
 - The Overview leads with one sentence that says whether every play is being collected, then today's listening drawn
   as a trace; on a computer, a dial of today's polls and the whole week. A declared gap shows as a dashed amber stretch,
   never as an empty one.

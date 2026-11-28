@@ -137,7 +137,7 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
       setGlobalState(env, KEY_BACKUP_AT, nowIso());
       console.log(`[scheduler] backup: ${r.file} (${(r.bytes / 1024 / 1024).toFixed(1)} MB)`);
       await notifyRecovered(env, "backup", {
-        title: "Spotify poller — backups working again",
+        title: "Témoin — backups working again",
         message: `Backup written to ${r.file}.`,
       });
     } catch (e) {
@@ -145,7 +145,7 @@ export function startScheduler(env: Env, opts: SchedulerOptions): void {
       // need it. It has to be loud.
       console.error("[scheduler] backup failed:", e);
       await notifyOnce(env, "backup", {
-        title: "Spotify poller — backup FAILED",
+        title: "Témoin — backup FAILED",
         message: `${String(e)}\nThe history is no longer protected against a disk loss.`,
         priority: "high",
         tags: ["floppy_disk", "warning"],
@@ -316,8 +316,8 @@ export function startPlaybackTicker(env: Env, opts: PlaybackOptions): void {
         pausedUntil = Date.now() + (fatal ? 3_600_000 : 600_000);
         await notifyOnce(env, fatal ? "auth" : "run-error", {
           title: fatal
-            ? "Spotify poller — playback needs a reconnection"
-            : "Spotify poller — playback collector failed",
+            ? "Témoin — playback needs a reconnection"
+            : "Témoin — playback collector failed",
           message: `${msg}\n\nThe 'played' collector is unaffected: it keeps the history.`,
           priority: "default",
           tags: ["musical_note", "warning"],

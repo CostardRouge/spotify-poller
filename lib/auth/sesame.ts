@@ -2,7 +2,7 @@
  * Sign-in through Sésame (`AUTH_MODE=sesame`): openid-client (OpenID
  * Certified) does the protocol — discovery, PKCE, the code exchange, the ID
  * token's signature, issuer, audience and expiry. Who may enter is Sésame's
- * decision (membership of the app `spotify-poller` there); this side only
+ * decision (membership of the app `temoin` there); this side only
  * turns a successful round trip into the same `sp_session` the token opened.
  */
 import * as oidc from "openid-client";

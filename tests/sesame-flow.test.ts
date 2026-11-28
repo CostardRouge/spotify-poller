@@ -40,7 +40,7 @@ test("next is a path on this site, nothing else", async () => {
 });
 
 test("the origin is the one the browser used, behind Traefik", () => {
-  const h = new Headers({ host: "poller.steeve.website", "x-forwarded-proto": "https" });
-  assert.equal(originFrom(h, "http://0.0.0.0:3000"), "https://poller.steeve.website");
+  const h = new Headers({ host: "temoin.steeve.website", "x-forwarded-proto": "https" });
+  assert.equal(originFrom(h, "http://0.0.0.0:3000"), "https://temoin.steeve.website");
   assert.equal(originFrom(new Headers({ host: "localhost:3000" }), "http://localhost:3000"), "http://localhost:3000");
 });
